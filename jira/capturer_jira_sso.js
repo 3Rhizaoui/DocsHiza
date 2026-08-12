@@ -117,16 +117,25 @@ class CDP {
   close() { try { this.ws.close(); } catch (_) {} }
 }
 
-async function openTarget(url) {
-  const response = await fetch(`http://127.0.0.1:${PORT}/json/new?${encodeURIComponent(url)}`, {method: 'PUT'});
-  if (!response.ok) throw new Error(`Impossible d'ouvrir Jira dans le navigateur (${response.status})`);
-  const target = await response.json();
+async function attachToAuthenticatedJira(baseUrl) {
+  const targets = await getJson(`http://127.0.0.1:${PORT}/json/list`, 10);
+  const pages = targets.filter(target => target.type === 'page' && target.webSocketDebuggerUrl);
+  const expected = new URL(baseUrl);
+  const target = pages.find(page => {
+    try { return new URL(page.url).origin === expected.origin; }
+    catch (_) { return false; }
+  });
+  if (!target) {
+    throw new Error('Aucun onglet Jira authentifie trouve. Affichez une vraie page Jira apres le SSO, puis relancez.');
+  }
   const cdp = new CDP(target.webSocketDebuggerUrl);
   await cdp.open();
   await cdp.send('Runtime.enable');
-  await cdp.send('Page.enable');
-  await cdp.send('Page.navigate', {url});
-  await sleep(2500);
+  const state = await cdp.send('Runtime.evaluate', {
+    expression: '({href: location.href, title: document.title})', returnByValue: true
+  });
+  const page = state.result && state.result.value ? state.result.value : {};
+  console.log(`Session Jira reutilisee : ${page.title || page.href || baseUrl}`);
   return cdp;
 }
 
@@ -190,11 +199,14 @@ async function main() {
 
   const searches = [];
   const errors = [];
-  for (const query of config.queries) {
-    let cdp;
-    try {
+  let cdp;
+  try {
+    // Toutes les requetes utilisent le meme onglet et les memes cookies SSO.
+    // Cela evite de rejouer le handshake SAML pour chaque filtre Jira.
+    cdp = await attachToAuthenticatedJira(config.baseUrl);
+    for (const query of config.queries) {
+      try {
       const url = `${config.baseUrl}/issues/?jql=${encodeURIComponent(query.jql)}`;
-      cdp = await openTarget(url);
       console.log(`\n[${query.name}] JQL envoyée : ${query.jql}`);
       const value = await executeJql(cdp, config.baseUrl, query.jql);
       const issues = value.issues || [];
@@ -203,12 +215,13 @@ async function main() {
         total_api: Number(value.total || 0), names: value.names || {}, issues});
       console.log(`[${query.name}] ${issues.length}/${value.total || 0} tickets récupérés`);
       console.log(`[${query.name}] Exemples : ${keys.slice(0, 10).join(', ') || '(aucun)'}`);
-    } catch (error) {
-      errors.push({name: query.name, jql: query.jql, erreur: String(error.message || error)});
-      console.error(`${query.name} : ${error.message || error}`);
-    } finally {
-      if (cdp) cdp.close();
+      } catch (error) {
+        errors.push({name: query.name, jql: query.jql, erreur: String(error.message || error)});
+        console.error(`${query.name} : ${error.message || error}`);
+      }
     }
+  } finally {
+    if (cdp) cdp.close();
   }
 
   const uniqueKeys = new Set(searches.flatMap(search => search.issues.map(issue => issue.key).filter(Boolean)));
