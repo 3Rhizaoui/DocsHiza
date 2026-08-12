@@ -7,6 +7,7 @@ const ROOT = __dirname;
 const CONFIG_FILE = path.join(ROOT, 'jira_config.json');
 const LEGACY_URLS_FILE = path.join(ROOT, 'jira_urls.txt');
 const OUT = path.join(ROOT, 'jira_brut.json');
+const DIAGNOSTIC_OUT = path.join(ROOT, 'jira_diagnostic.json');
 const PROFILE = path.join(ROOT, '.jira_sso_profile');
 const PORT = 9231;
 const PAGE_SIZE = 100;
@@ -16,14 +17,29 @@ function cleanBaseUrl(value) {
   return String(value || '').trim().replace(/\/+$/, '');
 }
 
+function jqlFromValue(value, name) {
+  if (typeof value === 'string') return value.trim();
+  if (!value || value.active === false || value.enabled === false) return '';
+  if (value.jql || value.query) return String(value.jql || value.query).trim();
+  if (value.filter_id || value.filterId) return `filter = ${value.filter_id || value.filterId}`;
+  if (value.url) {
+    const parsed = new URL(value.url);
+    const jql = parsed.searchParams.get('jql');
+    if (jql) return jql.trim();
+    const filterId = parsed.searchParams.get('filter');
+    if (filterId) return `filter = ${filterId}`;
+  }
+  throw new Error(`La requête "${name}" ne contient ni jql, ni filter_id, ni URL avec ?jql=`);
+}
+
 function readConfiguration() {
   if (fs.existsSync(CONFIG_FILE)) {
     const config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8').replace(/^\uFEFF/, ''));
     const baseUrl = cleanBaseUrl(config.jira_base_url);
     const rawQueries = config.queries || config.requetes || {};
     const queries = Array.isArray(rawQueries)
-      ? rawQueries.map((item, index) => ({name: item.name || `requete_${index + 1}`, jql: item.jql || item.query || ''}))
-      : Object.entries(rawQueries).map(([name, value]) => ({name, jql: typeof value === 'string' ? value : value.jql}));
+      ? rawQueries.map((item, index) => ({name: item.name || `requete_${index + 1}`, jql: jqlFromValue(item, item.name || `requete_${index + 1}`)}))
+      : Object.entries(rawQueries).map(([name, value]) => ({name, jql: jqlFromValue(value, name)}));
     const activeQueries = queries.map(item => ({name: item.name, jql: String(item.jql || '').trim()})).filter(item => item.jql);
     if (!baseUrl) throw new Error('jira_base_url est absent de jira_config.json');
     if (!activeQueries.length) throw new Error('Aucune requête JQL active dans jira_config.json');
@@ -114,21 +130,30 @@ async function openTarget(url) {
   return cdp;
 }
 
-async function executeJql(cdp, jql) {
+async function executeJql(cdp, baseUrl, jql) {
   // La requête est exécutée dans l'onglet Jira authentifié : les cookies SSO restent dans le navigateur.
   const expression = `
     (async () => {
       const jql = ${JSON.stringify(jql)};
+      const apiUrl = ${JSON.stringify(`${baseUrl}/rest/api/2/search`)};
       const pageSize = ${PAGE_SIZE};
       let startAt = 0;
       let total = null;
       let issues = [];
       let names = {};
       while (total === null || startAt < total) {
-        const api = '/rest/api/2/search?jql=' + encodeURIComponent(jql)
-          + '&startAt=' + startAt + '&maxResults=' + pageSize
-          + '&expand=names&fields=*all';
-        const response = await fetch(api, {credentials: 'include', headers: {'Accept': 'application/json'}});
+        const payload = {jql, startAt, maxResults: pageSize, fields: ['*all'], expand: ['names']};
+        let response = await fetch(apiUrl, {
+          method: 'POST', credentials: 'include',
+          headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        if (response.status === 404 || response.status === 405) {
+          const apiGet = apiUrl + '?jql=' + encodeURIComponent(jql)
+            + '&startAt=' + startAt + '&maxResults=' + pageSize
+            + '&expand=names&fields=*all';
+          response = await fetch(apiGet, {credentials: 'include', headers: {'Accept': 'application/json'}});
+        }
         if (!response.ok) throw new Error('API JIRA ' + response.status + ' : ' + (await response.text()).slice(0, 300));
         const page = await response.json();
         names = Object.assign(names, page.names || {});
@@ -137,7 +162,7 @@ async function executeJql(cdp, jql) {
         if (!(page.issues || []).length) break;
         startAt += page.issues.length;
       }
-      return {total, names, issues};
+      return {jqlEnvoyee: jql, total, names, issues};
     })()
   `;
   const result = await cdp.send('Runtime.evaluate', {expression, awaitPromise: true, returnByValue: true});
@@ -170,9 +195,14 @@ async function main() {
     try {
       const url = `${config.baseUrl}/issues/?jql=${encodeURIComponent(query.jql)}`;
       cdp = await openTarget(url);
-      const value = await executeJql(cdp, query.jql);
-      searches.push({name: query.name, url, jql: query.jql, names: value.names || {}, issues: value.issues || []});
-      console.log(`${query.name} : ${value.issues?.length || 0}/${value.total || 0} tickets récupérés`);
+      console.log(`\n[${query.name}] JQL envoyée : ${query.jql}`);
+      const value = await executeJql(cdp, config.baseUrl, query.jql);
+      const issues = value.issues || [];
+      const keys = issues.map(issue => issue.key).filter(Boolean);
+      searches.push({name: query.name, url, jql: query.jql, jql_envoyee: value.jqlEnvoyee,
+        total_api: Number(value.total || 0), names: value.names || {}, issues});
+      console.log(`[${query.name}] ${issues.length}/${value.total || 0} tickets récupérés`);
+      console.log(`[${query.name}] Exemples : ${keys.slice(0, 10).join(', ') || '(aucun)'}`);
     } catch (error) {
       errors.push({name: query.name, jql: query.jql, erreur: String(error.message || error)});
       console.error(`${query.name} : ${error.message || error}`);
@@ -187,8 +217,17 @@ async function main() {
     jira_base_url: config.baseUrl, recherches: searches, erreurs_source: errors
   };
   fs.writeFileSync(OUT, JSON.stringify(output, null, 2), 'utf8');
+  fs.writeFileSync(DIAGNOSTIC_OUT, JSON.stringify({
+    generated_at: output.generated_at,
+    remarque: 'Le dashboard utilise l’union des requêtes actives. Utilisez active:false pour exclure une requête.',
+    requetes: searches.map(search => ({name: search.name, jql_envoyee: search.jql_envoyee,
+      total_api: search.total_api, tickets_recuperes: search.issues.length,
+      exemples_cles: search.issues.slice(0, 20).map(issue => issue.key)})),
+    erreurs: errors
+  }, null, 2), 'utf8');
   try { browser.kill(); } catch (_) {}
   console.log(`JSON JIRA produit : ${OUT}`);
+  console.log(`Diagnostic des sélections : ${DIAGNOSTIC_OUT}`);
   console.log(`Requêtes : ${searches.length}/${config.queries.length} | Tickets uniques : ${uniqueKeys.size} | Erreurs : ${errors.length}`);
   if (errors.length) process.exitCode = 1;
 }
