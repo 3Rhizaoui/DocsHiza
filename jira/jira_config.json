@@ -1,0 +1,9 @@
+{
+  "jira_base_url": "https://jira.exemple.local",
+  "queries": {
+    "epics": "project = GIL AND issuetype = Epic",
+    "taches": "project = GIL AND issuetype IN (Story, Task, Sub-task)",
+    "anomalies_ouvertes": "project = GIL AND issuetype IN (Bug, Defect) AND statusCategory != Done",
+    "anomalies_resolues": "project = GIL AND issuetype IN (Bug, Defect) AND statusCategory = Done"
+  }
+}

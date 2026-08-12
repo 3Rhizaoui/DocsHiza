@@ -1,0 +1,4 @@
+# Collez ici une URL Confluence par ligne, par exemple :
+# https://confluence.exemple.net/spaces/GIL/pages/123456789/Acquisition
+# https://confluence.exemple.net/spaces/GIL/pages/987654321/Emission
+

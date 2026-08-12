@@ -1,0 +1,3 @@
+# Une URL de recherche JIRA par ligne (avec le paramètre jql).
+# Exemple : https://jira.exemple.local/issues/?jql=project%20%3D%20GIL
+
