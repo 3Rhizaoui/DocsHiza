@@ -1,9 +1,7 @@
 {
-  "jira_base_url": "https://jira.exemple.local",
+  "jira_base_url": "https://jira.group.echonet",
   "queries": {
-    "epics": "project = GIL AND issuetype = Epic",
-    "taches": "project = GIL AND issuetype IN (Story, Task, Sub-task)",
-    "anomalies_ouvertes": "project = GIL AND issuetype IN (Bug, Defect) AND statusCategory != Done",
-    "anomalies_resolues": "project = GIL AND issuetype IN (Bug, Defect) AND statusCategory = Done"
+    "epics": "project = AERL_GIL AND summary ~ \"Arrimage\" AND issuetype = Epic",
+    "anomalies_resolues": "project = \"Group Integration Layer\" AND issuetype = Bug AND Reference IS NOT EMPTY"
   }
 }
