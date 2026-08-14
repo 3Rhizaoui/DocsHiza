@@ -493,34 +493,30 @@ async function main() {
     { recursive: true }
   );
 
-  const browser = cp.spawn(
-    executable,
-    [
-      `--remote-debugging-port=${PORT}`,
-      `--user-data-dir=${PROFILE}`,
-      '--no-first-run',
-      '--no-default-browser-check',
-      '--new-window',
-      'about:blank'
-    ],
-    { stdio: 'ignore' }
-  );
+const startUrl = config.baseUrl;
+
+console.log(`Ouverture de JIRA : ${startUrl}`);
+
+const browser = cp.spawn(
+  executable,
+  [
+    `--remote-debugging-port=${PORT}`,
+    `--user-data-dir=${PROFILE}`,
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--new-window',
+    startUrl
+  ],
+  { stdio: 'ignore' }
+);
 
   await getJson(
     `http://127.0.0.1:${PORT}/json/version`
   );
 
-  console.log(
-    '\nUne nouvelle fenêtre vide vient de s’ouvrir.'
-  );
-
-  console.log(
-    `Dans CETTE fenêtre, saisissez manuellement : ${config.baseUrl}`
-  );
-
-  console.log(
-    'Connectez-vous avec le SSO BNP, puis attendez la page d’accueil JIRA.'
-  );
+console.log('\nUne fenêtre JIRA vient de s’ouvrir.');
+console.log(`URL JIRA : ${config.baseUrl}`);
+console.log('Connectez-vous avec le SSO, puis attendez que la page JIRA soit complètement chargée.');
 
   await ask(
     'Revenez ici et appuyez sur Entrée pour exécuter les requêtes JQL... '
