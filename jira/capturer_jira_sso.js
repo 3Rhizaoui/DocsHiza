@@ -803,9 +803,21 @@ console.log('Connectez-vous avec le SSO, puis attendez que la page JIRA soit com
     `Erreurs : ${output.erreurs_source.length}`
   );
 
-  if (output.erreurs_source.length) {
-    process.exitCode = 1;
-  }
+if (errors.length) {
+  console.error(
+    `\n${errors.length} requête(s) principale(s) JIRA ont échoué.`
+  );
+
+  process.exitCode = 1;
+} else if (childErrors.length) {
+  console.warn(
+    `\nATTENTION : ${childErrors.length} erreur(s) lors de la récupération détaillée des tâches des Epics.`
+  );
+
+  console.warn(
+    'Les données disponibles seront néanmoins utilisées.'
+  );
+}
 }
 
 main().catch(error => {
