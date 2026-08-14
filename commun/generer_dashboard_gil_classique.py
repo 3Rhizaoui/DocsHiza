@@ -218,32 +218,106 @@ payload.update({
 })
 def anomaly_item(row):
     return {
-        "reference": row.get("reference") or row["id"], "flux": row["id"],
-        "domaine": row["domaine"], "sousDomaine": row["sousDomaine"],
-        "environnement": row["environnement"], "statut": row.get("etatAnomalie") or "",
-        "partenaire": bug_owner(row), "nombre": int(float(row.get("nombre") or 0)),
+        "reference": row.get("reference") or "",
+        "flux": row.get("id") or "",
+        "domaine": row.get("domaine") or "À qualifier",
+        "sousDomaine": row.get("sousDomaine") or "À qualifier",
+        "environnement": row.get("environnement") or "",
+        "statut": row.get("etatAnomalie") or "",
+        "statutJira": row.get("statut_jira") or row.get("statut") or "",
+        "partenaire": row.get("responsable") or bug_owner(row),
+        "nombre": int(float(row.get("nombre") or 0)),
+        "severite": row.get("severite") or "",
+        "resume": row.get("commentaire") or "",
+        "description": row.get("description") or "",
+        "url": row.get("url_source") or "",
+        "epicParent": row.get("epic_parent") or "",
     }
 
 def delivered_item(row):
     return {
-        "reference": row.get("reference") or row["id"], "flux": row["id"],
-        "domaine": row["domaine"], "sousDomaine": row["sousDomaine"],
-        "environnement": row["environnement"], "statut": "Livré",
-        "partenaire": bug_owner(row), "nombre": int(float(row.get("nombre") or 0)),
+        "reference": row.get("reference") or row.get("id") or "",
+        "flux": row.get("id") or "",
+        "jiraKey": row.get("jira_key") or row.get("epic_key") or "",
+        "domaine": row.get("domaine") or "À qualifier",
+        "sousDomaine": row.get("sousDomaine") or "À qualifier",
+        "environnement": row.get("environnement") or "",
+        "statut": "Livré",
+        "statutJira": row.get("statut_jira") or row.get("statut") or "",
+        "partenaire": row.get("responsable") or bug_owner(row),
+        "nombre": int(float(row.get("nombre") or 0)),
         "version": row.get("version") or "",
+        "resume": row.get("commentaire") or "",
+        "description": row.get("description") or "",
+        "url": row.get("url_source") or "",
+        "tachesTotal": int(row.get("taches_total") or 0),
+        "tachesTerminees": int(row.get("taches_terminees") or 0),
+        "taches": row.get("taches") or [],
     }
 
 def is_explicit_corrected_anomaly(row):
-    """Reconnaît explicitement les anomalies clôturées, dont le statut Validé."""
-    status = unicodedata.normalize("NFKD", str(row.get("statut") or "").lower())
-    status = "".join(char for char in status if not unicodedata.combining(char))
-    return any(word in status for word in ("corrig", "resolu", "clos", "valide"))
+    if row.get("etatAnomalie") == "Corrigée":
+        return True
+
+    status = unicodedata.normalize(
+        "NFKD",
+        str(
+            row.get("statut")
+            or ""
+        ).lower()
+    )
+
+    status = "".join(
+        char
+        for char in status
+        if not unicodedata.combining(char)
+    )
+
+    return any(
+        word in status
+        for word in (
+            "corrig",
+            "resolu",
+            "clos",
+            "valide",
+            "done"
+        )
+    )
 
 def is_explicit_anomaly(row):
-    if row.get("etatAnomalie") == "KO" or is_explicit_corrected_anomaly(row):
+    if row.get("type") == "Anomalie":
         return True
-    text = " ".join(str(row.get(k) or "") for k in ("reference", "commentaire", "source", "statut")).lower()
-    return any(word in text for word in ("anomal", "bug", "incident", "octane", "jira"))
+
+    if row.get("etatAnomalie") in {
+        "KO",
+        "En cours",
+        "Corrigée"
+    }:
+        return True
+
+    if is_explicit_corrected_anomaly(row):
+        return True
+
+    text_value = " ".join(
+        str(row.get(k) or "")
+        for k in (
+            "reference",
+            "commentaire",
+            "source",
+            "statut"
+        )
+    ).lower()
+
+    return any(
+        word in text_value
+        for word in (
+            "anomal",
+            "bug",
+            "incident",
+            "octane",
+            "jira"
+        )
+    )
 
 def sprint_comparison_row(history_row, sprint, data_type, week, display_weeks=None):
     if display_weeks is None:
@@ -274,45 +348,122 @@ payload["comparaisonSprints"] = [
 # Phase 2 du Reporting : flux effectivement traités et prêts pour les ateliers
 # d'arrimage. Cette liste est indépendante des totaux AVRO/Configuration et
 # conserve systématiquement le domaine et le sous-domaine du flux.
-phase2_ready_ids = {
-    "MM4-1": ("Acquisition", "Onboarding", "API to API"),
-    "MM5-1": ("Acquisition", "Onboarding", "API to Event"),
-    "OA5-2": ("Acquisition", "Authorize", "API to Event"),
-    "CMS4_001": ("Issuing", "Onboarding", "API to API"),
-    "OA3_002": ("Issuing", "Authorize / Paiement", "API to Event"),
-    "CNT-EM6": ("Issuing", "Contestation", "API to Event"),
-    "CNT-EM9": ("Issuing", "Contestation", "API to Event"),
-    "CNT-EM15": ("Issuing", "Contestation", "API to Event"),
-    "CNT-EM18": ("Issuing", "Contestation", "API to Event"),
-}
-
 payload["fluxPretsArrimage"] = []
 seen_arrimage = set()
+
 for row in current:
-    # La phase d'arrimage est suivie sur les deux environnements. Un même flux
-    # peut donc apparaître une fois en SIT et une fois en UAT, sans doublon au
-    # sein d'un environnement.
-    if row.get("environnement") not in {"SIT", "UAT"} or row.get("id") not in phase2_ready_ids:
+    # Les anomalies ne sont jamais des flux prêts pour arrimage.
+    if row.get("type") == "Anomalie":
         continue
-    key = (row["id"], row["environnement"])
+
+    if row.get("environnement") not in {"SIT", "UAT"}:
+        continue
+
+    # La décision est maintenant calculée en amont à partir :
+    # Epic terminé + toutes les fiches rattachées terminées.
+    if row.get("etatFlux") != "Prêt":
+        continue
+
+    flux = row.get("id") or row.get("reference") or ""
+    environment = row.get("environnement") or ""
+
+    key = (
+        flux,
+        environment
+    )
+
     if key in seen_arrimage:
         continue
+
     seen_arrimage.add(key)
-    domaine, sous_domaine, pattern = phase2_ready_ids[row["id"]]
+
     payload["fluxPretsArrimage"].append({
-        "sprint": current_sprint,
-        "semaine": current_week,
-        "environnement": row["environnement"],
-        "domaine": domaine,
-        "sousDomaine": sous_domaine,
-        "flux": row["id"],
-        "pattern": pattern,
-        "version": row.get("version") or "",
-        "statut": "Prêt pour arrimage",
-        "source": "Reporting — Phase 2 Connectivité",
+        "sprint":
+            row.get("sprint") or current_sprint,
+
+        "semaine":
+            row.get("semaine") or current_week,
+
+        "environnement":
+            environment,
+
+        "domaine":
+            row.get("domaine") or "À qualifier",
+
+        "sousDomaine":
+            row.get("sousDomaine") or "À qualifier",
+
+        "flux":
+            flux,
+
+        "jiraKey":
+            row.get("jira_key")
+            or row.get("epic_key")
+            or "",
+
+        "pattern":
+            row.get("nature")
+            or "Epic JIRA",
+
+        "version":
+            row.get("version") or "",
+
+        "statut":
+            "Prêt pour arrimage",
+
+        "statutJira":
+            row.get("statut_jira")
+            or row.get("statut")
+            or "",
+
+        "resume":
+            row.get("commentaire")
+            or "",
+
+        "description":
+            row.get("description")
+            or "",
+
+        "url":
+            row.get("url_source")
+            or "",
+
+        "responsable":
+            row.get("responsable")
+            or row.get("source")
+            or "",
+
+        "tachesTotal":
+            int(
+                row.get(
+                    "taches_total"
+                )
+                or 0
+            ),
+
+        "tachesTerminees":
+            int(
+                row.get(
+                    "taches_terminees"
+                )
+                or 0
+            ),
+
+        "taches":
+            row.get("taches")
+            or [],
+
+        "source":
+            "JIRA — Epic + fiches rattachées",
     })
+
 payload["fluxPretsArrimage"].sort(
-    key=lambda x: (x["domaine"], x["sousDomaine"], x["flux"], x["environnement"])
+    key=lambda x: (
+        x["domaine"],
+        x["sousDomaine"],
+        x["flux"],
+        x["environnement"]
+    )
 )
 payload["histogrammes"] = {
     "statuts": {"prets": current_m["ready"], "anomaliesOuvertes": current_m["pending"],
@@ -411,12 +562,92 @@ def anomaly_severity(r):
 
 anomaly_records = [r for r in records if is_explicit_anomaly(r)]
 payload["anomaliesDetail"] = [{
-    "reference": r.get("reference") or r["id"], "flux": r["id"], "domaine": r["domaine"],
-    "sousDomaine": r["sousDomaine"], "environnement": r["environnement"],
-    "statut": anomaly_status(r),
-    "affectation": bug_owner(r), "version": r["version"], "commentaire": r["commentaire"],
-    "severite": anomaly_severity(r),
-    "semaine": r["semaine"], "sprint": current_sprint if r["semaine"] == current_week else previous_sprint,
+    # Numéro de l'anomalie Jira.
+    "reference":
+        r.get("reference")
+        or r.get("jira_key")
+        or "",
+
+    # Référence métier du flux provenant du champ Reference Jira.
+    "flux":
+        r.get("id")
+        or "",
+
+    "jiraKey":
+        r.get("jira_key")
+        or r.get("reference")
+        or "",
+
+    "domaine":
+        r.get("domaine")
+        or "À qualifier",
+
+    "sousDomaine":
+        r.get("sousDomaine")
+        or "À qualifier",
+
+    "environnement":
+        r.get("environnement")
+        or "",
+
+    "statut":
+        (
+            "Corrigée"
+            if r.get("etatAnomalie") == "Corrigée"
+            else (
+                "En cours"
+                if r.get("etatAnomalie") == "En cours"
+                else "Ouverte"
+            )
+        ),
+
+    "statutJira":
+        r.get("statut_jira")
+        or r.get("statut")
+        or "",
+
+    "affectation":
+        r.get("responsable")
+        or bug_owner(r),
+
+    "version":
+        r.get("version")
+        or "",
+
+    "resume":
+        r.get("commentaire")
+        or "",
+
+    "commentaire":
+        r.get("commentaire")
+        or "",
+
+    "description":
+        r.get("description")
+        or "",
+
+    "severite":
+        anomaly_severity(r),
+
+    "url":
+        r.get("url_source")
+        or "",
+
+    "epicParent":
+        r.get("epic_parent")
+        or "",
+
+    "semaine":
+        r.get("semaine")
+        or "",
+
+    "sprint":
+        r.get("sprint")
+        or (
+            current_sprint
+            if r.get("semaine") == current_week
+            else previous_sprint
+        ),
 } for r in anomaly_records]
 payload["prioritesHebdo"] = [{
     "semaineDecision": previous_week, "semaineSuivi": current_week,
