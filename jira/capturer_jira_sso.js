@@ -803,6 +803,7 @@ console.log('Connectez-vous avec le SSO, puis attendez que la page JIRA soit com
     `Erreurs : ${output.erreurs_source.length}`
   );
 
+  
 if (errors.length) {
   console.error(
     `\n${errors.length} requête(s) principale(s) JIRA ont échoué.`
