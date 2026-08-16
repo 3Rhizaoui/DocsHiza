@@ -30,10 +30,10 @@ echo ============================================================
 echo   Dashboard GIL - action {action}
 echo ============================================================
 echo.
-echo Dossier cible :
-echo   {target.parent}
-echo.
 cd /d "{target.parent}"
+echo Dossier courant :
+cd
+echo.
 echo Commande :
 echo   call "{target.name}"
 echo.
@@ -42,7 +42,6 @@ echo.
 echo ============================================================
 echo   Action {action} terminee avec code %ERRORLEVEL%
 echo ============================================================
-echo.
 pause
 """, encoding="utf-8")
     return launcher
@@ -80,38 +79,24 @@ class Handler(SimpleHTTPRequestHandler):
         action = path.rsplit("/", 1)[-1]
         target = ACTIONS.get(action)
 
-        if not target:
-            self.send_error(403, "Action non autorisee")
+        if not target or not target.exists():
+            self.send_error(404, f"Action introuvable : {action}")
             return
 
-        if not target.exists():
-            self.send_error(404, f"Commande introuvable : {target}")
-            return
+        launcher = make_launcher(action, target)
 
-        try:
-            launcher = make_launcher(action, target)
+        if os.name == "nt":
+            os.startfile(str(launcher))
+        else:
+            subprocess.Popen(["sh", str(launcher)], cwd=str(PROJECT))
 
-            if os.name == "nt":
-                os.startfile(str(launcher))
-            else:
-                subprocess.Popen(["sh", str(launcher)], cwd=str(PROJECT))
-
-            body = (
-                f"Action {action} lancée dans une nouvelle fenêtre CMD.\n"
-                f"Launcher : {launcher}\n\n"
-                "Pour Jira/Confluence : connecte-toi SSO puis appuie sur ENTREE dans la fenêtre CMD."
-            )
-
-            self.send_response(202)
-            self.send_header("Content-Type", "text/plain; charset=utf-8")
-            self.end_headers()
-            self.wfile.write(body.encode("utf-8", errors="replace"))
-
-        except Exception as exc:
-            self.send_response(500)
-            self.send_header("Content-Type", "text/plain; charset=utf-8")
-            self.end_headers()
-            self.wfile.write(f"Erreur lancement {action}: {exc}".encode("utf-8", errors="replace"))
+        self.send_response(202)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(
+            f"Action {action} lancée dans une nouvelle fenêtre CMD.\\n"
+            f"Pour Jira/Confluence : connecte-toi SSO puis appuie sur ENTREE dans cette fenêtre.".encode("utf-8")
+        )
 
 if __name__ == "__main__":
     print(f"Dashboard local : http://127.0.0.1:{PORT}/dashboard_gil_sprint21.html")

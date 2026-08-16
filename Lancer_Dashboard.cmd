@@ -1,12 +1,10 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title Dashboard GIL - page historique
+title Dashboard GIL - page legacy
 
 echo Demarrage du dashboard local GIL...
-echo.
-echo Cible :
-echo   http://127.0.0.1:8765/dashboard_gil_sprint21.html
+echo URL : http://127.0.0.1:8765/dashboard_gil_sprint21.html
 echo.
 
 start "" "http://127.0.0.1:8765/dashboard_gil_sprint21.html"
