@@ -19,39 +19,13 @@ ACTIONS = {
     "generate": ROOT / "generer_dashboard_commun.cmd",
 }
 
-RUN_DIR = PROJECT / ".dashboard_runs"
-RUN_DIR.mkdir(exist_ok=True)
-
-def make_launcher(action: str, target: Path) -> Path:
-    launcher = RUN_DIR / f"run_{action}.cmd"
-    launcher.write_text(f"""@echo off
-title Dashboard GIL - action {action}
-echo ============================================================
-echo   Dashboard GIL - action {action}
-echo ============================================================
-echo.
-echo Dossier cible :
-echo   {target.parent}
-echo.
-cd /d "{target.parent}"
-echo Commande :
-echo   call "{target.name}"
-echo.
-call "{target.name}"
-echo.
-echo ============================================================
-echo   Action {action} terminee avec code %ERRORLEVEL%
-echo ============================================================
-echo.
-pause
-""", encoding="utf-8")
-    return launcher
-
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
 
     def end_headers(self):
+        # Permet aux boutons de fonctionner même si dashboard_gil_sprint21.html
+        # est ouvert en file:// pendant que ce serveur tourne.
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
@@ -64,6 +38,7 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         path = urlparse(self.path).path
 
+        # Cible principale = ancienne page historique.
         if path in {"", "/"}:
             self.path = "/dashboard_gil_sprint21.html"
 
@@ -81,31 +56,37 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_error(404)
             return
 
-        action = path.rsplit("/", 1)[-1]
-        target = ACTIONS.get(action)
+        name = path.rsplit("/", 1)[-1]
+        cmd = ACTIONS.get(name)
 
-        if not target:
+        if not cmd:
             self.send_error(403, "Action non autorisee")
             return
 
-        if not target.exists():
-            self.send_error(404, f"Commande introuvable : {target}")
+        if not cmd.exists():
+            self.send_error(404, f"Commande introuvable : {cmd}")
             return
 
         try:
-            launcher = make_launcher(action, target)
-
             if os.name == "nt":
-                os.startfile(str(launcher))
+                # Important :
+                # - CREATE_NEW_CONSOLE ouvre une vraie fenêtre visible.
+                # - /k garde la fenêtre ouverte.
+                # - call lance correctement les .cmd.
+                flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
+                subprocess.Popen(
+                    ["cmd.exe", "/k", f'call "{cmd}"'],
+                    cwd=str(cmd.parent),
+                    creationflags=flags,
+                )
             else:
-                subprocess.Popen(["sh", str(launcher)], cwd=str(PROJECT))
+                subprocess.Popen(["sh", str(cmd)], cwd=str(cmd.parent))
 
             body = (
-                f"Action {action} lancee dans une nouvelle fenetre CMD.\n"
-                f"Launcher : {launcher}\n\n"
+                f"Action {name} lancee dans une nouvelle fenetre CMD.\n"
+                f"Commande : {cmd}\n"
                 "Pour Jira/Confluence : connecte-toi SSO puis appuie sur ENTREE dans la fenetre CMD."
             )
-
             self.send_response(202)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
             self.end_headers()
@@ -115,9 +96,10 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_response(500)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
             self.end_headers()
-            self.wfile.write(f"Erreur lancement {action}: {exc}".encode("utf-8", errors="replace"))
+            self.wfile.write(f"Erreur lancement {name}: {exc}".encode("utf-8", errors="replace"))
 
 if __name__ == "__main__":
-    print(f"Dashboard local : http://127.0.0.1:{PORT}/dashboard_gil_sprint21.html")
-    print("Actions disponibles :", ", ".join(ACTIONS))
+    print(f"Dashboard local : http://127.0.0.1:{PORT}/")
+    print(f"Page cible      : http://127.0.0.1:{PORT}/dashboard_gil_sprint21.html")
+    print("Actions         :", ", ".join(ACTIONS))
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()

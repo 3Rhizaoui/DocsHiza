@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-16T20:24:30+02:00",
+  "generatedAt": "2026-08-16T21:11:23+02:00",
   "versionCalcul": "dynamic-v1",
   "source": "multisources",
   "semaineCourante": "2026-W32",
@@ -7,7 +7,7 @@
   "semainesSprint": [
     "2026-W32"
   ],
-  "comparisonSource": "données live",
+  "comparisonSource": "donnÃ©es live",
   "kpis": {
     "flux": 4,
     "pretTester": 4,
@@ -91,7 +91,7 @@
           "domaine": "Issuing",
           "sousDomaine": "GED",
           "environnement": "SIT",
-          "statut": "Livré",
+          "statut": "LivrÃ©",
           "statutSource": "Livré",
           "partenaire": "fichier suivi.txt",
           "nombre": 1,
@@ -110,7 +110,7 @@
           "domaine": "Issuing",
           "sousDomaine": "GED",
           "environnement": "UAT",
-          "statut": "Bloqué / Rejeté",
+          "statut": "BloquÃ© / RejetÃ©",
           "statutSource": "À traiter",
           "partenaire": "fichier suivi.txt",
           "nombre": 1,
@@ -125,7 +125,7 @@
     },
     {
       "sprint": "Sprint 21",
-      "typeDonnee": "Réel",
+      "typeDonnee": "RÃ©el",
       "semaines": [
         "2026-W32"
       ],
@@ -207,7 +207,7 @@
           "domaine": "Acquisition",
           "sousDomaine": "Crédit commerçant",
           "environnement": "SIT",
-          "statut": "Livré",
+          "statut": "LivrÃ©",
           "statutSource": "Livré",
           "partenaire": "fichier suivi.txt",
           "nombre": 1,
@@ -223,7 +223,7 @@
           "domaine": "Issuing",
           "sousDomaine": "GED",
           "environnement": "SIT",
-          "statut": "Livré",
+          "statut": "LivrÃ©",
           "statutSource": "Livré",
           "partenaire": "fichier suivi.txt",
           "nombre": 1,
@@ -239,7 +239,7 @@
           "domaine": "Acquisition",
           "sousDomaine": "Crédit commerçant",
           "environnement": "UAT",
-          "statut": "Livré",
+          "statut": "LivrÃ©",
           "statutSource": "Livré",
           "partenaire": "fichier suivi.txt",
           "nombre": 1,
@@ -255,7 +255,7 @@
           "domaine": "Issuing",
           "sousDomaine": "GED",
           "environnement": "UAT",
-          "statut": "Livré",
+          "statut": "LivrÃ©",
           "statutSource": "Livré",
           "partenaire": "fichier suivi.txt",
           "nombre": 1,
@@ -279,7 +279,7 @@
       "sousDomaine": "Onboarding",
       "environnement": "SIT",
       "statut": "Validé",
-      "severite": "Non renseignée",
+      "severite": "Non renseignÃ©e",
       "resume": "id-flow",
       "sprint": "Sprint 21",
       "semaine": "2026-W32"
@@ -291,7 +291,7 @@
       "sousDomaine": "Onboarding",
       "environnement": "SIT",
       "statut": "Validé",
-      "severite": "Non renseignée",
+      "severite": "Non renseignÃ©e",
       "resume": "500 Gateway Timeout",
       "sprint": "Sprint 21",
       "semaine": "2026-W32"
@@ -303,7 +303,7 @@
       "sousDomaine": "Authorize / Paiement",
       "environnement": "SIT",
       "statut": "Validé",
-      "severite": "Non renseignée",
+      "severite": "Non renseignÃ©e",
       "resume": "500 on card holder.id missing on OA3-2",
       "sprint": "Sprint 21",
       "semaine": "2026-W32"
@@ -315,7 +315,7 @@
       "sousDomaine": "Onboarding",
       "environnement": "SIT",
       "statut": "Validé",
-      "severite": "Non renseignée",
+      "severite": "Non renseignÃ©e",
       "resume": "DateTime format",
       "sprint": "Sprint 21",
       "semaine": "2026-W32"
@@ -327,7 +327,7 @@
       "sousDomaine": "Onboarding",
       "environnement": "SIT",
       "statut": "Validé",
-      "severite": "Non renseignée",
+      "severite": "Non renseignÃ©e",
       "resume": "Error to get the schema",
       "sprint": "Sprint 21",
       "semaine": "2026-W32"
@@ -339,7 +339,7 @@
       "sousDomaine": "Onboarding",
       "environnement": "SIT",
       "statut": "Validé",
-      "severite": "Non renseignée",
+      "severite": "Non renseignÃ©e",
       "resume": "Erreur unauthorized_request CMS4_001 — pas liée à GIL",
       "sprint": "Sprint 21",
       "semaine": "2026-W32"
@@ -351,7 +351,7 @@
       "sousDomaine": "GED",
       "environnement": "UAT",
       "statut": "Ouverte",
-      "severite": "Non renseignée",
+      "severite": "Non renseignÃ©e",
       "resume": "",
       "sprint": "Sprint 20",
       "semaine": "2026-W31"
@@ -623,5 +623,5 @@
       "description": ""
     }
   ],
-  "commitGit": "2156c83"
+  "commitGit": "ad7aba2"
 }
