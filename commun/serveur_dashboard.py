@@ -63,20 +63,16 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = urlparse(self.path).path
-
         if path in {"", "/"}:
             self.path = "/dashboard_gil_sprint21.html"
-
         if path == "/favicon.ico":
             self.send_response(204)
             self.end_headers()
             return
-
         return super().do_GET()
 
     def do_POST(self):
         path = urlparse(self.path).path
-
         if not path.startswith("/action/"):
             self.send_error(404)
             return
@@ -101,9 +97,9 @@ class Handler(SimpleHTTPRequestHandler):
                 subprocess.Popen(["sh", str(launcher)], cwd=str(PROJECT))
 
             body = (
-                f"Action {action} lancee dans une nouvelle fenetre CMD.\n"
+                f"Action {action} lancée dans une nouvelle fenêtre CMD.\n"
                 f"Launcher : {launcher}\n\n"
-                "Pour Jira/Confluence : connecte-toi SSO puis appuie sur ENTREE dans la fenetre CMD."
+                "Pour Jira/Confluence : connecte-toi SSO puis appuie sur ENTREE dans la fenêtre CMD."
             )
 
             self.send_response(202)

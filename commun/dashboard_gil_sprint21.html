@@ -10,7 +10,7 @@
 </style>
 </head>
 <body>
-<header><div class="in"><h1>Dashboard GIL dynamique</h1><p id="sub"></p></div></header>
+<header><div class="in"><h1>Dashboard GIL dynamique</h1><p id="sub"></p></div><div class="actions"><button onclick="runLocalAction('excel')">Importer Excel</button><button onclick="runLocalAction('confluence')">Importer Confluence</button><button onclick="runLocalAction('jira')">Importer JIRA</button><button onclick="runLocalAction('sync')">Synchroniser les 3</button><button onclick="runLocalAction('archive')">Valider / Archiver Sprint</button><button onclick="window.print()">Générer le rapport PDF</button><button onclick="loadData()">Rafraîchir</button></div></header>
 <main>
 <div class="actions">
 <button class="primary" onclick="runAction('excel')">Importer Excel</button>
