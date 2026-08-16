@@ -24,9 +24,11 @@ records=list({(r['semaine'],r['id'],r['domaine'],r['sousDomaine'],r['environneme
 if not records:
     raise SystemExit("Aucune donnée exploitable dans Reporting / Reporting N-1. Vérifiez les colonnes ID_Flux, Type_Livraison, Source, SIT/UAT.")
 _weeks=sorted({r['semaine'] for r in records})
+_current_week=_weeks[-1]
 for r in records:
-    r['sprint']='Sprint 21' if r['semaine']==_weeks[-1] else 'Sprint 20'
-    r['niveauSemaine']='Sprint actuel' if r['semaine']==_weeks[-1] else 'Sprint N-1'
+    if not r.get('sprint') or r.get('sprint') == 'Sprint non défini':
+        r['sprint']=f"Semaine {r['semaine']}"
+    r['niveauSemaine']='Période actuelle' if r['semaine']==_current_week else 'Période précédente'
 payload={'generatedAt':datetime.now().isoformat(timespec='seconds'),'workbook':XLSX.name,'records':records}
 (ROOT/'dashboard_gil_data.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
 

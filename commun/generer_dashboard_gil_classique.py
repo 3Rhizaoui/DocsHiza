@@ -2,927 +2,402 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
+import subprocess
 import unicodedata
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+PROJECT = ROOT.parent
 SOURCE = ROOT / "dashboard_gil_data.json"
-TEMPLATE_DATA = ROOT / "rapport_gil_v6_w28_data.json"
-HTML = ROOT / "dashboard_gil_sprint21.html"
-GENERATOR_VERSION = "2026.08.11.2"
+HTML = ROOT / "dashboard_gil.html"
+LEGACY_HTML = ROOT / "dashboard_gil_sprint21.html"
+ARCHIVE_INDEX = PROJECT / "archives_sprints" / "index_sprints.json"
+VERSION_CALCUL = "dynamic-v1"
+ENVIRONMENTS = {"SIT", "UAT"}
 
-print(f"Generateur dashboard GIL - version {GENERATOR_VERSION}")
+
+def read_json(path: Path, default=None):
+    if not path.exists():
+        return default
+    return json.loads(path.read_text(encoding="utf-8-sig"))
 
 
-def load_payload_template():
-    """Charge le modele JSON ou le restaure depuis les donnees integrees au HTML."""
-    if TEMPLATE_DATA.exists():
-        return json.loads(TEMPLATE_DATA.read_text(encoding="utf-8-sig"))
+def write_json(path: Path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    if not HTML.exists():
-        raise SystemExit(
-            "Modele introuvable : copiez dashboard_gil_sprint21.html dans le meme "
-            "dossier que ce script."
-        )
 
-    html = HTML.read_text(encoding="utf-8")
-    match = re.search(
-        r"const fallbackData\s*=\s*([\s\S]*?);\s*let currentData\s*=\s*fallbackData\s*;",
-        html,
-    )
-    if not match:
-        raise SystemExit(
-            "Le fichier rapport_gil_v6_w28_data.json est absent et le modele "
-            "integre au HTML n'a pas pu etre lu. Recopiez le dossier de livraison complet."
-        )
+def fold(value) -> str:
+    text = unicodedata.normalize("NFKD", str(value or "").casefold())
+    return "".join(ch for ch in text if not unicodedata.combining(ch))
 
+
+def to_number(value) -> int:
     try:
-        payload = json.loads(match.group(1))
-    except json.JSONDecodeError as exc:
-        raise SystemExit(f"Modele JSON integre au HTML invalide : {exc}") from exc
-
-    TEMPLATE_DATA.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    print("Modele JSON absent : restaure automatiquement depuis le HTML.")
-    return payload
+        return max(0, int(float(value or 0)))
+    except (TypeError, ValueError):
+        return 0
 
 
-def total(rows, predicate=lambda r: True):
-    return int(sum(float(r.get("nombre") or 0) for r in rows if predicate(r)))
+def week_key(value: str) -> tuple:
+    match = re.search(r"(\d{4})\D*W?(\d{1,2})", str(value or ""), re.I)
+    if match:
+        return (int(match.group(1)), int(match.group(2)))
+    return (0, 0)
 
 
-def metrics(rows):
-    flow_rows = [r for r in rows if r.get("type") != "Anomalie"]
-    amount = total(flow_rows)
-    ready = total(flow_rows, lambda r: r.get("etatFlux") == "Prêt")
-    ko = total(rows, lambda r: r.get("etatAnomalie") == "KO")
-    progress = total(flow_rows, lambda r: r.get("etatFlux") == "En cours")
-    pending = max(0, amount - ready)
-    rate = ready / amount if amount else 0
-    level = "Vert" if rate >= .80 else ("Orange" if rate >= .60 else "Rouge")
-    return dict(total=amount, ready=ready, ko=ko, progress=progress, pending=pending, rate=rate, level=level)
+def sprint_order(value: str) -> tuple:
+    match = re.search(r"(\d+)", str(value or ""))
+    if match:
+        return (1, int(match.group(1)))
+    return (0, str(value or ""))
 
 
-def report(identifier, title, rows):
-    m = metrics(rows)
-    return {"id": identifier, "titre": title, "total": m["total"], "pret": m["ready"],
-            "bloque": m["pending"], "risques": f'{m["ko"]} KO et {m["progress"]} en cours',
-            "niveau": m["level"], "interpretation": f'{m["ready"]} prêts sur {m["total"]} ({m["rate"]:.0%}).',
-            "action": "Traiter les KO et les flux en cours." if m["pending"] else "Maintenir le suivi."}
-
-
-def build_compatible_records(data):
-    """Construit l'ancien format `records` depuis le JSON Confluence normalise."""
-    flux = data.get("flux") or []
-    anomalies = data.get("anomalies") or []
-    if not flux:
-        raise SystemExit(
-            "Le JSON ne contient ni `records` ni liste `flux`. Relancez "
-            "l'import Excel, Confluence ou JIRA avec le dossier de livraison complet."
-        )
-
-    generated_at = str(data.get("generated_at") or datetime.now().astimezone().isoformat())
-    try:
-        generated_dt = datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
-    except ValueError:
-        generated_dt = datetime.now().astimezone()
-    iso_year, iso_week, _ = generated_dt.isocalendar()
-    week_label = f"{iso_year}-W{iso_week:02d}"
-    sprint_no = 21 + ((iso_year - 2026) * 26) + ((iso_week - 31) // 2)
-    sprint_label = f"Sprint {max(1, sprint_no)}"
-
-    anomaly_index = {}
-    for anomaly in anomalies:
-        key = (str(anomaly.get("flux") or ""), str(anomaly.get("environnement") or ""))
-        anomaly_index.setdefault(key, []).append(anomaly)
-
-    result = []
-    for item in flux:
-        reference = str(item.get("reference_flux") or item.get("reference") or "")
-        env = str(item.get("environnement") or "")
-        related = anomaly_index.get((reference, env), [])
-        has_open_blocker = any(
-            bool(a.get("bloquante")) and str(a.get("statut") or "").casefold() not in {"resolue", "résolue"}
-            for a in related
-        )
-        versions = item.get("versions") or []
-        if isinstance(versions, str):
-            versions = [versions]
-        source = item.get("source") or {}
-        result.append({
-            "id": reference, "reference": reference,
-            "type": "AVRO" if str(item.get("type_flux")) == "Event" else "Configuration",
-            "domaine": item.get("domaine") or "Non renseigné",
-            "sousDomaine": item.get("sous_domaine") or "Non renseigné",
-            "environnement": env, "semaine": week_label, "sprint": sprint_label,
-            "etatFlux": "Prêt" if item.get("pret_arrimage") else "En cours",
-            "etatAnomalie": "KO" if has_open_blocker else "",
-            "statut": "Livré" if item.get("configuration_deployee") else str(item.get("statut_configuration") or ""),
-            "version": " / ".join(str(v) for v in versions), "nombre": 1,
-            "commentaire": str(item.get("description") or ""),
-            "source": str(item.get("partenaire") or ""),
-            "date": generated_dt.date().isoformat(), "nature": "Confluence",
-            "url_source": source.get("url", "") if isinstance(source, dict) else "",
+def normalize_records(data: dict) -> list[dict]:
+    raw_records = data.get("records") or []
+    if not raw_records and data.get("flux"):
+        generated_at = str(data.get("generated_at") or data.get("generatedAt") or datetime.now().astimezone().isoformat())
+        try:
+            generated_dt = datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
+        except ValueError:
+            generated_dt = datetime.now().astimezone()
+        iso_year, iso_week, _ = generated_dt.isocalendar()
+        week = f"{iso_year}-W{iso_week:02d}"
+        sprint = str(data.get("sprint") or data.get("sprintCourant") or f"Semaine {week}")
+        raw_records = []
+        anomalies_by_key = defaultdict(list)
+        for anomaly in data.get("anomalies") or []:
+            anomalies_by_key[(str(anomaly.get("flux") or ""), str(anomaly.get("environnement") or ""))].append(anomaly)
+        for item in data.get("flux") or []:
+            ref = str(item.get("reference_flux") or item.get("reference") or item.get("id") or "")
+            env = str(item.get("environnement") or "")
+            related = anomalies_by_key[(ref, env)]
+            has_blocker = any(bool(a.get("bloquante")) and fold(a.get("statut")) not in {"resolue", "resolu"} for a in related)
+            raw_records.append({
+                "id": ref,
+                "reference": ref,
+                "type": "AVRO" if str(item.get("type_flux") or "").casefold() == "event" else "Configuration",
+                "domaine": item.get("domaine") or "Non renseigné",
+                "sousDomaine": item.get("sous_domaine") or item.get("sousDomaine") or "Non renseigné",
+                "environnement": env,
+                "semaine": week,
+                "sprint": item.get("sprint") or sprint,
+                "etatFlux": "Prêt" if item.get("pret_arrimage") else "En cours",
+                "etatAnomalie": "KO" if has_blocker else "",
+                "statut": "Livré" if item.get("configuration_deployee") else str(item.get("statut_configuration") or ""),
+                "version": " / ".join(map(str, item.get("versions") or [])) if isinstance(item.get("versions"), list) else str(item.get("versions") or ""),
+                "nombre": 1,
+                "commentaire": item.get("description") or "",
+                "source": item.get("partenaire") or data.get("source_type") or "",
+                "date": generated_dt.date().isoformat(),
+                "nature": data.get("source_type") or "Source normalisée",
+            })
+        for anomaly in data.get("anomalies") or []:
+            raw_records.append({
+                "id": anomaly.get("flux") or anomaly.get("reference") or "",
+                "reference": anomaly.get("reference") or "",
+                "type": "Anomalie",
+                "domaine": anomaly.get("domaine") or "Non renseigné",
+                "sousDomaine": anomaly.get("sous_domaine") or anomaly.get("sousDomaine") or "Non renseigné",
+                "environnement": anomaly.get("environnement") or "",
+                "semaine": week,
+                "sprint": anomaly.get("sprint") or sprint,
+                "etatFlux": "",
+                "etatAnomalie": "Corrigée" if fold(anomaly.get("statut")) in {"resolue", "resolu", "done", "clos"} else "KO",
+                "statut": anomaly.get("statut") or "",
+                "version": "",
+                "nombre": 1,
+                "commentaire": anomaly.get("description") or anomaly.get("resume") or "",
+                "source": anomaly.get("responsable") or data.get("source_type") or "",
+                "date": generated_dt.date().isoformat(),
+                "severite": anomaly.get("severite") or "",
+            })
+    records = []
+    for r in raw_records:
+        env = str(r.get("environnement") or "").upper().strip()
+        if env not in ENVIRONMENTS:
+            continue
+        week = str(r.get("semaine") or r.get("week") or "").strip()
+        if not week:
+            week = "Semaine non définie"
+        sprint = str(r.get("sprint") or r.get("sprintCourant") or f"Semaine {week}").strip()
+        kind = str(r.get("type") or r.get("typeLivraison") or "Configuration").strip()
+        records.append({
+            "id": str(r.get("id") or r.get("ID_Flux") or r.get("reference") or "").strip(),
+            "reference": str(r.get("reference") or r.get("Référence_Source") or r.get("jira_key") or r.get("id") or "").strip(),
+            "jira_key": str(r.get("jira_key") or r.get("epic_key") or "").strip(),
+            "type": kind,
+            "domaine": str(r.get("domaine") or r.get("Domaine") or "Non classé").strip(),
+            "sousDomaine": str(r.get("sousDomaine") or r.get("sous_domaine") or r.get("Sous_Domaine") or "Non classé").strip(),
+            "environnement": env,
+            "semaine": week,
+            "sprint": sprint,
+            "etatFlux": str(r.get("etatFlux") or r.get("État_Flux") or "").strip(),
+            "etatAnomalie": str(r.get("etatAnomalie") or r.get("État_Anomalie") or "").strip(),
+            "statut": str(r.get("statut") or r.get("Statut") or "").strip(),
+            "version": str(r.get("version") or r.get("Version") or "").strip(),
+            "nombre": to_number(r.get("nombre") or r.get("Nombre") or 1),
+            "commentaire": str(r.get("commentaire") or r.get("Commentaire") or r.get("resume") or "").strip(),
+            "source": str(r.get("source") or r.get("source_system") or r.get("nature") or "").strip(),
+            "date": str(r.get("date") or r.get("Date_Rapport") or "").strip(),
+            "severite": str(r.get("severite") or r.get("sévérité") or r.get("criticite") or "").strip(),
+            "url_source": str(r.get("url_source") or r.get("url") or "").strip(),
+            "description": str(r.get("description") or "").strip(),
         })
-
-    for anomaly in anomalies:
-        status = str(anomaly.get("statut") or "")
-        resolved = status.casefold() in {"resolue", "résolue"}
-        result.append({
-            "id": anomaly.get("flux") or anomaly.get("reference") or "",
-            "reference": anomaly.get("reference") or "",
-            "type": "Anomalie", "domaine": anomaly.get("domaine") or "Non renseigné",
-            "sousDomaine": anomaly.get("sous_domaine") or "Non renseigné",
-            "environnement": anomaly.get("environnement") or "",
-            "semaine": week_label, "sprint": sprint_label, "etatFlux": "",
-            "etatAnomalie": "Corrigée" if resolved else "KO", "statut": status,
-            "version": "", "nombre": 1,
-            "commentaire": f"{anomaly.get('responsable') or ''} - {anomaly.get('severite') or ''}",
-            "source": anomaly.get("responsable") or "", "date": generated_dt.date().isoformat(),
-            "severite": anomaly.get("severite") or "", "responsable": anomaly.get("responsable") or "",
-            "nature": "Confluence",
-        })
-    print(f"Compatibilite JSON : {len(result)} lignes `records` construites automatiquement.")
-    return result
+    return records
 
 
-if not SOURCE.exists():
-    raise SystemExit(
-        "Source dashboard_gil_data.json introuvable. Lancez d'abord un import Excel, Confluence ou JIRA."
-    )
+def flow_status(row: dict) -> str:
+    status = fold(" ".join(str(row.get(k) or "") for k in ("etatFlux", "etatAnomalie", "statut", "commentaire")))
+    if row.get("etatAnomalie") == "KO" or any(w in status for w in ("bloqu", "rejet", "refus", " ko", "non pret", "non-pret", "abandon", "annul")):
+        return "blocked"
+    if any(w in status for w in ("en cours", "progress", "a faire", "a traiter", "todo", "doing")):
+        return "progress"
+    if row.get("etatFlux") == "Prêt" or any(w in status for w in ("pret", "prêt", "livr", "done", "termine", "terminé", "closed")):
+        return "delivered"
+    return "progress"
 
-data = json.loads(SOURCE.read_text(encoding="utf-8-sig"))
-payload = load_payload_template()
-records = data.get("records") or build_compatible_records(data)
-# La feuille Reporting est la seule source de calcul. Les anciens exemples et
-# toute ligne dont l'environnement n'est pas SIT/UAT sont exclus.
-records = [r for r in records if r.get("environnement") in {"SIT", "UAT"}]
-weeks = sorted({r["semaine"] for r in records})
-if not weeks:
-    raise SystemExit("Aucune semaine disponible. Lancez d'abord generer_dashboard_gil.py et vérifiez Reporting / Reporting N-1.")
-current_week = weeks[-1]
-previous_week = weeks[-2] if len(weeks) > 1 else current_week
-current = [r for r in records if r["semaine"] == current_week]
-current_m = metrics(current)
-current_sprint = current[0].get("sprint", "Sprint non défini") if current else "Sprint non défini"
 
-def sprint_number(label):
-    match = re.search(r"(\d+)", str(label or ""))
-    return int(match.group(1)) if match else 1
-
-current_sprint_number = sprint_number(current_sprint)
-previous_sprint = f"Sprint {max(1, current_sprint_number - 1)}"
-current_sprint_weeks = sorted({r["semaine"] for r in records if r.get("sprint") == current_sprint}) or [current_week]
-previous_sprint_weeks = sorted({r["semaine"] for r in records if r.get("sprint") == previous_sprint}) or [previous_week]
-
-def bug_owner(row):
-    text = " ".join(str(row.get(k) or "") for k in ("commentaire", "reference", "source")).upper()
-    for owner in ("ESTREEM", "BCEF", "BCFM", "GIL", "ASSETS", "SAA"):
-        if owner in text:
-            return owner
-    return "ESTREEM" if str(row.get("domaine")) == "Issuing" else "BCEF"
-
-# Le Sprint 21 contient exactement deux semaines. Aucun ancien exemple n'est
-# conservé dans les calculs.
-history_by_week = {}
-for week in weeks:
-    rows = [r for r in records if r["semaine"] == week]
-    m = metrics(rows)
-    history_by_week[week] = {
-        "semaine": week, "dateRapport": max((r.get("date", "") for r in rows), default=""),
-        "flux": m["total"], "pretTester": m["ready"], "nonPret": m["pending"],
-        "bugsBloquants": m["ko"],
-        "servicesRisque": len({(r["domaine"], r["sousDomaine"]) for r in rows if r.get("etatAnomalie") == "KO" or r.get("etatFlux") == "En cours"}),
-        "testsKoBloques": m["ko"], "prioritesTraitees": m["ready"], "sante": m["level"],
-        "faitMarquant": f'{rows[0].get("nature", "Données")} — recalcul automatique' if rows else "",
-        "risque": f'{m["pending"]} éléments non prêts ({m["ko"]} KO, {m["progress"]} en cours)'
-    }
-history = [history_by_week[w] for w in sorted(history_by_week)]
-hist_current = history_by_week[current_week]
-hist_previous = history_by_week[previous_week]
-
-payload.update({
-    "generatedAt": datetime.now().astimezone().isoformat(timespec="seconds"),
-    "source": f"{str(data.get('source_type') or 'multisources').upper()} — source JSON normalisée — flux, tâches et anomalies",
-    "semaineCourante": current_week, "semainePrecedente": previous_week,
-    "sprintCourant": current_sprint, "semainesSprint": current_sprint_weeks,
-    "kpis": {"flux": current_m["total"], "pretTester": current_m["ready"], "nonPret": current_m["pending"],
-             "bugsBloquants": current_m["ko"], "servicesRougeOrange": hist_current["servicesRisque"],
-             "testsKoBloques": current_m["ko"]},
-    "tendanceHebdo": {"rows": history, "current": hist_current, "previous": hist_previous,
-                       "deltaPret": current_m["ready"] - hist_previous["pretTester"],
-                       "deltaBugs": current_m["ko"] - hist_previous["bugsBloquants"],
-                       "deltaTestsKo": current_m["ko"] - hist_previous["testsKoBloques"]}
-})
-def anomaly_item(row):
-    return {
-        "reference": row.get("reference") or "",
-        "flux": row.get("id") or "",
-        "domaine": row.get("domaine") or "À qualifier",
-        "sousDomaine": row.get("sousDomaine") or "À qualifier",
-        "environnement": row.get("environnement") or "",
-        "statut": row.get("etatAnomalie") or "",
-        "statutJira": row.get("statut_jira") or row.get("statut") or "",
-        "partenaire": row.get("responsable") or bug_owner(row),
-        "nombre": int(float(row.get("nombre") or 0)),
-        "severite": row.get("severite") or "",
-        "resume": row.get("commentaire") or "",
-        "description": row.get("description") or "",
-        "url": row.get("url_source") or "",
-        "epicParent": row.get("epic_parent") or "",
-    }
-
-def delivered_item(row):
+def detail_item(row: dict, label: str) -> dict:
     return {
         "reference": row.get("reference") or row.get("id") or "",
-        "flux": row.get("id") or "",
-        "jiraKey": row.get("jira_key") or row.get("epic_key") or "",
-        "domaine": row.get("domaine") or "À qualifier",
-        "sousDomaine": row.get("sousDomaine") or "À qualifier",
+        "flux": row.get("id") or row.get("reference") or "",
+        "jiraKey": row.get("jira_key") or "",
+        "domaine": row.get("domaine") or "Non classé",
+        "sousDomaine": row.get("sousDomaine") or "Non classé",
         "environnement": row.get("environnement") or "",
-        "statut": "Livré",
-        "statutJira": row.get("statut_jira") or row.get("statut") or "",
-        "partenaire": row.get("responsable") or bug_owner(row),
-        "nombre": int(float(row.get("nombre") or 0)),
+        "statut": label,
+        "statutSource": row.get("statut") or row.get("etatFlux") or row.get("etatAnomalie") or "",
+        "partenaire": row.get("source") or "",
+        "nombre": to_number(row.get("nombre") or 1),
         "version": row.get("version") or "",
         "resume": row.get("commentaire") or "",
         "description": row.get("description") or "",
         "url": row.get("url_source") or "",
-        "tachesTotal": int(row.get("taches_total") or 0),
-        "tachesTerminees": int(row.get("taches_terminees") or 0),
-        "taches": row.get("taches") or [],
     }
 
-def is_explicit_corrected_anomaly(row):
-    if row.get("etatAnomalie") == "Corrigée":
-        return True
 
-    status = unicodedata.normalize(
-        "NFKD",
-        str(
-            row.get("statut")
-            or ""
-        ).lower()
-    )
-
-    status = "".join(
-        char
-        for char in status
-        if not unicodedata.combining(char)
-    )
-
-    return any(
-        word in status
-        for word in (
-            "corrig",
-            "resolu",
-            "clos",
-            "valide",
-            "done"
-        )
-    )
-
-def is_explicit_anomaly(row):
-    if row.get("type") == "Anomalie":
-        return True
-
-    if row.get("etatAnomalie") in {
-        "KO",
-        "En cours",
-        "Corrigée"
-    }:
-        return True
-
-    if is_explicit_corrected_anomaly(row):
-        return True
-
-    text_value = " ".join(
-        str(row.get(k) or "")
-        for k in (
-            "reference",
-            "commentaire",
-            "source",
-            "statut"
-        )
-    ).lower()
-
-    return any(
-        word in text_value
-        for word in (
-            "anomal",
-            "bug",
-            "incident",
-            "octane",
-            "jira"
-        )
-    )
-
-def sprint_comparison_row(
-    history_row,
-    sprint,
-    data_type,
-    week,
-    display_weeks=None
-):
-    if display_weeks is None:
-        display_weeks = (
-            current_sprint_weeks
-            if sprint == current_sprint
-            else previous_sprint_weeks
-        )
-
-    sprint_rows = [
-        r
-        for r in records
-        if r["semaine"] == week
-    ]
-
-    # ---------------------------------------------------------
-    # COMPARAISON DES FLUX / DEMANDES
-    #
-    # Les anomalies ne sont plus mélangées à ce graphique.
-    # Elles restent traitées dans l'histogramme des anomalies.
-    # ---------------------------------------------------------
-
-    flow_rows = [
-        r
-        for r in sprint_rows
-        if r.get("type") != "Anomalie"
-    ]
-
-    def flow_item(row, label):
-        return {
-            "reference":
-                row.get("reference")
-                or row.get("id")
-                or "",
-
-            "flux":
-                row.get("id")
-                or "",
-
-            "jiraKey":
-                row.get("jira_key")
-                or row.get("epic_key")
-                or "",
-
-            "domaine":
-                row.get("domaine")
-                or "À qualifier",
-
-            "sousDomaine":
-                row.get("sousDomaine")
-                or "À qualifier",
-
-            "environnement":
-                row.get("environnement")
-                or "",
-
-            "statut":
-                label,
-
-            "statutSource":
-                row.get("statut")
-                or "",
-
-            "partenaire":
-                row.get("responsable")
-                or row.get("source")
-                or bug_owner(row),
-
-            "nombre":
-                int(
-                    float(
-                        row.get("nombre")
-                        or 0
-                    )
-                ),
-
-            "version":
-                row.get("version")
-                or "",
-
-            "resume":
-                row.get("commentaire")
-                or "",
-
-            "description":
-                row.get("description")
-                or "",
-
-            "url":
-                row.get("url_source")
-                or "",
-        }
-
-    def normalized_status(row):
-        raw = " ".join(
-            str(
-                row.get(key)
-                or ""
-            )
-            for key in (
-                "etatFlux",
-                "etatAnomalie",
-                "statut"
-            )
-        )
-
-        value = unicodedata.normalize(
-            "NFKD",
-            raw.casefold()
-        )
-
-        return "".join(
-            char
-            for char in value
-            if not unicodedata.combining(char)
-        )
-
-    def is_blocked(row):
-        status = normalized_status(row)
-
-        blocked_words = (
-            "bloqu",
-            "rejet",
-            "refus",
-            "ko",
-            "a traiter",
-            "non pret",
-            "abandon",
-            "annul"
-        )
-
-        return (
-            row.get("etatAnomalie") == "KO"
-            or any(
-                word in status
-                for word in blocked_words
-            )
-        )
-
-    def is_progress(row):
-        # Un flux bloqué/rejeté ne doit pas être
-        # compté une deuxième fois comme En cours.
-        if is_blocked(row):
-            return False
-
-        status = normalized_status(row)
-
-        return (
-            row.get("etatFlux") == "En cours"
-            or "en cours" in status
-            or "progress" in status
-        )
-
-    def is_delivered(row):
-        # Catégories exclusives :
-        # Bloqué > En cours > Livré
-        if is_blocked(row):
-            return False
-
-        if is_progress(row):
-            return False
-
-        status = normalized_status(row)
-
-        return (
-            row.get("etatFlux") == "Prêt"
-            or "livr" in status
-            or "pret" in status
-            or "done" in status
-        )
-
-    # ---------------------------------------------------------
-    # 1 - TOTAL DES FLUX / DEMANDES
-    # ---------------------------------------------------------
-
-    total_flows = [
-        flow_item(
-            row,
-            "Total"
-        )
-        for row in flow_rows
-    ]
-
-    # ---------------------------------------------------------
-    # 2 - FLUX LIVRÉS
-    # ---------------------------------------------------------
-
-    delivered = [
-        flow_item(
-            row,
-            "Livré"
-        )
-        for row in flow_rows
-        if is_delivered(row)
-    ]
-
-    # ---------------------------------------------------------
-    # 3 - FLUX EN COURS
-    # ---------------------------------------------------------
-
-    progress = [
-        flow_item(
-            row,
-            "En cours"
-        )
-        for row in flow_rows
-        if is_progress(row)
-    ]
-
-    # ---------------------------------------------------------
-    # 4 - FLUX BLOQUÉS / REJETÉS
-    # ---------------------------------------------------------
-
-    blocked = [
-        flow_item(
-            row,
-            "Bloqué / Rejeté"
-        )
-        for row in flow_rows
-        if is_blocked(row)
-    ]
-
+def metrics(records: list[dict]) -> dict:
+    flow_rows = [r for r in records if r.get("type") != "Anomalie"]
+    delivered = []
+    progress = []
+    blocked = []
+    for row in flow_rows:
+        status = flow_status(row)
+        if status == "delivered":
+            delivered.append(detail_item(row, "Livré"))
+        elif status == "blocked":
+            blocked.append(detail_item(row, "Bloqué / Rejeté"))
+        else:
+            progress.append(detail_item(row, "En cours"))
+    total_detail = [detail_item(r, "Total") for r in flow_rows]
+    total = sum(x["nombre"] for x in total_detail)
     return {
-        **history_row,
-
-        "sprint":
-            sprint,
-
-        "typeDonnee":
-            data_type,
-
-        "semaines":
-            display_weeks,
-
-        # Détails utilisés par le graphe
-        # et le tableau comparatif.
-        "fluxTotalDetail":
-            total_flows,
-
-        "fluxLivresDetail":
-            delivered,
-
-        "fluxEnCoursDetail":
-            progress,
-
-        "fluxBloquesDetail":
-            blocked,
-
-        # Totaux.
-        "fluxTotal":
-            sum(
-                x["nombre"]
-                for x in total_flows
-            ),
-
-        "fluxLivresTotal":
-            sum(
-                x["nombre"]
-                for x in delivered
-            ),
-
-        "fluxEnCoursTotal":
-            sum(
-                x["nombre"]
-                for x in progress
-            ),
-
-        "fluxBloquesTotal":
-            sum(
-                x["nombre"]
-                for x in blocked
-            ),
+        "fluxTotal": total,
+        "fluxLivresTotal": sum(x["nombre"] for x in delivered),
+        "fluxEnCoursTotal": sum(x["nombre"] for x in progress),
+        "fluxBloquesTotal": sum(x["nombre"] for x in blocked),
+        "fluxTotalDetail": total_detail,
+        "fluxLivresDetail": delivered,
+        "fluxEnCoursDetail": progress,
+        "fluxBloquesDetail": blocked,
+        "anomalies": sum(to_number(r.get("nombre") or 1) for r in records if r.get("type") == "Anomalie" or r.get("etatAnomalie") == "KO"),
+        "tauxPret": round((sum(x["nombre"] for x in delivered) / total) * 100) if total else 0,
     }
 
-payload["comparaisonSprints"] = [
-    sprint_comparison_row(hist_previous, previous_sprint, "Simulation N-1", previous_week),
-    sprint_comparison_row(hist_current, current_sprint, "Réel", current_week),
-]
 
-# Phase 2 du Reporting : flux effectivement traités et prêts pour les ateliers
-# d'arrimage. Cette liste est indépendante des totaux AVRO/Configuration et
-# conserve systématiquement le domaine et le sous-domaine du flux.
-payload["fluxPretsArrimage"] = []
-seen_arrimage = set()
+def archive_records_for_previous(current_sprint: str):
+    index = read_json(ARCHIVE_INDEX, {}) or {}
+    entries = index.get("archives") or []
+    if isinstance(entries, dict):
+        entries = list(entries.values())
+    candidates = [e for e in entries if str(e.get("sprint") or "") != current_sprint and e.get("statut", "VALIDE") == "VALIDE"]
+    if not candidates:
+        latest = index.get("last_validated") or index.get("dernier_sprint_valide") or {}
+        if isinstance(latest, dict) and str(latest.get("sprint") or "") != current_sprint:
+            candidates = [latest]
+    if not candidates:
+        return None, []
+    candidates.sort(key=lambda e: str(e.get("date_validation") or e.get("validated_at") or ""))
+    entry = candidates[-1]
+    path = entry.get("data_path") or entry.get("chemin_data") or entry.get("path")
+    if path:
+        data_path = (PROJECT / path).resolve() if not Path(path).is_absolute() else Path(path)
+    else:
+        archive_dir = entry.get("archive_dir") or entry.get("chemin") or ""
+        data_path = (PROJECT / archive_dir / "dashboard_gil_data.json").resolve()
+    data = read_json(data_path, {}) or {}
+    return str(entry.get("sprint") or data.get("sprintCourant") or "Sprint validé"), normalize_records(data)
 
-for row in current:
-    # Les anomalies ne sont jamais des flux prêts pour arrimage.
-    if row.get("type") == "Anomalie":
-        continue
 
-    if row.get("environnement") not in {"SIT", "UAT"}:
-        continue
-
-    # La décision est maintenant calculée en amont à partir :
-    # Epic terminé + toutes les fiches rattachées terminées.
-    if row.get("etatFlux") != "Prêt":
-        continue
-
-    flux = row.get("id") or row.get("reference") or ""
-    environment = row.get("environnement") or ""
-
-    key = (
-        flux,
-        environment
-    )
-
-    if key in seen_arrimage:
-        continue
-
-    seen_arrimage.add(key)
-
-    payload["fluxPretsArrimage"].append({
-        "sprint":
-            row.get("sprint") or current_sprint,
-
-        "semaine":
-            row.get("semaine") or current_week,
-
-        "environnement":
-            environment,
-
-        "domaine":
-            row.get("domaine") or "À qualifier",
-
-        "sousDomaine":
-            row.get("sousDomaine") or "À qualifier",
-
-        "flux":
-            flux,
-
-        "jiraKey":
-            row.get("jira_key")
-            or row.get("epic_key")
-            or "",
-
-        "pattern":
-            row.get("nature")
-            or "Epic JIRA",
-
-        "version":
-            row.get("version") or "",
-
-        "statut":
-            "Prêt pour arrimage",
-
-        "statutJira":
-            row.get("statut_jira")
-            or row.get("statut")
-            or "",
-
-        "resume":
-            row.get("commentaire")
-            or "",
-
-        "description":
-            row.get("description")
-            or "",
-
-        "url":
-            row.get("url_source")
-            or "",
-
-        "responsable":
-            row.get("responsable")
-            or row.get("source")
-            or "",
-
-        "tachesTotal":
-            int(
-                row.get(
-                    "taches_total"
-                )
-                or 0
-            ),
-
-        "tachesTerminees":
-            int(
-                row.get(
-                    "taches_terminees"
-                )
-                or 0
-            ),
-
-        "taches":
-            row.get("taches")
-            or [],
-
-        "source":
-            "JIRA — Epic + fiches rattachées",
-    })
-
-payload["fluxPretsArrimage"].sort(
-    key=lambda x: (
-        x["domaine"],
-        x["sousDomaine"],
-        x["flux"],
-        x["environnement"]
-    )
-)
-payload["histogrammes"] = {
-    "statuts": {"prets": current_m["ready"], "anomaliesOuvertes": current_m["pending"],
-                "ok": current_m["ready"], "ko": current_m["ko"]},
-    "severites": {
-        "Critique": total(current, lambda r: r.get("etatAnomalie") == "KO" and "rollback" in str(r.get("commentaire", "")).lower()),
-        "Majeure": total(current, lambda r: r.get("etatAnomalie") == "KO" and "rollback" not in str(r.get("commentaire", "")).lower()),
-        "Mineure": total(current, lambda r: r.get("etatFlux") == "En cours")
+def build_payload(data: dict) -> dict:
+    records = normalize_records(data)
+    if not records:
+        raise SystemExit("Aucune ligne exploitable SIT/UAT dans dashboard_gil_data.json.")
+    weeks = sorted({r["semaine"] for r in records}, key=week_key)
+    sprints = sorted({r["sprint"] for r in records}, key=sprint_order)
+    current_sprint = sprints[-1]
+    current_records = [r for r in records if r["sprint"] == current_sprint]
+    current_weeks = sorted({r["semaine"] for r in current_records}, key=week_key) or [weeks[-1]]
+    previous_sprint, previous_records = archive_records_for_previous(current_sprint)
+    comparison_source = "archive validée"
+    if not previous_records:
+        live_previous = [s for s in sprints if s != current_sprint]
+        previous_sprint = live_previous[-1] if live_previous else current_sprint
+        previous_records = [r for r in records if r["sprint"] == previous_sprint]
+        comparison_source = "données live"
+    current_metrics = metrics(current_records)
+    previous_metrics = metrics(previous_records)
+    def comparison_row(sprint: str, rows: list[dict], data_type: str) -> dict:
+        m = metrics(rows)
+        return {
+            "sprint": sprint,
+            "typeDonnee": data_type,
+            "semaines": sorted({r["semaine"] for r in rows}, key=week_key),
+            **m,
+        }
+    history = []
+    for sprint in sprints:
+        rows = [r for r in records if r["sprint"] == sprint]
+        m = metrics(rows)
+        history.append({
+            "sprint": sprint,
+            "semaine": " / ".join(sorted({r["semaine"] for r in rows}, key=week_key)),
+            "flux": m["fluxTotal"],
+            "pretTester": m["fluxLivresTotal"],
+            "nonPret": m["fluxEnCoursTotal"] + m["fluxBloquesTotal"],
+            "bugsBloquants": m["fluxBloquesTotal"],
+            "sante": "Vert" if m["tauxPret"] >= 80 else ("Orange" if m["tauxPret"] >= 60 else "Rouge"),
+        })
+    anomalies = []
+    for r in records:
+        if r.get("type") == "Anomalie" or r.get("etatAnomalie") == "KO":
+            anomalies.append({
+                "reference": r.get("reference") or r.get("jira_key") or "",
+                "flux": r.get("id") or "",
+                "domaine": r.get("domaine") or "Non classé",
+                "sousDomaine": r.get("sousDomaine") or "Non classé",
+                "environnement": r.get("environnement") or "",
+                "statut": "Ouverte" if r.get("etatAnomalie") == "KO" else (r.get("statut") or r.get("etatAnomalie") or ""),
+                "severite": r.get("severite") or "Non renseignée",
+                "resume": r.get("commentaire") or "",
+                "sprint": r.get("sprint") or "",
+                "semaine": r.get("semaine") or "",
+            })
+    return {
+        "generatedAt": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "versionCalcul": VERSION_CALCUL,
+        "source": data.get("source_type") or data.get("source") or "multisources",
+        "semaineCourante": current_weeks[-1],
+        "sprintCourant": current_sprint,
+        "semainesSprint": current_weeks,
+        "comparisonSource": comparison_source,
+        "kpis": {
+            "flux": current_metrics["fluxTotal"],
+            "pretTester": current_metrics["fluxLivresTotal"],
+            "nonPret": current_metrics["fluxEnCoursTotal"] + current_metrics["fluxBloquesTotal"],
+            "bugsBloquants": current_metrics["fluxBloquesTotal"],
+            "testsKoBloques": current_metrics["anomalies"],
+            "tauxPret": current_metrics["tauxPret"],
+        },
+        "tendanceHebdo": {"rows": history},
+        "comparaisonSprints": [
+            comparison_row(previous_sprint, previous_records, "N-1 validé" if comparison_source.startswith("archive") else "N-1 live"),
+            comparison_row(current_sprint, current_records, "Réel"),
+        ],
+        "anomaliesDetail": anomalies,
+        "records": records,
     }
-}
 
-payload["rapports"] = [
-    report("AVRO", "Chaîne de valeur AVRO", [r for r in current if r["type"] == "AVRO"]),
-    report("CONFIG", "Chaîne de valeur Configuration", [r for r in current if r["type"] == "Configuration"]),
-]
-payload["domaines"] = []
-for domain in sorted({r["domaine"] for r in current}):
-    m = metrics([r for r in current if r["domaine"] == domain])
-    payload["domaines"].append({"domaine": domain, "flux": m["total"], "pret": m["ready"],
-                                "nonPret": m["pending"], "bugsBloquants": m["ko"]})
 
-# Ventilation demandée dans le dashboard : deux environnements visibles pour
-# chaque semaine, puis domaine et sous-domaine avec leurs anomalies.
-payload["ventilation"] = []
-for week in weeks:
-    for environment in ("SIT", "UAT"):
-        env_rows = [r for r in records if r["semaine"] == week and r["environnement"] == environment]
-        for domain in sorted({r["domaine"] for r in env_rows}):
-            for subdomain in sorted({r["sousDomaine"] for r in env_rows if r["domaine"] == domain}):
-                rows = [r for r in env_rows if r["domaine"] == domain and r["sousDomaine"] == subdomain]
-                m = metrics(rows)
-                references = []
-                delivered_references = []
-                blocked_references = []
-                for row in rows:
-                    try:
-                        quantity = max(0, int(float(row.get("nombre") or 0)))
-                    except (TypeError, ValueError):
-                        quantity = 0
-                    label = f'{row["id"]} ({row["type"]})'
-                    references.extend([label] * quantity)
-                    if row.get("etatFlux") == "Prêt":
-                        delivered_references.extend([label] * quantity)
-                    if row.get("etatAnomalie") == "KO":
-                        blocked_references.extend([label] * quantity)
-                payload["ventilation"].append({
-                    "semaine": week, "environnement": environment, "domaine": domain,
-                    "sousDomaine": subdomain, "total": m["total"], "prets": m["ready"],
-                    "anomaliesOuvertes": m["pending"], "ko": m["ko"], "enCours": m["progress"],
-                    "referencesFlux": references, "referencesLivrees": delivered_references,
-                    "referencesBloquees": blocked_references
-                })
+def render_html(payload: dict) -> str:
+    data = json.dumps(payload, ensure_ascii=False).replace("</", "<\\/")
+    return f"""<!doctype html>
+<html lang=\"fr\">
+<head>
+<meta charset=\"utf-8\">
+<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
+<title>Dashboard GIL dynamique</title>
+<style>
+:root{{--n:#17324d;--b:#2878b5;--g:#16a264;--r:#cc3b3b;--a:#e89a18;--m:#667589;--l:#dce4ea}}
+*{{box-sizing:border-box}}body{{margin:0;background:#f3f6f8;color:#182331;font-family:Segoe UI,Arial,sans-serif}}header{{background:linear-gradient(120deg,var(--n),#27638e);color:white;padding:22px}}main,.in{{max-width:1400px;margin:auto}}h1{{margin:0}}header p{{margin:6px 0 0;color:#d9e8f4}}main{{padding:18px}}.actions{{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}}button{{border:1px solid var(--l);background:#fff;padding:10px 12px;border-radius:8px;font-weight:700;cursor:pointer}}button.primary{{background:var(--n);color:white}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}}.card,.panel{{background:#fff;border:1px solid var(--l);border-radius:13px;padding:16px;box-shadow:0 1px 2px #00000010}}.kpi span{{display:block;color:var(--m);font-size:12px;text-transform:uppercase;font-weight:700}}.kpi b{{font-size:30px}}.green{{color:var(--g)}}.red{{color:var(--r)}}.amber{{color:var(--a)}}h2{{margin:24px 0 10px}}table{{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--l);border-radius:13px;overflow:hidden}}th{{background:var(--n);color:white;text-align:left}}th,td{{padding:10px;border-bottom:1px solid #e9eef1;font-size:13px;vertical-align:top}}.bar{{height:12px;background:#edf1f4;border-radius:99px;overflow:hidden}}.fill{{height:100%;background:var(--b)}}.small{{color:var(--m);font-size:12px}}details summary{{cursor:pointer;font-weight:700}}.env{{display:inline-block;padding:3px 7px;border-radius:99px;background:#eef3f7;margin-right:4px;font-size:11px;font-weight:700}}pre{{white-space:pre-wrap;background:#13283b;color:#e8f2f8;padding:12px;border-radius:10px;max-height:180px;overflow:auto}}
+</style>
+</head>
+<body>
+<header><div class=\"in\"><h1>Dashboard GIL dynamique</h1><p id=\"sub\"></p></div></header>
+<main>
+<div class=\"actions\">
+<button class=\"primary\" onclick=\"runAction('excel')\">Importer Excel</button>
+<button class=\"primary\" onclick=\"runAction('confluence')\">Importer Confluence</button>
+<button class=\"primary\" onclick=\"runAction('jira')\">Importer JIRA</button>
+<button onclick=\"runAction('sync')\">Synchroniser les 3</button>
+<button onclick=\"runAction('archive')\">Valider / Archiver Sprint</button>
+<button onclick=\"window.print()\">Générer PDF</button>
+<button onclick=\"location.reload()\">Rafraîchir</button>
+</div>
+<div id=\"app\"></div>
+<h2>Journal des actions locales</h2><pre id=\"log\">Démarre Lancer_Dashboard.cmd pour activer les boutons d'import.</pre>
+</main>
+<script>
+const fallbackData = {data};
+let currentData = fallbackData;
+function esc(x){{return String(x??'').replace(/[&<>\"']/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[c]));}}
+function sum(items){{return (items||[]).reduce((s,x)=>s+Number(x.nombre||0),0);}}
+function envDetails(items){{return ['SIT','UAT'].map(env=>{{const xs=(items||[]).filter(x=>x.environnement===env);return `<details><summary><span class=env>${{env}}</span> ${{sum(xs)}}</summary>${{xs.length?'<ul>'+xs.map(x=>`<li>${{esc(x.domaine)}} / ${{esc(x.sousDomaine)}} — ${{esc(x.flux||x.reference)}} — ${{esc(x.statutSource||x.statut)}} </li>`).join('')+'</ul>':'Aucun élément'}}</details>`}}).join('');}}
+function render(){{
+ const d=currentData,k=d.kpis||{{}},rows=d.comparaisonSprints||[];
+ document.getElementById('sub').textContent=`${{d.sprintCourant||''}} · ${{(d.semainesSprint||[]).join(' / ')}} · généré le ${{d.generatedAt||''}}`;
+ const app=document.getElementById('app');
+ app.innerHTML=`<div class=grid>
+  <div class='card kpi'><span>Flux / demandes total</span><b>${{k.flux||0}}</b></div>
+  <div class='card kpi'><span>Flux livrés</span><b class=green>${{k.pretTester||0}}</b></div>
+  <div class='card kpi'><span>Flux en cours</span><b class=amber>${{(k.nonPret||0)-(k.bugsBloquants||0)}}</b></div>
+  <div class='card kpi'><span>Bloqués / rejetés</span><b class=red>${{k.bugsBloquants||0}}</b></div>
+  <div class='card kpi'><span>Taux livré</span><b>${{k.tauxPret||0}}%</b></div>
+ </div>
+ <h2>Comparaison Sprint N / N-1 <span class=small>(${{esc(d.comparisonSource||'')}})</span></h2>
+ <table><thead><tr><th>Sprint</th><th>Type</th><th>Total</th><th>Livrés</th><th>En cours</th><th>Bloqués / rejetés</th></tr></thead><tbody>${{rows.map(r=>`<tr><td><b>${{esc(r.sprint)}}</b><br><span class=small>${{esc((r.semaines||[]).join(' / '))}}</span></td><td>${{esc(r.typeDonnee)}}</td><td>${{envDetails(r.fluxTotalDetail)}}</td><td>${{envDetails(r.fluxLivresDetail)}}</td><td>${{envDetails(r.fluxEnCoursDetail)}}</td><td>${{envDetails(r.fluxBloquesDetail)}}</td></tr>`).join('')}}</tbody></table>
+ <h2>Graphique flux</h2>
+ <div class=panel>${{rows.map(r=>{{let max=Math.max(r.fluxTotal||1,1);return `<p><b>${{esc(r.sprint)}}</b></p>`+[['Total',r.fluxTotal],['Livrés',r.fluxLivresTotal],['En cours',r.fluxEnCoursTotal],['Bloqués / rejetés',r.fluxBloquesTotal]].map(x=>`<div class=small>${{x[0]}} · ${{x[1]||0}}</div><div class=bar><div class=fill style='width:${{((x[1]||0)*100/max).toFixed(0)}}%'></div></div>`).join('')}}).join('')}}</div>
+ <h2>Anomalies séparées</h2>
+ <table><thead><tr><th>Sprint</th><th>Référence</th><th>Flux</th><th>Domaine</th><th>Env.</th><th>Statut</th><th>Résumé</th></tr></thead><tbody>${{(d.anomaliesDetail||[]).map(a=>`<tr><td>${{esc(a.sprint)}}</td><td>${{esc(a.reference)}}</td><td>${{esc(a.flux)}}</td><td>${{esc(a.domaine)}} / ${{esc(a.sousDomaine)}}</td><td>${{esc(a.environnement)}}</td><td>${{esc(a.statut)}}</td><td>${{esc(a.resume)}}</td></tr>`).join('')||'<tr><td colspan=7>Aucune anomalie déclarée.</td></tr>'}}</tbody></table>`;
+}}
+async function runAction(name){{
+ const log=document.getElementById('log');
+ if(location.protocol==='file:'){{log.textContent='Boutons actifs uniquement via Lancer_Dashboard.cmd : http://127.0.0.1:8765/';return;}}
+ log.textContent='Action en cours : '+name+'...';
+ try{{const r=await fetch('/action/'+encodeURIComponent(name),{{method:'POST'}});const t=await r.text();log.textContent=t;if(r.ok && ['sync','archive','generate','excel','jira','confluence'].includes(name)) setTimeout(()=>location.reload(),1200);}}
+ catch(e){{log.textContent='Erreur action locale : '+e;}}
+}}
+render();
+</script>
+</body></html>"""
 
-payload["flux"] = []
-payload["histoFlux"] = []
-payload["avro"] = []
-payload["config"] = []
-payload["ateliers"] = []
-for r in current:
-    decision = "KO" if r["etatAnomalie"] == "KO" else ("EN COURS" if r["etatFlux"] == "En cours" else "PRÊT")
-    item = {"id": r["id"], "domain": r["domaine"], "subdomain": r["sousDomaine"],
-            "environment": r["environnement"], "type": r["type"], "version": r["version"],
-            "status": r["statut"], "decision": decision}
-    payload["flux"].append(item)
-    payload["histoFlux"].append({"semaine": current_week, "flux": r["id"], "domaine": r["domaine"],
-        "sousDomaine": r["sousDomaine"], "environnement": r["environnement"],
-        "type": r["type"], "statut": decision, "versionLivree": r["version"],
-        "bugsBloquants": int(r["nombre"]) if decision == "KO" else 0,
-        "testsOk": int(r["nombre"]) if decision == "PRÊT" else 0, "evenement": r["statut"],
-        "action": r["commentaire"], "responsable": r["source"]})
-    detail = {"demande": r["id"], "flux": r["id"], "typeDemande": r["sousDomaine"],
-        "environnement": r["environnement"],
-        "typeFlux": r["type"], "statut": decision, "versionAttendue": r["version"],
-        "versionLivree": r["version"], "pret": "Oui" if decision == "PRÊT" else "Non",
-        "bug": r["commentaire"] if decision == "KO" else "", "commentaire": r["commentaire"], "echeance": r["date"]}
-    payload["avro" if r["type"] == "AVRO" else "config"].append(detail)
 
-bad = [r for r in current if r["etatAnomalie"] == "KO" or r["etatFlux"] == "En cours"]
-def anomaly_status(r):
-    if r["etatAnomalie"] == "KO":
-        return "Ouverte"
-    if r["etatFlux"] == "En cours":
-        return "En cours"
-    return "Corrigée"
+def git_commit() -> str:
+    try:
+        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=PROJECT, text=True).strip()
+    except Exception:
+        return ""
 
-def anomaly_severity(r):
-    # La valeur explicite du fichier reste prioritaire lorsqu'elle existe.
-    raw = next((r.get(k) for k in ("severite", "sévérité", "criticite", "criticité", "priorite", "priorité") if r.get(k)), "")
-    if raw:
-        return str(raw)
-    if r["etatAnomalie"] == "KO":
-        return "Critique" if "rollback" in str(r.get("commentaire", "")).lower() else "Majeure"
-    if r["etatFlux"] == "En cours":
-        return "Mineure"
-    return "Non renseignée"
 
-anomaly_records = [r for r in records if is_explicit_anomaly(r)]
-payload["anomaliesDetail"] = [{
-    # Numéro de l'anomalie Jira.
-    "reference":
-        r.get("reference")
-        or r.get("jira_key")
-        or "",
+def main():
+    if not SOURCE.exists():
+        raise SystemExit("Source commun/dashboard_gil_data.json introuvable. Lancez un import ou Synchroniser_Tout.cmd.")
+    data = read_json(SOURCE, {}) or {}
+    payload = build_payload(data)
+    payload["commitGit"] = git_commit()
+    write_json(ROOT / "rapport_gil_v6_w28_data.json", payload)
+    html = render_html(payload)
+    HTML.write_text(html, encoding="utf-8")
+    LEGACY_HTML.write_text(html, encoding="utf-8")
+    print(f"Dashboard généré : {HTML}")
+    print(f"Compatibilité : {LEGACY_HTML}")
+    print(f"Sprint courant : {payload['sprintCourant']} - {payload['kpis']['pretTester']}/{payload['kpis']['flux']} livrés")
 
-    # Référence métier du flux provenant du champ Reference Jira.
-    "flux":
-        r.get("id")
-        or "",
 
-    "jiraKey":
-        r.get("jira_key")
-        or r.get("reference")
-        or "",
-
-    "domaine":
-        r.get("domaine")
-        or "À qualifier",
-
-    "sousDomaine":
-        r.get("sousDomaine")
-        or "À qualifier",
-
-    "environnement":
-        r.get("environnement")
-        or "",
-
-    "statut":
-        (
-            "Corrigée"
-            if r.get("etatAnomalie") == "Corrigée"
-            else (
-                "En cours"
-                if r.get("etatAnomalie") == "En cours"
-                else "Ouverte"
-            )
-        ),
-
-    "statutJira":
-        r.get("statut_jira")
-        or r.get("statut")
-        or "",
-
-    "affectation":
-        r.get("responsable")
-        or bug_owner(r),
-
-    "version":
-        r.get("version")
-        or "",
-
-    "resume":
-        r.get("commentaire")
-        or "",
-
-    "commentaire":
-        r.get("commentaire")
-        or "",
-
-    "description":
-        r.get("description")
-        or "",
-
-    "severite":
-        anomaly_severity(r),
-
-    "url":
-        r.get("url_source")
-        or "",
-
-    "epicParent":
-        r.get("epic_parent")
-        or "",
-
-    "semaine":
-        r.get("semaine")
-        or "",
-
-    "sprint":
-        r.get("sprint")
-        or (
-            current_sprint
-            if r.get("semaine") == current_week
-            else previous_sprint
-        ),
-} for r in anomaly_records]
-payload["prioritesHebdo"] = [{
-    "semaineDecision": previous_week, "semaineSuivi": current_week,
-    "priorite": "P0" if r["etatAnomalie"] == "KO" else "P1",
-    "sujet": f'{"Traiter anomalie" if r["etatAnomalie"] == "KO" else "Finaliser flux"} {r["id"]} ({r["environnement"]})',
-    "origine": r["source"], "statut": r["etatAnomalie"] if r["etatAnomalie"] == "KO" else r["etatFlux"],
-    "objets": f'{r["id"]} / {r["version"]} / {r["environnement"]}',
-    "responsable": f'{r["domaine"]} / {r["sousDomaine"]}', "echeance": r["date"],
-    "decisionAction": r["commentaire"] or "Qualifier, prioriser et planifier le traitement",
-    "niveau": "Rouge" if r["etatAnomalie"] == "KO" else "Orange"
-} for r in bad]
-
-TEMPLATE_DATA.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-html = HTML.read_text(encoding="utf-8")
-replacement = "const fallbackData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n    let currentData = fallbackData;"
-html, count = re.subn(r"const fallbackData = [\s\S]*?;\s*let currentData = fallbackData;", replacement, html, count=1)
-if count != 1:
-    raise SystemExit("Impossible d'injecter les données dans le dashboard classique.")
-HTML.write_text(html, encoding="utf-8")
-print(f"Dashboard classique actualisé : {current_week}, {current_m['ready']}/{current_m['total']} prêts.")
+if __name__ == "__main__":
+    main()

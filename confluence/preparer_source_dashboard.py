@@ -186,9 +186,7 @@ def convert(raw):
         generated_dt = datetime.now().astimezone()
     iso_year, iso_week, _ = generated_dt.isocalendar()
     week_label = f"{iso_year}-W{iso_week:02d}"
-    # Point d'ancrage métier : Sprint 21 = semaines W31/W32 de 2026.
-    sprint_number = 21 + ((iso_year - 2026) * 26) + ((iso_week - 31) // 2)
-    sprint_label = f"Sprint {max(1, sprint_number)}"
+    sprint_label = str(raw.get("sprint") or raw.get("sprintCourant") or f"Semaine {week_label}")
 
     # Compatibilité avec le générateur HTML historique. Le JSON normalisé reste
     # la source principale, tandis que `records` permet au dashboard existant

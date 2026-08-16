@@ -1,0 +1,468 @@
+{
+  "generatedAt": "2026-08-16T20:24:30+02:00",
+  "sources": {
+    "excel": 103
+  },
+  "fichiers": [
+    "excel\\dashboard_gil_data.json"
+  ],
+  "lignes_entree": 103,
+  "lignes_sortie": 12,
+  "doublons": [
+    {
+      "key": "flow|reporting avro acquisition sit|SIT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro acquisition sit|SIT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro acquisition sit|SIT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro acquisition sit|SIT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro acquisition sit|SIT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing sit|SIT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing sit|SIT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing sit|SIT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing sit|SIT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing sit|SIT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing sit|SIT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing sit|SIT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing sit|SIT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing sit|SIT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing sit|SIT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing sit|SIT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing sit|SIT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing sit|SIT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro acquisition uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro acquisition uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro acquisition uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro acquisition uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro acquisition uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro acquisition uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro acquisition uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro acquisition uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro acquisition uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro acquisition uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro acquisition uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro acquisition uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro acquisition uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|reporting avro issuing uat|UAT|Sprint 21|2026-W32",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "anomaly|796002|SIT|Sprint 21",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "anomaly|800038|SIT|Sprint 21",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|SIT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|SIT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|SIT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|SIT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|SIT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|SIT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|SIT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|SIT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|SIT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|SIT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|SIT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|SIT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|SIT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|SIT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|SIT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|SIT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|SIT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|SIT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    },
+    {
+      "key": "flow|simulation dérivée de w32|UAT|Sprint 20|2026-W31",
+      "kept": "excel",
+      "replaced": "excel"
+    }
+  ]
+}

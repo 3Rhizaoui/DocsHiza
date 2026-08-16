@@ -16,7 +16,11 @@ python preparer_source_dashboard.py --input confluence_brut.json --output dashbo
 if errorlevel 1 py -3 preparer_source_dashboard.py --input confluence_brut.json --output dashboard_gil_data.json
 if errorlevel 1 goto :error
 
-copy /y "dashboard_gil_data.json" "..\commun\dashboard_gil_data.json" >nul
+if not exist "..\sources" mkdir "..\sources"
+copy /y "dashboard_gil_data.json" "..\sources\confluence.json" >nul
+python "..\commun\fusionner_sources.py"
+if errorlevel 1 py -3 "..\commun\fusionner_sources.py"
+if errorlevel 1 goto :error
 call "..\commun\generer_dashboard_commun.cmd"
 if errorlevel 1 goto :error
 

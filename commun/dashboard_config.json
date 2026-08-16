@@ -1,0 +1,10 @@
+{
+  "version_calcul": "dynamic-v1",
+  "dashboard_port": 8765,
+  "sources": {
+    "excel": "sources/excel.json",
+    "confluence": "sources/confluence.json",
+    "jira": "sources/jira.json"
+  },
+  "archive_mode": "manual_only"
+}
