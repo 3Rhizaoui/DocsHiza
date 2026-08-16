@@ -66,7 +66,7 @@
 <button onclick="runLocalAction('sync')">Synchroniser les 3</button>
 <button onclick="runLocalAction('archive')">Valider / Archiver Sprint</button>
 <button onclick="window.print()">Générer le rapport PDF</button>
-<button onclick="loadData()">Rafraîchir</button>
+<button onclick="hardRefreshDashboard()">Rafraîchir</button>
 </div></header>
   <main id="dashboardView">
     <div class="hero">
@@ -536,6 +536,11 @@ async function runLocalAction(action){
   } catch (e) {
     alert("Serveur local indisponible. Lance Lancer_Dashboard.cmd puis réessaie.\n\n" + e);
   }
+}
+
+
+function hardRefreshDashboard(){
+  window.location.href = window.location.pathname + '?t=' + Date.now();
 }
 
 </script>
