@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import re
 import shutil
 import subprocess
@@ -13,8 +12,10 @@ PROJECT = ROOT.parent
 JIRA_SOURCE = PROJECT / "jira" / "dashboard_gil_data.json"
 COMMUN_SOURCE = ROOT / "dashboard_gil_data.json"
 HTML = ROOT / "dashboard_gil_sprint21.html"
-JSON_LEGACY = ROOT / "rapport_gil_v6_data.json"
-JSON_TEMPLATE = ROOT / "rapport_gil_v6_w28_data.json"
+GENERATOR = ROOT / "generer_dashboard_gil_classique.py"
+
+FETCH_LINE = "/* JIRA stable : chargement externe rapport_gil_v6_data.json désactivé ; fallbackData embarqué utilisé */"
+COMMENT = "/* JIRA stable : chargement JSON externe desactive, fallbackData embarque utilise */"
 
 
 def stop(msg: str) -> None:
@@ -45,6 +46,28 @@ def run(cmd: list[str], cwd: Path) -> None:
         stop("Commande en erreur : " + " ".join(cmd))
 
 
+def disable_external_json_load(text: str) -> str:
+    text = text.replace(FETCH_LINE, COMMENT)
+
+    text = re.sub(
+        r"try\s*\{\s*const\s+r\s*=\s*await\s+fetch\(\s*['\"]rapport_gil_v6_data\.json['\"]\s*,\s*\{cache\s*:\s*['\"]no-store['\"]\}\s*\)\s*;\s*if\s*\(r\.ok\)\s*data\s*=\s*await\s+r\.json\(\)\s*;\s*\}\s*catch\s*\(\s*e\s*\)\s*\{\s*\}",
+        COMMENT,
+        text,
+        flags=re.S,
+    )
+
+    text = text.replace(
+        "fetch('__disabled_rapport_gil_v6_data.json'",
+        "fetch('__disabled_rapport_gil_v6_data.json'"
+    )
+    text = text.replace(
+        'fetch("__disabled_rapport_gil_v6_data.json',
+        'fetch("__disabled_rapport_gil_v6_data.json'
+    )
+
+    return text
+
+
 def inject_buttons_and_js(html: str) -> str:
     buttons = """<div class="actions">
 <button onclick="runLocalAction('excel')">Importer<br>Excel</button>
@@ -56,7 +79,6 @@ def inject_buttons_and_js(html: str) -> str:
 <button onclick="hardRefreshDashboard()">Rafraîchir</button>
 </div>"""
 
-    # Supprimer toutes les barres actions existantes pour éviter les doublons.
     html = re.sub(r'<div class="actions">.*?</div>', '', html, flags=re.S)
 
     if "</header>" in html:
@@ -83,28 +105,33 @@ function hardRefreshDashboard(){
     if "function runLocalAction" not in html:
         html = html.replace("</script>", js + "\n</script>", 1)
 
+    if "function hardRefreshDashboard" not in html:
+        html = html.replace(
+            "</script>",
+            "\nfunction hardRefreshDashboard(){ window.location.href = window.location.pathname + '?t=' + Date.now(); }\n</script>",
+            1,
+        )
+
     if "<meta charset" not in html.lower():
         html = html.replace("<head>", '<head>\n<meta charset="utf-8">', 1)
 
     return html
 
 
-def extract_fallback_payload(html: str) -> dict:
-    match = re.search(
-        r"const fallbackData\s*=\s*([\s\S]*?);\s*let currentData\s*=\s*fallbackData\s*;",
-        html,
-    )
-    if not match:
-        stop("Impossible de trouver fallbackData dans dashboard_gil_sprint21.html")
+def patch_generator_once() -> None:
+    if not GENERATOR.exists():
+        return
 
-    try:
-        return json.loads(match.group(1))
-    except json.JSONDecodeError as exc:
-        stop(f"fallbackData JSON invalide : {exc}")
+    text = read_text(GENERATOR)
+    new_text = disable_external_json_load(text)
+
+    if new_text != text:
+        write_text(GENERATOR, new_text)
+        print("[OK] generateur patche : il ne remettra plus rapport_gil_v6_data.json")
 
 
 def main() -> None:
-    print("=== PUBLICATION JIRA -> HTML LEGACY ===")
+    print("=== PUBLICATION JIRA -> HTML LEGACY STABLE ===")
 
     if not JIRA_SOURCE.exists():
         stop(f"Source JIRA absente : {JIRA_SOURCE}")
@@ -112,32 +139,31 @@ def main() -> None:
     if not HTML.exists():
         stop(f"HTML legacy absent : {HTML}")
 
-    print("[1/5] Copie JIRA vers commun/dashboard_gil_data.json")
+    patch_generator_once()
+
+    print("[1/4] Copie JIRA vers commun/dashboard_gil_data.json")
     shutil.copy2(JIRA_SOURCE, COMMUN_SOURCE)
 
-    print("[2/5] Génération HTML legacy")
+    print("[2/4] Generation HTML legacy")
     run([sys.executable, "generer_dashboard_gil_classique.py"], ROOT)
 
-    print("[3/5] Réinjection boutons + JS")
+    print("[3/4] Stabilisation HTML")
     html = read_text(HTML)
+    html = disable_external_json_load(html)
     html = inject_buttons_and_js(html)
     write_text(HTML, html)
 
-    print("[4/5] Création du JSON legacy depuis fallbackData")
-    payload = extract_fallback_payload(html)
-    JSON_LEGACY.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    JSON_TEMPLATE.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    print("[4/4] Controle")
+    html2 = read_text(HTML)
 
-    print("[5/5] Résumé publication")
-    print("sprintCourant   :", payload.get("sprintCourant"))
-    print("semaineCourante :", payload.get("semaineCourante"))
-    print("kpis            :", payload.get("kpis"))
-    print("comparaison     :", len(payload.get("comparaisonSprints") or []))
+    if "fetch('rapport_gil_v6_data.json'" in html2 or 'fetch("rapport_gil_v6_data.json' in html2:
+        stop("Le HTML contient encore un fetch actif vers rapport_gil_v6_data.json")
 
-    print()
-    print("[OK] Publication JIRA stabilisée.")
+    if "function runLocalAction" not in html2:
+        stop("runLocalAction absent apres publication")
+
+    print("[OK] Publication JIRA stable.")
     print("HTML :", HTML)
-    print("JSON :", JSON_LEGACY)
 
 
 if __name__ == "__main__":
