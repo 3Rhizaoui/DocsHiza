@@ -285,6 +285,112 @@ def build_payload(rows: list[dict]) -> dict:
     }
 
 
+
+def enrich_score_detail(payload: dict) -> dict:
+    """Ajoute le détail du calcul de santé sprint sans changer la règle historique.
+
+    Règle conservée :
+    - score brut = flux prêts / total flux
+    - pénalité = bugsBloquants * 3
+    - pénalité max = 35 points
+    - score final = score brut - pénalité
+    """
+
+    def to_int(value, default=0):
+        try:
+            if value is None or value == "":
+                return default
+            return int(round(float(value)))
+        except Exception:
+            return default
+
+    tendance = payload.setdefault("tendanceHebdo", {})
+    rows = tendance.get("rows") or []
+
+    current = tendance.get("current")
+    if not isinstance(current, dict):
+        current = rows[-1] if rows and isinstance(rows[-1], dict) else {}
+
+    kpis = payload.setdefault("kpis", {})
+
+    total_flux = to_int(
+        current.get("flux")
+        or current.get("total")
+        or kpis.get("flux")
+        or kpis.get("total")
+    )
+
+    flux_prets = to_int(
+        current.get("pretTester")
+        or current.get("prets")
+        or current.get("ready")
+        or kpis.get("pretTester")
+        or kpis.get("prets")
+        or kpis.get("ready")
+    )
+
+    bugs_bloquants = to_int(
+        current.get("bugsBloquants")
+        or kpis.get("bugsBloquants")
+        or 0
+    )
+
+    score_brut = round((flux_prets / total_flux) * 100) if total_flux else 100
+    penalite_unitaire = 3
+    penalite_max = 35
+    penalite = min(penalite_max, bugs_bloquants * penalite_unitaire)
+    score_final = max(0, min(100, round(score_brut - penalite)))
+
+    niveau = "Vert" if score_final >= 80 else ("Orange" if score_final >= 60 else "Rouge")
+
+    detail = {
+        "totalFlux": total_flux,
+        "fluxPrets": flux_prets,
+        "bugsBloquants": bugs_bloquants,
+        "scoreBrut": score_brut,
+        "penaliteUnitaireBugBloquant": penalite_unitaire,
+        "penaliteMax": penalite_max,
+        "penalite": penalite,
+        "scoreFinal": score_final,
+        "niveau": niveau,
+        "formule": "scoreFinal = round(fluxPrets / totalFlux * 100) - min(35, bugsBloquants * 3)",
+        "regle": "Règle historique conservée : seule la volumétrie des bugs bloquants pénalise le score.",
+    }
+
+    kpis.update({
+        "flux": total_flux,
+        "pretTester": flux_prets,
+        "bugsBloquants": bugs_bloquants,
+        "scoreBrut": score_brut,
+        "penalite": penalite,
+        "scoreFinal": score_final,
+        "taux": score_final,
+        "niveau": niveau,
+    })
+
+    current.update({
+        "flux": total_flux,
+        "pretTester": flux_prets,
+        "nonPret": max(0, total_flux - flux_prets),
+        "bugsBloquants": bugs_bloquants,
+        "scoreBrut": score_brut,
+        "penalite": penalite,
+        "scoreFinal": score_final,
+        "sante": niveau,
+    })
+
+    if rows:
+        rows[-1].update(current)
+    else:
+        rows.append(current)
+
+    tendance["rows"] = rows
+    tendance["current"] = current
+
+    payload["statutSprintCalcul"] = detail
+
+    return payload
+
 def json_for_script(payload: dict) -> str:
     text = json.dumps(payload, ensure_ascii=False, indent=2)
     text = text.replace("</", "<\\/")
@@ -363,6 +469,7 @@ function hardRefreshDashboard(){
 
 
 def replace_fallback_data(html: str, payload: dict) -> str:
+    payload = enrich_score_detail(payload)
     clean_json = json_for_script(payload)
 
     new_block = "const fallbackData = " + clean_json + ";\nlet currentData = fallbackData;"
