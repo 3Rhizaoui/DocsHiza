@@ -468,6 +468,170 @@ function hardRefreshDashboard(){
     return html
 
 
+
+def inject_statut_sprint_tooltips(html: str) -> str:
+    """Injecte les bulles d'explication du bloc Statut du Sprint."""
+
+    css = r"""
+<style id="statutSprintCalcStyle">
+.statutCalcBox{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:10px;
+  margin:12px auto 4px auto;
+  max-width:980px;
+  font-size:12px;
+}
+.statutCalcBox .calcPill{
+  position:relative;
+  border:1px solid #cbd5e1;
+  border-radius:10px;
+  background:#f8fafc;
+  padding:8px 10px;
+  min-width:120px;
+  text-align:center;
+  cursor:help;
+}
+.statutCalcBox .calcPill b{
+  display:block;
+  color:#334155;
+  font-size:11px;
+}
+.statutCalcBox .calcPill span{
+  display:block;
+  color:#0f172a;
+  font-weight:800;
+  font-size:15px;
+  margin-top:2px;
+}
+.statutCalcBox .calcPill:hover::after{
+  content:attr(data-tip);
+  position:absolute;
+  left:50%;
+  bottom:calc(100% + 8px);
+  transform:translateX(-50%);
+  width:280px;
+  background:#111827;
+  color:white;
+  padding:10px;
+  border-radius:8px;
+  box-shadow:0 8px 20px rgba(0,0,0,.25);
+  z-index:9999;
+  white-space:normal;
+  line-height:1.35;
+  text-align:left;
+}
+.statutCalcBox .calcPill:hover::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:100%;
+  transform:translateX(-50%);
+  border:8px solid transparent;
+  border-top-color:#111827;
+  z-index:9999;
+}
+.statutCalcFormula{
+  width:100%;
+  text-align:center;
+  color:#475569;
+  font-size:12px;
+  margin-top:4px;
+}
+</style>
+"""
+
+    js = r"""
+<script id="statutSprintCalcTooltipScript">
+(function(){
+  function esc(v){
+    return String(v ?? '').replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function readCalc(data){
+    data = data || {};
+    const k = data.kpis || {};
+    const t = data.tendanceHebdo || {};
+    const rows = t.rows || [];
+    const current = t.current || rows[rows.length - 1] || {};
+    const c = data.statutSprintCalcul || {};
+
+    const totalFlux = c.totalFlux ?? k.flux ?? k.total ?? current.flux ?? current.total ?? 0;
+    const fluxPrets = c.fluxPrets ?? k.pretTester ?? k.prets ?? current.pretTester ?? current.prets ?? 0;
+    const bugsBloquants = c.bugsBloquants ?? k.bugsBloquants ?? current.bugsBloquants ?? 0;
+
+    const scoreBrut = c.scoreBrut ?? Math.round(totalFlux ? fluxPrets / totalFlux * 100 : 100);
+    const penalite = c.penalite ?? Math.min(35, Number(bugsBloquants || 0) * 3);
+    const scoreFinal = c.scoreFinal ?? Math.max(0, Math.min(100, Math.round(scoreBrut - penalite)));
+    const niveau = c.niveau ?? (scoreFinal >= 80 ? 'Vert' : scoreFinal >= 60 ? 'Orange' : 'Rouge');
+
+    return {totalFlux, fluxPrets, bugsBloquants, scoreBrut, penalite, scoreFinal, niveau};
+  }
+
+  function findStatutSection(){
+    const sections = Array.from(document.querySelectorAll('section'));
+    return sections.find(function(s){
+      const h = s.querySelector('h2');
+      return h && /Statut du Sprint/i.test(h.textContent || '');
+    });
+  }
+
+  function decorateStatutSprintTooltips(){
+    let data;
+    try { data = currentData || fallbackData; } catch(e) { data = null; }
+    if (!data) return;
+
+    const c = readCalc(data);
+    const section = findStatutSection();
+    if (!section) return;
+
+    let box = section.querySelector('.statutCalcBox');
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'statutCalcBox';
+      section.appendChild(box);
+    }
+
+    box.innerHTML =
+      '<div class="calcPill" title="Nombre total de flux suivis dans le sprint, hors lignes purement anomalies." data-tip="Total flux : nombre de flux suivis pour le sprint. Les anomalies servent à la pénalité mais ne sont pas comptées comme flux prêts."><b>Total flux</b><span>'+esc(c.totalFlux)+'</span></div>' +
+      '<div class="calcPill" title="Flux considérés prêts pour arrimage." data-tip="Flux prêts : nombre de flux dont le statut est prêt, livré ou prêt pour arrimage selon la source préparée."><b>Flux prêts</b><span>'+esc(c.fluxPrets)+'</span></div>' +
+      '<div class="calcPill" title="Score brut = flux prêts / total flux × 100." data-tip="Score brut : round(flux prêts / total flux × 100). Exemple : 16 / 18 = 88,89 %, arrondi à 89 %."><b>Score brut</b><span>'+esc(c.scoreBrut)+'%</span></div>' +
+      '<div class="calcPill" title="Bugs bloquants utilisés pour appliquer la pénalité historique." data-tip="Bugs bloquants : nombre d’anomalies bloquantes prises en compte par la règle historique. Chaque bug bloquant enlève 3 points."><b>Bugs bloquants</b><span>'+esc(c.bugsBloquants)+'</span></div>' +
+      '<div class="calcPill" title="Pénalité = min(35, bugs bloquants × 3)." data-tip="Pénalité : min(35, bugs bloquants × 3). Le plafond de 35 évite qu’une volumétrie élevée d’anomalies fasse tomber le score de façon illimitée."><b>Pénalité</b><span>-'+esc(c.penalite)+' pts</span></div>' +
+      '<div class="calcPill" title="Score final affiché par la jauge." data-tip="Score final : score brut - pénalité. C’est cette valeur qui pilote la jauge et le niveau Rouge, Orange ou Vert."><b>Score final</b><span>'+esc(c.scoreFinal)+'% '+esc(c.niveau)+'</span></div>' +
+      '<div class="statutCalcFormula">Méthode : score final = round(flux prêts / total flux × 100) - min(35, bugs bloquants × 3). Seuils : Rouge 0–59 %, Orange 60–79 %, Vert 80–100 %.</div>';
+  }
+
+  const previousRender = (typeof render === 'function') ? render : null;
+  if (previousRender && !previousRender.__statutCalcWrapped) {
+    const wrapped = function(data){
+      previousRender(data);
+      setTimeout(decorateStatutSprintTooltips, 0);
+    };
+    wrapped.__statutCalcWrapped = true;
+    render = wrapped;
+  }
+
+  window.addEventListener('load', function(){
+    setTimeout(decorateStatutSprintTooltips, 150);
+  });
+
+  window.decorateStatutSprintTooltips = decorateStatutSprintTooltips;
+})();
+</script>
+"""
+
+    if "statutSprintCalcStyle" not in html:
+        html = html.replace("</head>", css + "\n</head>", 1) if "</head>" in html else css + "\n" + html
+
+    if "statutSprintCalcTooltipScript" not in html:
+        html = html.replace("</body>", js + "\n</body>", 1) if "</body>" in html else html + "\n" + js
+
+    return html
+
 def replace_fallback_data(html: str, payload: dict) -> str:
     payload = enrich_score_detail(payload)
     clean_json = json_for_script(payload)
@@ -488,26 +652,34 @@ def replace_fallback_data(html: str, payload: dict) -> str:
 
 
 def verify_html(html: str, payload: dict) -> None:
+    """Contrôle non destructif après publication.
+
+    On ne re-parse pas fallbackData depuis le HTML.
+    Le payload est déjà construit en Python puis injecté avec json.dumps.
+    """
+
     if "fetch('rapport_gil_v6_data.json'" in html or 'fetch("rapport_gil_v6_data.json' in html:
         stop("Le HTML contient encore un fetch actif vers rapport_gil_v6_data.json")
 
     if "function runLocalAction" not in html:
         stop("runLocalAction absent après publication")
 
-    match = re.search(r"const fallbackData\s*=\s*([\s\S]*?);\s*let currentData", html)
-    if not match:
+    if "const fallbackData" not in html or "let currentData = fallbackData" not in html:
         stop("fallbackData absent après publication")
 
-    try:
-        parsed = json.loads(match.group(1))
-    except json.JSONDecodeError as exc:
-        stop(f"fallbackData JSON invalide après publication : {exc}")
+    required_tokens = [
+        '"statutSprintCalcul"',
+        '"scoreBrut"',
+        '"penalite"',
+        '"scoreFinal"',
+        '"niveau"',
+        "statutSprintCalcTooltipScript",
+        "decorateStatutSprintTooltips",
+    ]
 
-    expected_total = payload.get("kpis", {}).get("total", 0)
-    actual_total = parsed.get("kpis", {}).get("total", 0)
-
-    if expected_total and not actual_total:
-        stop("fallbackData publié avec total à 0 alors que la source JIRA contient des flux")
+    missing = [token for token in required_tokens if token not in html]
+    if missing:
+        stop("Détail du calcul statut sprint ou bulles absents du HTML : " + ", ".join(missing))
 
 
 def main() -> None:
@@ -539,6 +711,7 @@ def main() -> None:
     html = disable_external_json_load(html)
     html = inject_buttons_and_js(html)
     html = replace_fallback_data(html, payload)
+    html = inject_statut_sprint_tooltips(html)
     write_text(HTML, html)
 
     print("[4/4] Contrôle")
