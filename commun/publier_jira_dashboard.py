@@ -391,6 +391,82 @@ def enrich_score_detail(payload: dict) -> dict:
 
     return payload
 
+
+def load_sprint_context() -> dict:
+    """Lit le diagnostic Jira et retourne les noms de sprint détectés."""
+
+    diagnostic = PROJECT / "jira" / "jira_diagnostic.json"
+    if not diagnostic.exists():
+        return {}
+
+    try:
+        data = json.loads(diagnostic.read_text(encoding="utf-8", errors="replace"))
+    except Exception:
+        return {}
+
+    sprints = data.get("sprints") or data.get("diagnostic_sprints") or {}
+    courant = sprints.get("courant") or sprints.get("current") or {}
+    precedent = sprints.get("precedent") or sprints.get("previous") or {}
+
+    return {
+        "projectKey": sprints.get("projectKey") or data.get("project_key") or "",
+        "courant": courant,
+        "precedent": precedent,
+        "nomCourant": courant.get("nom") or courant.get("name") or "",
+        "nomPrecedent": precedent.get("nom") or precedent.get("name") or "",
+        "sprints": sprints,
+    }
+
+
+def apply_sprint_context(payload: dict) -> dict:
+    """Injecte les noms de sprint Jira sans modifier le calcul."""
+
+    ctx = load_sprint_context()
+    current_name = ctx.get("nomCourant") or payload.get("sprintCourant") or "Sprint courant"
+    previous_name = ctx.get("nomPrecedent") or payload.get("sprintPrecedent") or "Sprint N-1"
+
+    payload["sprintCourant"] = current_name
+    payload["sprintPrecedent"] = previous_name
+    payload["diagnosticSprintsJira"] = ctx
+
+    comparaison = payload.get("comparaisonSprints")
+    if isinstance(comparaison, list) and comparaison:
+        if len(comparaison) >= 2:
+            comparaison[0]["sprint"] = previous_name
+            comparaison[0]["typeDonnee"] = comparaison[0].get("typeDonnee") or "Sprint N-1"
+            comparaison[-1]["sprint"] = current_name
+            comparaison[-1]["typeDonnee"] = comparaison[-1].get("typeDonnee") or "Réel"
+        else:
+            comparaison[0]["sprint"] = current_name
+            comparaison[0]["typeDonnee"] = comparaison[0].get("typeDonnee") or "Réel"
+
+    for key in [
+        "fluxPrets",
+        "fluxPretsArrimage",
+        "histoFlux",
+        "histoAnomalies",
+        "anomalies",
+        "anomaliesDetail",
+        "prioritesHebdo",
+    ]:
+        items = payload.get(key)
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if isinstance(item, dict):
+                sprint = str(item.get("sprint") or "")
+                if not sprint or sprint.startswith("Sprint "):
+                    item["sprint"] = current_name
+
+    tendance = payload.get("tendanceHebdo") or {}
+    rows = tendance.get("rows") or []
+    if rows and isinstance(rows[-1], dict):
+        rows[-1]["sprint"] = current_name
+    if isinstance(tendance.get("current"), dict):
+        tendance["current"]["sprint"] = current_name
+
+    return payload
+
 def json_for_script(payload: dict) -> str:
     text = json.dumps(payload, ensure_ascii=False, indent=2)
     text = text.replace("</", "<\\/")
@@ -633,6 +709,7 @@ def inject_statut_sprint_tooltips(html: str) -> str:
     return html
 
 def replace_fallback_data(html: str, payload: dict) -> str:
+    payload = apply_sprint_context(payload)
     payload = enrich_score_detail(payload)
     clean_json = json_for_script(payload)
 

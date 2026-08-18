@@ -45,6 +45,22 @@ function jqlFromValue(value, name) {
   );
 }
 
+
+function extractProjectKeyFromJql(items) {
+  for (const item of (items || [])) {
+    const jql = typeof item === 'string' ? item : String(item.jql || '');
+    const match = jql.match(/\bproject\s*=\s*"?([A-Z][A-Z0-9_]+)"?/i);
+    if (match) return match[1];
+  }
+  return '';
+}
+
+function quoteJqlProject(value) {
+  const text = String(value || '').trim();
+  if (!text) return 'AERL_GIL';
+  return /^[A-Z][A-Z0-9_]*$/.test(text) ? text : '"' + text.replace(/"/g, '\\"') + '"';
+}
+
 function readConfiguration() {
   if (fs.existsSync(CONFIG_FILE)) {
     const config = JSON.parse(
@@ -481,6 +497,227 @@ async function fetchEpicChildren(
     children,
     errors,
     names
+  };
+}
+
+
+function normalizeList(value) {
+  if (value === null || value === undefined) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function parseSprintString(text) {
+  const s = String(text || '');
+  if (!s) return null;
+
+  function get(key) {
+    const m = s.match(new RegExp(key + '=([^,\\]]*)'));
+    return m ? String(m[1] || '').trim() : '';
+  }
+
+  const name = get('name');
+  if (!name && !/Sprint/i.test(s)) return null;
+
+  return {
+    id: get('id'),
+    name: name || s,
+    state: get('state'),
+    startDate: get('startDate'),
+    endDate: get('endDate'),
+    completeDate: get('completeDate')
+  };
+}
+
+function parseSprintEntry(value) {
+  if (!value) return null;
+
+  if (typeof value === 'string') {
+    return parseSprintString(value);
+  }
+
+  if (typeof value === 'object') {
+    const name = value.name || value.nom || value.sprintName;
+    if (!name && !value.id) return null;
+
+    return {
+      id: value.id || value.sprintId || '',
+      name: name || String(value.id || ''),
+      state: value.state || value.etat || '',
+      startDate: value.startDate || value.start_date || '',
+      endDate: value.endDate || value.end_date || '',
+      completeDate: value.completeDate || value.complete_date || ''
+    };
+  }
+
+  return null;
+}
+
+function sprintFieldIds(names) {
+  const ids = [];
+  for (const [id, label] of Object.entries(names || {})) {
+    const text = String(label || '').toLowerCase();
+    if (text === 'sprint' || text.includes('sprint')) ids.push(id);
+  }
+  return ids;
+}
+
+function issueSprints(issue, names) {
+  const fields = issue.fields || {};
+  const candidates = [];
+
+  for (const id of sprintFieldIds(names)) {
+    candidates.push(fields[id]);
+  }
+
+  // Fallback : certains Jira exposent le champ Sprint sans nom clair.
+  for (const [id, value] of Object.entries(fields)) {
+    if (!/^customfield_/.test(id)) continue;
+    const list = normalizeList(value);
+    if (list.some(v => String(JSON.stringify(v || '')).includes('Sprint'))) {
+      candidates.push(value);
+    }
+  }
+
+  const sprints = [];
+  for (const candidate of candidates) {
+    for (const item of normalizeList(candidate)) {
+      const sprint = parseSprintEntry(item);
+      if (sprint && sprint.name) sprints.push(sprint);
+    }
+  }
+
+  const seen = new Set();
+  return sprints.filter(s => {
+    const key = String(s.id || s.name);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function issueTypeName(issue) {
+  return String(issue?.fields?.issuetype?.name || issue?.fields?.issuetype || '').trim();
+}
+
+function issueKind(issue) {
+  const type = issueTypeName(issue).toLowerCase();
+  return /bug|anomal/i.test(type) ? 'anomalie' : 'flux';
+}
+
+function sprintSortValue(sprint) {
+  const dateValue = Date.parse(sprint.endDate || sprint.completeDate || sprint.startDate || '');
+  if (!Number.isNaN(dateValue)) return dateValue;
+  const numericId = Number(sprint.id || 0);
+  return Number.isNaN(numericId) ? 0 : numericId;
+}
+
+function aggregateSprintIssues(label, result) {
+  const names = result.names || {};
+  const buckets = new Map();
+
+  for (const issue of (result.issues || [])) {
+    const sprints = issueSprints(issue, names);
+    const kind = issueKind(issue);
+
+    const effectiveSprints = sprints.length ? sprints : [{
+      id: '',
+      name: 'Sans sprint',
+      state: '',
+      startDate: '',
+      endDate: '',
+      completeDate: ''
+    }];
+
+    for (const sprint of effectiveSprints) {
+      const key = String(sprint.id || sprint.name);
+      if (!buckets.has(key)) {
+        buckets.set(key, {
+          id: sprint.id || '',
+          nom: sprint.name || 'Sans sprint',
+          etat: sprint.state || '',
+          startDate: sprint.startDate || '',
+          endDate: sprint.endDate || '',
+          completeDate: sprint.completeDate || '',
+          source: label,
+          total: 0,
+          flux: 0,
+          anomalies: 0,
+          cles: [],
+          clesFlux: [],
+          clesAnomalies: []
+        });
+      }
+
+      const bucket = buckets.get(key);
+      bucket.total += 1;
+      bucket.cles.push(issue.key);
+
+      if (kind === 'anomalie') {
+        bucket.anomalies += 1;
+        bucket.clesAnomalies.push(issue.key);
+      } else {
+        bucket.flux += 1;
+        bucket.clesFlux.push(issue.key);
+      }
+    }
+  }
+
+  return Array.from(buckets.values()).sort((a, b) => sprintSortValue(b) - sprintSortValue(a));
+}
+
+function pickCurrentSprint(buckets) {
+  return buckets.find(s => /active|open|ouvert/i.test(String(s.etat || ''))) || buckets[0] || null;
+}
+
+function pickPreviousSprint(buckets, current) {
+  const currentName = current ? String(current.nom || '') : '';
+  return buckets.find(s => String(s.nom || '') !== currentName) || buckets[0] || null;
+}
+
+async function collectSprintDiagnostics(cdp, baseUrl, projectKey) {
+  const project = quoteJqlProject(projectKey);
+
+  const jqlCourant = `project = ${project} AND Sprint in openSprints() ORDER BY updated DESC`;
+  const jqlFermes = `project = ${project} AND Sprint in closedSprints() ORDER BY updated DESC`;
+
+  console.log(`\n[sprints_courants] JQL envoyée : ${jqlCourant}`);
+  const courantResult = await executeJql(cdp, baseUrl, jqlCourant);
+  console.log(`[sprints_courants] ${courantResult.issues.length}/${courantResult.total || 0} tickets récupérés`);
+
+  console.log(`\n[sprints_fermes] JQL envoyée : ${jqlFermes}`);
+  const fermesResult = await executeJql(cdp, baseUrl, jqlFermes);
+  console.log(`[sprints_fermes] ${fermesResult.issues.length}/${fermesResult.total || 0} tickets récupérés`);
+
+  const bucketsCourants = aggregateSprintIssues('openSprints', courantResult);
+  const bucketsFermes = aggregateSprintIssues('closedSprints', fermesResult);
+
+  const courant = pickCurrentSprint(bucketsCourants);
+  const precedent = pickPreviousSprint(bucketsFermes, courant);
+
+  console.log(`[diagnostic_sprints] Sprint courant détecté : ${courant ? courant.nom : '(non trouvé)'}`);
+  console.log(`[diagnostic_sprints] Sprint précédent détecté : ${precedent ? precedent.nom : '(non trouvé)'}`);
+
+  return {
+    projectKey,
+    generated_at: new Date().toISOString(),
+    courant,
+    precedent,
+    sprintsCourants: bucketsCourants,
+    sprintsFermes: bucketsFermes.slice(0, 20),
+    requetes: {
+      courant: {
+        nom: 'sprints_courants',
+        jql: jqlCourant,
+        total_api: Number(courantResult.total || 0),
+        tickets_recuperes: courantResult.issues.length
+      },
+      fermes: {
+        nom: 'sprints_fermes',
+        jql: jqlFermes,
+        total_api: Number(fermesResult.total || 0),
+        tickets_recuperes: fermesResult.issues.length
+      }
+    }
   };
 }
 
