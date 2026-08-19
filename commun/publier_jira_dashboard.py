@@ -497,6 +497,13 @@ def apply_sprint_comparison_from_jira(payload: dict) -> dict:
     if not sprint_data:
         return payload
 
+    if sprint_data.get("reliable") is not True:
+        payload["diagnosticSprintsJira"] = sprint_data
+        payload["sprintDetectionWarning"] = sprint_data.get("warnings") or [
+            "Détection sprint Jira non fiable : comparaison dynamique non appliquée."
+        ]
+        return payload
+
     courant = sprint_data.get("courant") or {}
     precedent = sprint_data.get("precedent") or {}
 
@@ -782,6 +789,20 @@ def inject_statut_sprint_tooltips(html: str) -> str:
     return html
 
 
+
+def has_reliable_sprints_dashboard() -> bool:
+    data = load_sprints_dashboard()
+    return bool(data and data.get("reliable") is True)
+
+
+def clean_dynamic_sprint_labels(html: str) -> str:
+    return re.sub(
+        r'\n?<script id="dynamicSprintLabelsScript">[\s\S]*?</script>\n?',
+        "\n",
+        html,
+        flags=re.S,
+    )
+
 def inject_dynamic_sprint_labels(html: str) -> str:
     """Met à jour les libellés visibles des sprints dans le HTML legacy.
 
@@ -1008,7 +1029,8 @@ def main() -> None:
     html = inject_buttons_and_js(html)
     html = replace_fallback_data(html, payload)
     html = inject_statut_sprint_tooltips(html)
-    html = inject_dynamic_sprint_labels(html)
+    html = clean_dynamic_sprint_labels(html)
+    html = inject_dynamic_sprint_labels(html) if has_reliable_sprints_dashboard() else html
     write_text(HTML, html)
 
     print("[4/4] Contrôle")

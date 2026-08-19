@@ -721,8 +721,218 @@ async function collectSprintDiagnostics(cdp, baseUrl, projectKey) {
   };
 }
 
+
+function officialProjectKeyFromQueries(queries) {
+  for (const item of (queries || [])) {
+    const jql = String(item.jql || item.query || item || '');
+    const m = jql.match(/\bproject\s*=\s*"?([A-Z][A-Z0-9_]+)"?/i);
+    if (m) return m[1];
+  }
+  return 'AERL_GIL';
+}
+
+async function executeJiraGet(cdp, url) {
+  const expression = `
+    (async () => {
+      const url = ${JSON.stringify(url)};
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {'Accept': 'application/json'}
+      });
+      const text = await response.text();
+      if (!response.ok) {
+        throw new Error('API JIRA GET ' + response.status + ' : ' + text.slice(0, 300));
+      }
+      return JSON.parse(text);
+    })()
+  `;
+  const result = await cdp.send('Runtime.evaluate', {expression, awaitPromise: true, returnByValue: true});
+  if (result.exceptionDetails) {
+    const detail = result.exceptionDetails.exception?.description || result.exceptionDetails.text;
+    throw new Error(detail || 'Erreur JavaScript API Jira');
+  }
+  if (!result.result || !result.result.value) throw new Error('Réponse Jira vide');
+  return result.result.value;
+}
+
+async function agilePaged(cdp, baseUrl, path, itemKey) {
+  const items = [];
+  let names = {};
+  let startAt = 0;
+  const maxResults = 100;
+
+  while (true) {
+    const sep = path.includes('?') ? '&' : '?';
+    const url = `${baseUrl}${path}${sep}startAt=${startAt}&maxResults=${maxResults}`;
+    const page = await executeJiraGet(cdp, url);
+
+    const pageItems = page[itemKey] || page.values || page.issues || [];
+    items.push(...pageItems);
+    names = Object.assign(names, page.names || {});
+
+    const total = Number(page.total ?? items.length);
+    const isLast = page.isLast === true;
+
+    if (!pageItems.length || isLast || items.length >= total) break;
+    startAt += pageItems.length;
+  }
+
+  return {items, names};
+}
+
+function sprintDateValue(sprint) {
+  const d = Date.parse(sprint.endDate || sprint.completeDate || sprint.startDate || '');
+  if (!Number.isNaN(d)) return d;
+  return Number(sprint.id || 0);
+}
+
+function officialIssueType(issue) {
+  const v = issue?.fields?.issuetype;
+  return String((v && typeof v === 'object' ? v.name : v) || '');
+}
+
+function officialIsAnomaly(issue) {
+  return /bug|anomal/i.test(officialIssueType(issue));
+}
+
+function filterProjectIssues(issues, projectKey) {
+  const prefix = String(projectKey || '').trim() + '-';
+  return (issues || []).filter(issue => {
+    const key = String(issue.key || '');
+    const pkey = String(issue?.fields?.project?.key || '');
+    return !projectKey || key.startsWith(prefix) || pkey === projectKey;
+  });
+}
+
+function summarizeSprint(sprint, issues, projectKey) {
+  const projectIssues = filterProjectIssues(issues, projectKey);
+  const flux = projectIssues.filter(issue => !officialIsAnomaly(issue));
+  const anomalies = projectIssues.filter(issue => officialIsAnomaly(issue));
+
+  return {
+    id: sprint.id,
+    nom: sprint.name,
+    etat: sprint.state,
+    startDate: sprint.startDate || '',
+    endDate: sprint.endDate || '',
+    completeDate: sprint.completeDate || '',
+    total: projectIssues.length,
+    flux: flux.length,
+    anomalies: anomalies.length,
+    cles: projectIssues.map(issue => issue.key).filter(Boolean),
+    clesFlux: flux.map(issue => issue.key).filter(Boolean),
+    clesAnomalies: anomalies.map(issue => issue.key).filter(Boolean)
+  };
+}
+
+async function collectOfficialSprintDiagnostics(cdp, baseUrl, projectKey) {
+  projectKey = projectKey || 'AERL_GIL';
+
+  console.log('');
+  console.log('[diagnostic_sprints_officiel] Recherche des boards Jira du projet...');
+  const boardsResult = await agilePaged(
+    cdp,
+    baseUrl,
+    `/rest/agile/1.0/board?projectKeyOrId=${encodeURIComponent(projectKey)}`,
+    'values'
+  );
+
+  const boards = boardsResult.items || [];
+  if (!boards.length) {
+    throw new Error(`Aucun board Jira trouvé pour le projet ${projectKey}`);
+  }
+
+  let selected = null;
+
+  for (const board of boards) {
+    try {
+      const sprintResult = await agilePaged(
+        cdp,
+        baseUrl,
+        `/rest/agile/1.0/board/${board.id}/sprint?state=active,closed`,
+        'values'
+      );
+
+      const sprints = sprintResult.items || [];
+      const active = sprints.filter(s => String(s.state || '').toLowerCase() === 'active')
+        .sort((a, b) => sprintDateValue(b) - sprintDateValue(a))[0];
+      const closed = sprints.filter(s => String(s.state || '').toLowerCase() === 'closed')
+        .sort((a, b) => sprintDateValue(b) - sprintDateValue(a));
+
+      if (active && closed.length) {
+        selected = {board, sprints, active, previous: closed[0]};
+        break;
+      }
+
+      if (!selected && active) selected = {board, sprints, active, previous: closed[0] || null};
+    } catch (error) {
+      console.log(`[diagnostic_sprints_officiel] Board ${board.id} ignoré : ${error.message || error}`);
+    }
+  }
+
+  if (!selected || !selected.active || !selected.previous) {
+    throw new Error('Impossible de trouver un sprint actif et un sprint fermé via les boards Jira.');
+  }
+
+  console.log(`[diagnostic_sprints_officiel] Board détecté : ${selected.board.id} - ${selected.board.name}`);
+  console.log(`[diagnostic_sprints_officiel] Sprint courant officiel : ${selected.active.id} - ${selected.active.name}`);
+  console.log(`[diagnostic_sprints_officiel] Sprint précédent officiel : ${selected.previous.id} - ${selected.previous.name}`);
+
+  const currentIssuesResult = await agilePaged(
+    cdp,
+    baseUrl,
+    `/rest/agile/1.0/sprint/${selected.active.id}/issue?fields=*all&expand=names`,
+    'issues'
+  );
+
+  const previousIssuesResult = await agilePaged(
+    cdp,
+    baseUrl,
+    `/rest/agile/1.0/sprint/${selected.previous.id}/issue?fields=*all&expand=names`,
+    'issues'
+  );
+
+  const currentIssues = filterProjectIssues(currentIssuesResult.items || [], projectKey);
+  const previousIssues = filterProjectIssues(previousIssuesResult.items || [], projectKey);
+
+  const names = Object.assign({}, currentIssuesResult.names || {}, previousIssuesResult.names || {});
+
+  const courant = summarizeSprint(selected.active, currentIssues, projectKey);
+  const precedent = summarizeSprint(selected.previous, previousIssues, projectKey);
+
+  console.log(`[diagnostic_sprints_officiel] Tickets sprint courant : ${courant.total} | flux: ${courant.flux} | anomalies: ${courant.anomalies}`);
+  console.log(`[diagnostic_sprints_officiel] Tickets sprint précédent : ${precedent.total} | flux: ${precedent.flux} | anomalies: ${precedent.anomalies}`);
+
+  return {
+    methode: 'agile_api',
+    reliable: true,
+    generated_at: new Date().toISOString(),
+    projectKey,
+    board: {
+      id: selected.board.id,
+      name: selected.board.name,
+      type: selected.board.type || ''
+    },
+    courant,
+    precedent,
+    sprints: selected.sprints.map(s => ({
+      id: s.id,
+      nom: s.name,
+      etat: s.state,
+      startDate: s.startDate || '',
+      endDate: s.endDate || '',
+      completeDate: s.completeDate || ''
+    })),
+    issuesCourant: currentIssues,
+    issuesPrecedent: previousIssues,
+    names
+  };
+}
+
 async function main() {
   const config = readConfiguration();
+  if (!config.projectKey) config.projectKey = officialProjectKeyFromQueries(config.queries);
   const executable = browserPath();
 
   fs.mkdirSync(

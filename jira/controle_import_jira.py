@@ -34,7 +34,7 @@ def rows_from_source(data):
 
 print()
 print("============================================================")
-print("[4/4] CONTROLE FINAL IMPORT JIRA")
+print("[5/5] CONTROLE FINAL IMPORT JIRA")
 print("============================================================")
 
 print()
