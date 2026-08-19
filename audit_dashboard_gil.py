@@ -193,7 +193,10 @@ for path in ROOT.rglob("*"):
         # Autorisé uniquement dans le publisher :
         # dashboard_gil_sprint21.html reste un alias legacy temporaire.
         # Interdit dans les lanceurs, contrôles, README et scripts actifs.
-        if rel == "commun/publier_jira_dashboard.py":
+        if rel in [
+            "commun/publier_jira_dashboard.py",
+            "commun/preparer_dashboard_runtime.py",
+        ]:
             continue
         active_refs.append(rel)
 
