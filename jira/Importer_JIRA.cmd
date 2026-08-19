@@ -1,19 +1,21 @@
 @echo off
-setlocal
-cd /d "%~dp0"
-title Import JIRA - Dashboard GIL
+setlocal EnableExtensions EnableDelayedExpansion
 
-echo.
+set "SCRIPT_DIR=%~dp0"
+set "PROJECT_DIR=%SCRIPT_DIR%.."
+
+cd /d "%PROJECT_DIR%"
+
 echo ============================================================
 echo   IMPORT JIRA - DASHBOARD GIL
 echo ============================================================
 echo.
 echo Dossier projet :
-echo   %~dp0..
+echo   %PROJECT_DIR%
 echo.
 
 echo ============================================================
-echo [1/5] EXTRACTION JIRA VIA SSO
+echo [1/7] EXTRACTION JIRA VIA SSO
 echo ============================================================
 echo Objectif :
 echo   - ouvrir Jira via SSO
@@ -21,89 +23,108 @@ echo   - executer les requetes JQL configurees
 echo   - produire jira_brut.json et jira_diagnostic.json
 echo.
 
-node "capturer_jira_sso.js"
-if errorlevel 1 goto :extract_error
-
-if not exist "jira_brut.json" goto :missing_brut
-if not exist "jira_diagnostic.json" goto :missing_diag
+node "%PROJECT_DIR%\jira\capturer_jira_sso.js"
+if errorlevel 1 goto erreur_extraction
 
 echo.
-echo [OK] Extraction JIRA terminee.
-echo.
-
 echo ============================================================
-echo [2/5] ANALYSE DYNAMIQUE DES SPRINTS JIRA
+echo [2/7] DETECTION OFFICIELLE DES SPRINTS JIRA
 echo ============================================================
 echo Objectif :
-echo   - detecter le sprint courant depuis Jira
-echo   - detecter le sprint precedent depuis Jira
-echo   - separer flux et anomalies par sprint
-echo   - produire sprints_dashboard.json
+echo   - construire sprints_dashboard.json
+echo   - identifier sprint courant et sprint precedent
 echo.
 
-python "construire_sprints_jira.py"
+python "%PROJECT_DIR%\jira\construire_sprints_jira.py"
 if errorlevel 1 goto erreur
+
+echo.
+echo ============================================================
+echo [3/7] ARCHITECTURE JSON PAR SPRINT
+echo ============================================================
+echo Objectif :
+echo   - produire jira\sprints\sprint_courant.json
+echo   - produire jira\sprints\sprint_precedent.json
+echo   - produire jira\presentation\comparaison_sprints.json
+echo.
+
 python "%PROJECT_DIR%\jira\construire_architecture_sprints.py"
 if errorlevel 1 goto erreur
+
 python "%PROJECT_DIR%\jira\auditer_architecture_sprints.py"
-if errorlevel 1 py -3 "construire_sprints_jira.py"
-if errorlevel 1 goto :sprint_error
-
-if not exist "sprints_dashboard.json" goto :missing_sprints
+if errorlevel 1 goto erreur
 
 echo.
-echo [OK] Analyse des sprints terminee.
-echo.
-
 echo ============================================================
-echo [3/5] PREPARATION SOURCE JIRA NORMALISEE
+echo [4/7] PREPARATION SOURCE DASHBOARD
 echo ============================================================
 echo Objectif :
 echo   - transformer les tickets Jira en lignes dashboard
-echo   - garder le calcul historique existant
+echo   - produire jira\dashboard_gil_data.json
 echo.
 
-python "preparer_source_jira.py"
-if errorlevel 1 py -3 "preparer_source_jira.py"
-if errorlevel 1 goto :prepare_error
-
-if not exist "dashboard_gil_data.json" goto :missing_dashboard
+python "%PROJECT_DIR%\jira\preparer_source_jira.py"
+if errorlevel 1 goto erreur
 
 echo.
-echo [OK] Source JIRA normalisee produite.
-echo.
-
 echo ============================================================
-echo [4/5] PUBLICATION HTML LEGACY
+echo [5/7] PUBLICATION HTML
 echo ============================================================
 echo Objectif :
-echo   - publier les donnees JIRA dans commun\dashboard_gil.html
-echo   - injecter les noms de sprint dynamiques
-echo   - injecter la comparaison sprint precedent / sprint courant
-echo   - conserver les donnees apres Ctrl+F5
+echo   - publier commun\dashboard_gil.html
+echo   - conserver le calcul historique du statut sprint
 echo.
 
-python "..\commun\publier_jira_dashboard.py"
-if errorlevel 1 py -3 "..\commun\publier_jira_dashboard.py"
-if errorlevel 1 goto :publish_error
+python "%PROJECT_DIR%\commun\publier_jira_dashboard.py"
+if errorlevel 1 goto erreur
 
 echo.
-echo [OK] Publication HTML terminee.
-echo.
-
 echo ============================================================
-echo [5/5] CONTROLE FINAL IMPORT JIRA
+echo [6/7] PREPARATION RUNTIME HTML
+echo ============================================================
+echo Objectif :
+echo   - copier les JSON utiles dans commun\
+echo   - permettre au HTML generique de les charger directement
+echo.
+
+python "%PROJECT_DIR%\commun\preparer_dashboard_runtime.py" --after-import
+if errorlevel 1 goto erreur
+
+echo.
+echo ============================================================
+echo [7/7] CONTROLE FINAL
 echo ============================================================
 
-python "controle_import_jira.py"
+python "%PROJECT_DIR%\jira\controle_import_jira.py"
+if errorlevel 1 goto erreur
+
+if exist "%PROJECT_DIR%\audit_dashboard_gil.py" (
+  python "%PROJECT_DIR%\audit_dashboard_gil.py" --mode runtime
+  if errorlevel 1 goto erreur
+)
 
 echo.
 echo ============================================================
 echo IMPORT JIRA TERMINE AVEC SUCCES
 echo ============================================================
+echo.
+
+echo Fichiers runtime attendus :
+dir "%PROJECT_DIR%\commun\sprint_courant.json" "%PROJECT_DIR%\commun\sprint_precedent.json" "%PROJECT_DIR%\commun\comparaison_sprints.json"
+
+for /f %%i in ('powershell -NoProfile -Command "[DateTimeOffset]::Now.ToUnixTimeMilliseconds()"') do set GIL_TS=%%i
+
+echo.
+echo Ouverture dashboard actualise :
+echo   http://127.0.0.1:8765/dashboard_gil.html?_gil_refresh=%GIL_TS%
+start "" "http://127.0.0.1:8765/dashboard_gil.html?_gil_refresh=%GIL_TS%"
+
+echo.
+echo Action jira terminee avec code 0
+pause
 exit /b 0
 
-:extract_error
+:erreur_extraction
 echo.
 echo ============================================================
 echo [ERREUR BLOQUANTE] Extraction JIRA en echec.
@@ -112,98 +133,11 @@ echo La suite est arretee car jira_brut.json n'est pas fiable.
 pause
 exit /b 1
 
-:sprint_error
+:erreur
 echo.
 echo ============================================================
-echo [ERREUR BLOQUANTE] Analyse dynamique des sprints en echec.
+echo [ERREUR BLOQUANTE] Import JIRA interrompu.
 echo ============================================================
-echo La comparaison Sprint precedent / Sprint courant ne peut pas etre consideree fiable.
-pause
-exit /b 1
-
-:prepare_error
-echo.
-echo ============================================================
-echo [ERREUR BLOQUANTE] Preparation des donnees JIRA en echec.
-echo ============================================================
-echo La publication HTML n'est pas lancee car dashboard_gil_data.json n'est pas fiable.
-pause
-exit /b 1
-
-:publish_error
-echo.
-echo ============================================================
-echo [ERREUR BLOQUANTE] Publication HTML en echec.
-echo ============================================================
-echo Les donnees JIRA sont extraites mais non publiees dans la page HTML.
-pause
-exit /b 1
-
-:missing_brut
-echo.
-echo [ERREUR BLOQUANTE] jira_brut.json n'a pas ete genere.
-pause
-exit /b 1
-
-:missing_diag
-echo.
-echo [ERREUR BLOQUANTE] jira_diagnostic.json n'a pas ete genere.
-pause
-exit /b 1
-
-:missing_sprints
-echo.
-echo [ERREUR BLOQUANTE] sprints_dashboard.json n'a pas ete genere.
-pause
-exit /b 1
-
-:missing_dashboard
-echo.
-echo [ERREUR BLOQUANTE] dashboard_gil_data.json n'a pas ete genere.
-
-
-echo.
-echo ============================================================
-
-
-echo.
-echo ============================================================
-echo [AUTO] PREPARATION HTML RUNTIME
-echo ============================================================
-if not defined PROJECT_DIR set "PROJECT_DIR=%~dp0.."
-if exist "%PROJECT_DIR%\commun\preparer_dashboard_runtime.py" (
-  python "%PROJECT_DIR%\commun\preparer_dashboard_runtime.py" --after-import
-) else (
-  echo [INFO] preparer_dashboard_runtime.py introuvable.
-)
-
-
-
-echo.
-echo ============================================================
-echo [AUTO] OUVERTURE DASHBOARD ACTUALISE
-echo ============================================================
-if not defined PROJECT_DIR set "PROJECT_DIR=%~dp0.."
-
-if exist "%PROJECT_DIR%\commun\preparer_dashboard_runtime.py" (
-  python "%PROJECT_DIR%\commun\preparer_dashboard_runtime.py" --after-import
-)
-
-for /f %%i in ('powershell -NoProfile -Command "[DateTimeOffset]::Now.ToUnixTimeMilliseconds()"') do set GIL_TS=%%i
-
-echo Dashboard :
-echo   http://127.0.0.1:8765/dashboard_gil.html?_gil_refresh=%GIL_TS%
-
-start "" "http://127.0.0.1:8765/dashboard_gil.html?_gil_refresh=%GIL_TS%"
-
-echo [AUTO] AUDIT RUNTIME DASHBOARD GIL
-echo ============================================================
-if not defined PROJECT_DIR set "PROJECT_DIR=%~dp0.."
-if exist "%PROJECT_DIR%\audit_dashboard_gil.py" (
-  python "%PROJECT_DIR%\audit_dashboard_gil.py" --mode runtime
-) else (
-  echo [INFO] audit_dashboard_gil.py introuvable, audit runtime ignore.
-)
-
+echo Controle les messages ci-dessus.
 pause
 exit /b 1

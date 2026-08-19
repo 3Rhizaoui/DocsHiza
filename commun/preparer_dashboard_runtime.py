@@ -1,7 +1,6 @@
 from pathlib import Path
 import argparse
 import datetime as dt
-import json
 import re
 import shutil
 
@@ -20,36 +19,30 @@ HTML_FILES = [
 ]
 
 
-def copy_if_exists(src: Path, dst: Path) -> bool:
-    if not src.exists():
-        return False
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(src, dst)
-    return True
-
-
-def copy_runtime_jsons():
-    copied = []
-
+def copy_required_runtime_jsons():
     mappings = [
         (JIRA / "dashboard_gil_data.json", COMMUN / "dashboard_gil_data.json"),
         (JIRA / "sprints" / "sprint_courant.json", COMMUN / "sprint_courant.json"),
         (JIRA / "sprints" / "sprint_precedent.json", COMMUN / "sprint_precedent.json"),
         (JIRA / "presentation" / "comparaison_sprints.json", COMMUN / "comparaison_sprints.json"),
-        (JIRA / "sprint_courant.json", COMMUN / "sprint_courant.json"),
-        (JIRA / "sprint_precedent.json", COMMUN / "sprint_precedent.json"),
-        (JIRA / "comparaison_sprints.json", COMMUN / "comparaison_sprints.json"),
     ]
 
-    for src, dst in mappings:
-        if copy_if_exists(src, dst):
-            copied.append(str(dst.relative_to(ROOT)))
+    copied = []
+    missing = []
 
-    return copied
+    for src, dst in mappings:
+        if src.exists():
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(src, dst)
+            copied.append(str(dst.relative_to(ROOT)))
+        else:
+            missing.append(str(src.relative_to(ROOT)))
+
+    return copied, missing
 
 
 def clean_runtime(html: str) -> str:
-    ids = [
+    runtime_ids = [
         "stableFallbackLoader",
         "autoReloadAfterActionScript",
         "jiraOfficialComparisonFallbackScript",
@@ -57,7 +50,7 @@ def clean_runtime(html: str) -> str:
         "jiraOfficialSprintRowsData",
     ]
 
-    for script_id in ids:
+    for script_id in runtime_ids:
         html = re.sub(
             r'\n?<script\b[^>]*id="' + re.escape(script_id) + r'"[\s\S]*?</script>\n?',
             "\n",
@@ -86,8 +79,9 @@ def inject_runtime(html: str) -> str:
     stamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
     meta = f'<meta name="gil-build-stamp" content="{stamp}">'
 
-    js_tag = (
+    script = (
         f'<script id="stableFallbackLoader" '
+        f'data-runtime="json" '
         f'data-auto="autoReloadAfterActionScript" '
         f'data-comparison="jiraOfficialComparisonStaticScript" '
         f'src="runtime_dashboard.js?v={stamp}"></script>'
@@ -99,9 +93,9 @@ def inject_runtime(html: str) -> str:
         html = meta + "\n" + html
 
     if "</body>" in html:
-        html = html.replace("</body>", js_tag + "\n</body>", 1)
+        html = html.replace("</body>", script + "\n</body>", 1)
     else:
-        html = html + "\n" + js_tag
+        html = html + "\n" + script
 
     return html
 
@@ -113,32 +107,53 @@ def patch_html(path: Path) -> bool:
     html = path.read_text(encoding="utf-8", errors="replace")
     html = clean_runtime(html)
     html = inject_runtime(html)
-
     path.write_text(html, encoding="utf-8")
     return True
 
 
 def main():
-    copied = copy_runtime_jsons()
+    copied, missing = copy_required_runtime_jsons()
 
-    done = []
+    prepared = []
     for path in HTML_FILES:
         if patch_html(path):
-            done.append(str(path.relative_to(ROOT)))
+            prepared.append(str(path.relative_to(ROOT)))
 
-    if not done:
+    if not prepared:
         raise SystemExit("[ERREUR] Aucun HTML dashboard trouvé à préparer.")
 
     print("[OK] Dashboard runtime préparé :")
-    for item in done:
+    for item in prepared:
         print(" -", item)
 
     if copied:
         print("[OK] JSON runtime copiés dans commun/ :")
         for item in copied:
             print(" -", item)
-    else:
-        print("[INFO] Aucun JSON runtime à copier pour l'instant.")
+
+    if args.after_import:
+        required = [
+            COMMUN / "dashboard_gil_data.json",
+            COMMUN / "sprint_courant.json",
+            COMMUN / "sprint_precedent.json",
+            COMMUN / "comparaison_sprints.json",
+        ]
+
+        runtime_missing = [path for path in required if not path.exists()]
+
+        if runtime_missing:
+            print("[ERREUR] JSON runtime manquants dans commun/ après import :")
+            for path in runtime_missing:
+                print(" -", path)
+            print()
+            print("Sources Jira manquantes possibles :")
+            for item in missing:
+                print(" -", item)
+            raise SystemExit(1)
+
+        print("[OK] Architecture runtime disponible pour le dashboard HTML.")
+    elif not copied:
+        print("[INFO] Aucun JSON runtime copié : mode bootstrap avant import.")
 
 
 if __name__ == "__main__":

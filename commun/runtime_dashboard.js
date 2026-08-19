@@ -25,6 +25,30 @@
     return doc.nom || doc.name || doc.sprint || doc.label || fallback || "";
   }
 
+  function showRuntimeError(title, message) {
+    var old = document.getElementById("gilRuntimeError");
+    if (old) old.remove();
+
+    var block = document.createElement("div");
+    block.id = "gilRuntimeError";
+    block.style.margin = "18px 20px";
+    block.style.padding = "14px";
+    block.style.border = "2px solid #dc2626";
+    block.style.borderRadius = "10px";
+    block.style.background = "#fef2f2";
+    block.style.color = "#7f1d1d";
+    block.innerHTML =
+      "<div style='font-size:16px;font-weight:700;margin-bottom:6px;'>" + title + "</div>" +
+      "<div style='font-size:13px;'>" + message + "</div>";
+
+    var anchor = document.querySelector("#reportTitle") || document.body.firstElementChild || document.body;
+    if (anchor && anchor.parentElement) {
+      anchor.parentElement.insertBefore(block, anchor.nextSibling);
+    } else {
+      document.body.insertBefore(block, document.body.firstChild);
+    }
+  }
+
   function patchTitles(data) {
     var courant = data && data.sprintCourant ? data.sprintCourant : "";
     var precedent = data && data.sprintPrecedent ? data.sprintPrecedent : "";
@@ -43,15 +67,14 @@
     var all = Array.prototype.slice.call(document.querySelectorAll("h1,h2,h3,div,span,strong"));
     all.forEach(function (el) {
       if (!el || !el.childNodes || el.childNodes.length !== 1) return;
+
       var t = el.textContent || "";
+      var next = t;
 
-      if (t.indexOf("Sprint 21") >= 0) {
-        el.textContent = t.replace(/Sprint 21/g, courant);
-      }
+      next = next.replace(/Sprint 21/g, courant);
+      if (precedent) next = next.replace(/Sprint 20/g, precedent);
 
-      if (precedent && t.indexOf("Sprint 20") >= 0) {
-        el.textContent = t.replace(/Sprint 20/g, precedent);
-      }
+      if (next !== t) el.textContent = next;
     });
   }
 
@@ -71,8 +94,6 @@
         total: total,
         flux: flux,
         anomalies: anomalies,
-        sitTotal: num(r.sitTotal || r.totalSIT || r.fluxSIT || r.SIT),
-        uatTotal: num(r.uatTotal || r.totalUAT || r.fluxUAT || r.UAT),
         nonVentile: num(r.nonVentile)
       };
     }).filter(function (r) {
@@ -151,21 +172,10 @@
     if (nomCourant) data.sprintCourant = nomCourant;
     if (nomPrecedent) data.sprintPrecedent = nomPrecedent;
 
-    if (courant) data.sprintCourantDetail = courant;
-    if (precedent) data.sprintPrecedentDetail = precedent;
-
-    if (Array.isArray(comparaison) && comparaison.length) {
-      data.comparaisonSprints = comparaison;
-      data.comparaisonSprintsJiraOfficielle = comparaison;
-    }
-
-    data.architectureJira = {
-      chargeeDepuisJsonRuntime: true,
-      dashboard: !!dashboard,
-      sprintCourant: !!courant,
-      sprintPrecedent: !!precedent,
-      comparaison: Array.isArray(comparaison) && comparaison.length > 0
-    };
+    data.sprintCourantDetail = courant;
+    data.sprintPrecedentDetail = precedent;
+    data.comparaisonSprints = comparaison;
+    data.comparaisonSprintsJiraOfficielle = comparaison;
 
     if (data.tendanceHebdo) {
       if (data.tendanceHebdo.current && nomCourant) {
@@ -176,6 +186,13 @@
         data.tendanceHebdo.rows[data.tendanceHebdo.rows.length - 1].sprint = nomCourant;
       }
     }
+
+    data.architectureJira = {
+      chargeeDepuisJsonRuntime: true,
+      sprintCourant: true,
+      sprintPrecedent: true,
+      comparaison: true
+    };
 
     return data;
   }
@@ -192,12 +209,7 @@
     }
 
     patchTitles(data);
-
-    if (Array.isArray(data.comparaisonSprintsJiraOfficielle)) {
-      renderOfficialComparison(data.comparaisonSprintsJiraOfficielle);
-    } else if (Array.isArray(data.comparaisonSprints)) {
-      renderOfficialComparison(data.comparaisonSprints);
-    }
+    renderOfficialComparison(data.comparaisonSprintsJiraOfficielle || data.comparaisonSprints || []);
   }
 
   function loadRuntimeJsonsAndRender() {
@@ -214,16 +226,35 @@
       var precedent = values[2];
       var comparaison = values[3];
 
+      var architectureOk =
+        !!dashboard &&
+        !!courant &&
+        !!precedent &&
+        Array.isArray(comparaison) &&
+        comparaison.length >= 2;
+
+      if (!architectureOk) {
+        console.warn("[GIL] Architecture sprint incomplète", {
+          dashboard_gil_data: !!dashboard,
+          sprint_courant: !!courant,
+          sprint_precedent: !!precedent,
+          comparaison_sprints: Array.isArray(comparaison) ? comparaison.length : 0
+        });
+
+        showRuntimeError(
+          "Architecture sprint Jira incomplète",
+          "Les fichiers commun/dashboard_gil_data.json, commun/sprint_courant.json, commun/sprint_precedent.json et commun/comparaison_sprints.json doivent être produits après l'import Jira."
+        );
+        return;
+      }
+
       var data = mergeRuntimeData(base, dashboard, courant, precedent, comparaison);
       renderData(data);
 
       console.log("[GIL] JSON runtime chargés", {
-        dashboard_gil_data: !!dashboard,
-        sprint_courant: !!courant,
-        sprint_precedent: !!precedent,
-        comparaison_sprints: Array.isArray(comparaison) ? comparaison.length : 0,
         sprintCourant: data.sprintCourant,
-        sprintPrecedent: data.sprintPrecedent
+        sprintPrecedent: data.sprintPrecedent,
+        comparaison: comparaison.length
       });
     });
   }
@@ -270,10 +301,6 @@
   }
 
   function boot() {
-    if (window.fallbackData) {
-      renderData(window.fallbackData);
-    }
-
     setTimeout(loadRuntimeJsonsAndRender, 0);
     setTimeout(loadRuntimeJsonsAndRender, 1000);
     setTimeout(loadRuntimeJsonsAndRender, 3000);
