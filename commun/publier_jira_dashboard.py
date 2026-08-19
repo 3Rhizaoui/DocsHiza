@@ -797,6 +797,8 @@ def inject_auto_reload_after_actions(html: str) -> str:
 
     return html + "\n" + script
 
+
+
 def load_json_optional(path, default=None):
     if default is None:
         default = {}
@@ -809,27 +811,58 @@ def load_json_optional(path, default=None):
 
 
 def apply_architecture_sprints(payload: dict) -> dict:
+    """Source de vérité : JSON d'architecture Jira par sprint.
+
+    Si ces fichiers existent, ils écrasent les valeurs legacy Sprint 20 / Sprint 21.
+    """
+
     base = PROJECT / "jira"
 
     sprint_courant = load_json_optional(base / "sprints" / "sprint_courant.json", {})
     sprint_precedent = load_json_optional(base / "sprints" / "sprint_precedent.json", {})
     comparaison = load_json_optional(base / "presentation" / "comparaison_sprints.json", [])
 
+    # Fallback aliases racine si besoin.
+    if not sprint_courant:
+        sprint_courant = load_json_optional(base / "sprint_courant.json", {})
+
+    if not sprint_precedent:
+        sprint_precedent = load_json_optional(base / "sprint_precedent.json", {})
+
+    if not comparaison:
+        comparaison = load_json_optional(base / "comparaison_sprints.json", [])
+
+    nom_courant = ((sprint_courant.get("sprint") or {}).get("nom")) if isinstance(sprint_courant, dict) else None
+    nom_precedent = ((sprint_precedent.get("sprint") or {}).get("nom")) if isinstance(sprint_precedent, dict) else None
+
+    if nom_courant:
+        payload["sprintCourant"] = nom_courant
+
+    if nom_precedent:
+        payload["sprintPrecedent"] = nom_precedent
+
     if sprint_courant:
         payload["sprintCourantDetail"] = sprint_courant
-        nom = (sprint_courant.get("sprint") or {}).get("nom")
-        if nom:
-            payload["sprintCourant"] = nom
 
     if sprint_precedent:
         payload["sprintPrecedentDetail"] = sprint_precedent
-        nom = (sprint_precedent.get("sprint") or {}).get("nom")
-        if nom:
-            payload["sprintPrecedent"] = nom
 
     if isinstance(comparaison, list) and comparaison:
         payload["comparaisonSprints"] = comparaison
         payload["comparaisonSprintsJiraOfficielle"] = comparaison
+
+    # Mettre à jour les zones legacy qui pilotent encore les titres.
+    tendance = payload.get("tendanceHebdo") or {}
+
+    if isinstance(tendance.get("current"), dict) and nom_courant:
+        tendance["current"]["sprint"] = nom_courant
+
+    rows = tendance.get("rows")
+    if isinstance(rows, list) and rows and nom_courant:
+        rows[-1]["sprint"] = nom_courant
+
+    tendance["rows"] = rows or []
+    payload["tendanceHebdo"] = tendance
 
     payload["architectureJira"] = {
         "sprintsComplets": bool(sprint_courant and sprint_precedent),
@@ -838,6 +871,28 @@ def apply_architecture_sprints(payload: dict) -> dict:
     }
 
     return payload
+
+
+def assert_architecture_in_payload(payload: dict) -> None:
+    """Bloque la publication si les JSON architecture existent mais ne sont pas injectés."""
+
+    base = PROJECT / "jira"
+    has_architecture = (
+        (base / "sprints" / "sprint_courant.json").exists()
+        or (base / "sprint_courant.json").exists()
+    )
+
+    if not has_architecture:
+        return
+
+    sprint = payload.get("sprintCourant")
+    comparaison = payload.get("comparaisonSprints")
+
+    if not sprint or sprint == "Sprint 21":
+        stop("Architecture Jira détectée mais sprintCourant non injecté dans le payload HTML")
+
+    if not isinstance(comparaison, list) or not comparaison:
+        stop("Architecture Jira détectée mais comparaisonSprints non injectée dans le payload HTML")
 
 def apply_sprint_comparison_from_jira(payload: dict) -> dict:
     sprint_data = load_sprints_dashboard()
@@ -1249,6 +1304,24 @@ def replace_fallback_data(html: str, payload: dict) -> str:
     return html2
 
 
+
+def patch_static_legacy_titles(html: str, payload: dict) -> str:
+    courant = payload.get("sprintCourant")
+    precedent = payload.get("sprintPrecedent")
+
+    if courant and courant != "Sprint 21":
+        html = html.replace("Biweekly GIL - Reporting Sprint 21", f"Biweekly GIL - Reporting {courant}")
+        html = html.replace("Statut du Sprint 21", f"Statut du {courant}")
+        html = html.replace("Statut général du Sprint 21", f"Statut général du {courant}")
+        html = html.replace(">Sprint 21", f">{courant}")
+        html = html.replace("Sprint 21 —", f"{courant} —")
+
+    if precedent and precedent != "Sprint 20":
+        html = html.replace(">Sprint 20", f">{precedent}")
+        html = html.replace("Sprint 20", precedent)
+
+    return html
+
 def verify_html(html: str, payload: dict) -> None:
     if "fetch('rapport_gil_v6_data.json'" in html or 'fetch("rapport_gil_v6_data.json' in html:
         stop("Le HTML contient encore un fetch actif vers rapport_gil_v6_data.json")
@@ -1303,6 +1376,7 @@ def main() -> None:
     html = inject_stable_fallback_loader(html)
     html = inject_build_stamp(html)
     html = inject_auto_reload_after_actions(html)
+    html = patch_static_legacy_titles(html, payload)
     write_text(HTML, html)
 
     # Fichier canonique générique.
