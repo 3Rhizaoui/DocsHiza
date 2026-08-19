@@ -977,16 +977,58 @@ console.log('Connectez-vous avec le SSO, puis attendez que la page JIRA soit com
   let childNames = {};
 
   let cdp;
+  let sprintDiagnostic = null;
 
   try {
     cdp = await attachToAuthenticatedJira(
       config.baseUrl
     );
 
-    /*
-     * 1. Exécution exacte des requêtes
-     * configurées dans jira_config.json.
-     */
+    console.log('');
+    console.log('============================================================');
+    console.log('[SPRINTS] DETECTION OFFICIELLE VIA API AGILE JIRA');
+    console.log('============================================================');
+    console.log(`[SPRINTS] Projet Jira : ${config.projectKey || '(non renseigné)'}`);
+
+    try {
+      if (typeof collectOfficialSprintDiagnostics !== 'function') {
+        throw new Error('collectOfficialSprintDiagnostics est absente du fichier capturer_jira_sso.js');
+      }
+
+      sprintDiagnostic = await collectOfficialSprintDiagnostics(cdp, config.baseUrl, config.projectKey);
+
+      console.log('[SPRINTS] Diagnostic officiel OK.');
+      console.log(`[SPRINTS] Board : ${sprintDiagnostic.board?.id || '?'} - ${sprintDiagnostic.board?.name || '?'}`);
+      console.log(`[SPRINTS] Sprint courant : ${sprintDiagnostic.courant?.id || '?'} - ${sprintDiagnostic.courant?.nom || '?'}`);
+      console.log(`[SPRINTS] Sprint précédent : ${sprintDiagnostic.precedent?.id || '?'} - ${sprintDiagnostic.precedent?.nom || '?'}`);
+    } catch (error) {
+      const message = String(error && error.message ? error.message : error);
+
+      sprintDiagnostic = {
+        methode: 'agile_api',
+        reliable: false,
+        erreur: message,
+        warnings: [message],
+        generated_at: new Date().toISOString(),
+        projectKey: config.projectKey || ''
+      };
+
+      errors.push({
+        name: 'diagnostic_sprints_officiel',
+        jql: 'API Agile board/sprint/issue',
+        erreur: message
+      });
+
+      console.log('[SPRINTS][ATTENTION] Diagnostic officiel KO.');
+      console.log('[SPRINTS][CAUSE] ' + message);
+      console.log('[SPRINTS][ACTION] La publication stable continue sans comparaison dynamique.');
+    }
+
+    console.log('');
+    console.log('============================================================');
+    console.log('[JQL] EXTRACTION DES REQUETES CONFIGUREES');
+    console.log('============================================================');
+
     for (const query of config.queries) {
       try {
         const url =
@@ -1142,7 +1184,7 @@ console.log('Connectez-vous avec le SSO, puis attendez que la page JIRA soit com
     source_type: 'jira_sso',
 
     jira_base_url:
-      config.baseUrl,
+      config.baseUrl, diagnostic_sprints: sprintDiagnostic,
 
     /*
      * Résultat brut des deux requêtes
