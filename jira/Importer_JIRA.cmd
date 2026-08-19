@@ -177,6 +177,25 @@ if exist "%PROJECT_DIR%\commun\preparer_dashboard_runtime.py" (
   echo [INFO] preparer_dashboard_runtime.py introuvable.
 )
 
+
+
+echo.
+echo ============================================================
+echo [AUTO] OUVERTURE DASHBOARD ACTUALISE
+echo ============================================================
+if not defined PROJECT_DIR set "PROJECT_DIR=%~dp0.."
+
+if exist "%PROJECT_DIR%\commun\preparer_dashboard_runtime.py" (
+  python "%PROJECT_DIR%\commun\preparer_dashboard_runtime.py" --after-import
+)
+
+for /f %%i in ('powershell -NoProfile -Command "[DateTimeOffset]::Now.ToUnixTimeMilliseconds()"') do set GIL_TS=%%i
+
+echo Dashboard :
+echo   http://127.0.0.1:8765/dashboard_gil.html?_gil_refresh=%GIL_TS%
+
+start "" "http://127.0.0.1:8765/dashboard_gil.html?_gil_refresh=%GIL_TS%"
+
 echo [AUTO] AUDIT RUNTIME DASHBOARD GIL
 echo ============================================================
 if not defined PROJECT_DIR set "PROJECT_DIR=%~dp0.."
