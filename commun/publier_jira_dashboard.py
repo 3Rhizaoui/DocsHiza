@@ -488,17 +488,21 @@ def load_sprints_dashboard() -> dict:
 
 
 def apply_sprint_comparison_from_jira(payload: dict) -> dict:
-    """Injecte les noms de sprint dynamiques et la comparaison Jira.
+    """Injecte les vrais noms Jira et la comparaison officielle sans casser les données existantes.
 
-    Le calcul du statut sprint n'est pas modifié ici.
+    Règle :
+    - si sprints_dashboard.json est fiable, on utilise ses noms et sa comparaison ;
+    - on ne supprime pas les lignes dashboard déjà préparées ;
+    - le calcul du statut sprint reste inchangé.
     """
 
     sprint_data = load_sprints_dashboard()
     if not sprint_data:
         return payload
 
+    payload["diagnosticSprintsJira"] = sprint_data
+
     if sprint_data.get("reliable") is not True:
-        payload["diagnosticSprintsJira"] = sprint_data
         payload["sprintDetectionWarning"] = sprint_data.get("warnings") or [
             "Détection sprint Jira non fiable : comparaison dynamique non appliquée."
         ]
@@ -507,28 +511,29 @@ def apply_sprint_comparison_from_jira(payload: dict) -> dict:
     courant = sprint_data.get("courant") or {}
     precedent = sprint_data.get("precedent") or {}
 
-    nom_courant = courant.get("nom") or payload.get("sprintCourant") or "Sprint courant"
-    nom_precedent = precedent.get("nom") or payload.get("sprintPrecedent") or "Sprint précédent"
+    nom_courant = courant.get("nom") or courant.get("name") or payload.get("sprintCourant") or "Sprint courant"
+    nom_precedent = precedent.get("nom") or precedent.get("name") or payload.get("sprintPrecedent") or "Sprint précédent"
 
     payload["sprintCourant"] = nom_courant
     payload["sprintPrecedent"] = nom_precedent
-    payload["diagnosticSprintsJira"] = sprint_data
 
     comparaison = sprint_data.get("comparaisonSprints")
-    if isinstance(comparaison, list) and comparaison:
+    if isinstance(comparaison, list) and len(comparaison) >= 2:
         payload["comparaisonSprints"] = comparaison
 
     tendance = payload.get("tendanceHebdo") or {}
     rows = tendance.get("rows") or []
 
-    if rows and isinstance(rows[-1], dict):
+    if isinstance(rows, list) and rows:
         rows[-1]["sprint"] = nom_courant
 
     if isinstance(tendance.get("current"), dict):
         tendance["current"]["sprint"] = nom_courant
 
+    tendance["rows"] = rows
     payload["tendanceHebdo"] = tendance
 
+    # Ne pas vider/remplacer les listes existantes : on ajoute seulement le nom courant.
     for key in [
         "fluxPrets",
         "fluxPretsArrimage",
@@ -546,6 +551,8 @@ def apply_sprint_comparison_from_jira(payload: dict) -> dict:
                 item["sprint"] = nom_courant
 
     return payload
+
+
 
 def json_for_script(payload: dict) -> str:
     text = json.dumps(payload, ensure_ascii=False, indent=2)
@@ -790,162 +797,22 @@ def inject_statut_sprint_tooltips(html: str) -> str:
 
 
 
-def has_reliable_sprints_dashboard() -> bool:
-    data = load_sprints_dashboard()
-    return bool(data and data.get("reliable") is True)
 
 
-def clean_dynamic_sprint_labels(html: str) -> str:
+
+def remove_dynamic_sprint_label_script(html: str) -> str:
+    """Retire l'ancien script JS qui remplaçait les libellés côté navigateur.
+
+    On ne veut plus de remplacement JS générique "Sprint courant".
+    Les noms de sprint doivent venir du payload Python publié.
+    """
+
     return re.sub(
         r'\n?<script id="dynamicSprintLabelsScript">[\s\S]*?</script>\n?',
         "\n",
         html,
         flags=re.S,
     )
-
-def inject_dynamic_sprint_labels(html: str) -> str:
-    """Met à jour les libellés visibles des sprints dans le HTML legacy.
-
-    Source de vérité :
-    - payload.sprintCourant
-    - payload.sprintPrecedent
-    - payload.diagnosticSprintsJira
-    """
-
-    js = r"""
-<script id="dynamicSprintLabelsScript">
-(function(){
-  function value(v, fallback){
-    const text = String(v ?? '').trim();
-    return text || fallback;
-  }
-
-  function getDashboardData(){
-    try {
-      if (typeof currentData !== 'undefined' && currentData) return currentData;
-      if (typeof fallbackData !== 'undefined' && fallbackData) return fallbackData;
-    } catch(e) {}
-    return {};
-  }
-
-  function sprintNames(data){
-    data = data || {};
-    const diag = data.diagnosticSprintsJira || {};
-    const courant = diag.courant || {};
-    const precedent = diag.precedent || {};
-
-    const currentName = value(
-      data.sprintCourant || courant.nom || courant.name,
-      'Sprint courant'
-    );
-
-    const previousName = value(
-      data.sprintPrecedent || precedent.nom || precedent.name,
-      'Sprint précédent'
-    );
-
-    return {currentName, previousName};
-  }
-
-  function setTextById(id, text){
-    const el = document.getElementById(id);
-    if (el) el.textContent = text;
-  }
-
-  function updateComparisonTitle(previousName, currentName){
-    const headings = Array.from(document.querySelectorAll('h1,h2,h3'));
-    for (const h of headings) {
-      const text = h.textContent || '';
-      if (/Comparaison\s+Sprint\s+N-1\s*\/\s*Sprint\s+actuel/i.test(text)) {
-        h.textContent = 'Comparaison ' + previousName + ' / ' + currentName;
-      }
-    }
-  }
-
-  function replaceVisibleSprintTokens(root, previousName, currentName){
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    const nodes = [];
-
-    while (walker.nextNode()) {
-      nodes.push(walker.currentNode);
-    }
-
-    for (const node of nodes) {
-      const parent = node.parentElement;
-      if (!parent) continue;
-
-      const tag = parent.tagName ? parent.tagName.toLowerCase() : '';
-      if (tag === 'script' || tag === 'style') continue;
-
-      let text = node.nodeValue || '';
-      let next = text
-        .replace(/Sprint\s+N-1/g, previousName)
-        .replace(/Sprint\s+précédent/g, previousName)
-        .replace(/Sprint\s+precedent/g, previousName)
-        .replace(/Sprint\s+actuel/g, currentName)
-        .replace(/Sprint\s+courant/g, currentName);
-
-      if (next !== text) {
-        node.nodeValue = next;
-      }
-    }
-  }
-
-  function updateWeeklyTrendRows(previousName, currentName){
-    const table = document.getElementById('weeklyTrend');
-    if (!table) return;
-
-    const bodyRows = Array.from(table.querySelectorAll('tr')).filter(function(tr){
-      return tr.querySelector('td');
-    });
-
-    if (bodyRows.length >= 2) {
-      const first = bodyRows[0].querySelector('td');
-      const last = bodyRows[bodyRows.length - 1].querySelector('td');
-
-      if (first) first.textContent = previousName;
-      if (last) last.textContent = currentName;
-    }
-  }
-
-  function applyDynamicSprintLabels(){
-    const data = getDashboardData();
-    const names = sprintNames(data);
-
-    document.title = 'Biweekly GIL - Reporting ' + names.currentName;
-
-    setTextById('reportTitle', 'Biweekly GIL - Reporting ' + names.currentName);
-    setTextById('gaugeTitle', 'Statut du Sprint — ' + names.currentName);
-    setTextById('generalTitle', 'Statut général du Sprint — ' + names.currentName);
-
-    updateComparisonTitle(names.previousName, names.currentName);
-    replaceVisibleSprintTokens(document.body, names.previousName, names.currentName);
-    updateWeeklyTrendRows(names.previousName, names.currentName);
-  }
-
-  const previousRender = (typeof render === 'function') ? render : null;
-  if (previousRender && !previousRender.__dynamicSprintLabelsWrapped) {
-    const wrapped = function(data){
-      previousRender(data);
-      setTimeout(applyDynamicSprintLabels, 0);
-    };
-    wrapped.__dynamicSprintLabelsWrapped = true;
-    render = wrapped;
-  }
-
-  window.addEventListener('load', function(){
-    setTimeout(applyDynamicSprintLabels, 150);
-  });
-
-  window.applyDynamicSprintLabels = applyDynamicSprintLabels;
-})();
-</script>
-"""
-
-    if "dynamicSprintLabelsScript" not in html:
-        html = html.replace("</body>", js + "\n</body>", 1) if "</body>" in html else html + "\n" + js
-
-    return html
 
 def replace_fallback_data(html: str, payload: dict) -> str:
     payload = apply_sprint_context(payload)
@@ -1029,8 +896,7 @@ def main() -> None:
     html = inject_buttons_and_js(html)
     html = replace_fallback_data(html, payload)
     html = inject_statut_sprint_tooltips(html)
-    html = clean_dynamic_sprint_labels(html)
-    html = inject_dynamic_sprint_labels(html) if has_reliable_sprints_dashboard() else html
+    html = remove_dynamic_sprint_label_script(html)
     write_text(HTML, html)
 
     print("[4/4] Contrôle")
