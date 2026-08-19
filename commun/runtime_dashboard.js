@@ -2,11 +2,6 @@
   if (window.__gilRuntimeDashboardInstalled) return;
   window.__gilRuntimeDashboardInstalled = true;
 
-  function num(value) {
-    var n = Number(value);
-    return Number.isFinite(n) ? n : 0;
-  }
-
   function fetchJson(path) {
     return fetch(path + "?_ts=" + Date.now(), { cache: "no-store" })
       .then(function (r) {
@@ -68,99 +63,17 @@
     all.forEach(function (el) {
       if (!el || !el.childNodes || el.childNodes.length !== 1) return;
 
-      var t = el.textContent || "";
-      var next = t;
+      var oldText = el.textContent || "";
+      var newText = oldText.replace(/Sprint 21/g, courant);
 
-      next = next.replace(/Sprint 21/g, courant);
-      if (precedent) next = next.replace(/Sprint 20/g, precedent);
-
-      if (next !== t) el.textContent = next;
-    });
-  }
-
-  function normalizeComparison(rows) {
-    if (!Array.isArray(rows)) return [];
-
-    return rows.slice(0, 2).map(function (r) {
-      var total = num(r.total || r.flux || r.demandesTotal || r.totalDemandes || r.fluxTotal || r.totalFlux);
-      var flux = num(r.flux || r.demandes || r.demandesTotal || r.fluxTotal || r.totalFlux);
-      var anomalies = num(r.anomalies || r.bugs || r.defauts);
-
-      if (!total) total = flux + anomalies;
-      if (!flux) flux = total;
-
-      return {
-        sprint: r.sprint || r.nom || r.label || r.name || "",
-        total: total,
-        flux: flux,
-        anomalies: anomalies,
-        nonVentile: num(r.nonVentile)
-      };
-    }).filter(function (r) {
-      return r.sprint && r.total > 0;
-    });
-  }
-
-  function renderOfficialComparison(rows) {
-    rows = normalizeComparison(rows);
-    if (!rows.length) return;
-
-    var max = Math.max.apply(null, rows.map(function (r) { return r.total; }));
-    if (!max) return;
-
-    var old = document.getElementById("jiraOfficialComparisonStatic");
-    if (old) old.remove();
-
-    var block = document.createElement("div");
-    block.id = "jiraOfficialComparisonStatic";
-    block.style.margin = "18px 20px";
-    block.style.padding = "16px";
-    block.style.border = "1px solid #cbd5e1";
-    block.style.borderRadius = "10px";
-    block.style.background = "#ffffff";
-    block.style.boxShadow = "0 1px 3px rgba(0,0,0,0.08)";
-
-    var html = "";
-    html += '<h3 style="margin:0 0 8px 0;font-size:18px;">Comparaison officielle Jira Agile</h3>';
-    html += '<div style="font-size:13px;color:#475569;margin-bottom:12px;">Source : commun/comparaison_sprints.json</div>';
-
-    rows.forEach(function (r) {
-      var width = Math.max(2, Math.round((r.total / max) * 100));
-
-      html += '<div style="margin:14px 0;">';
-      html += '<div style="display:flex;justify-content:space-between;gap:12px;font-weight:700;">';
-      html += '<span>' + r.sprint + '</span>';
-      html += '<span>Total : ' + r.total + ' | Flux : ' + r.flux + ' | Anomalies : ' + r.anomalies + '</span>';
-      html += '</div>';
-      html += '<div style="height:24px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-top:6px;">';
-      html += '<div style="height:24px;width:' + width + '%;background:#2563eb;border-radius:999px;"></div>';
-      html += '</div>';
-
-      if (r.nonVentile) {
-        html += '<div style="font-size:12px;color:#64748b;margin-top:4px;">Non ventilé : ' + r.nonVentile + '</div>';
+      if (precedent) {
+        newText = newText.replace(/Sprint 20/g, precedent);
       }
 
-      html += '</div>';
-    });
-
-    block.innerHTML = html;
-
-    var titles = Array.prototype.slice.call(document.querySelectorAll("h1,h2,h3,summary,div"));
-    var anchor = null;
-
-    for (var i = 0; i < titles.length; i++) {
-      var text = (titles[i].textContent || "").toLowerCase();
-      if (text.indexOf("comparaison") >= 0) {
-        anchor = titles[i].parentElement || titles[i];
-        break;
+      if (newText !== oldText) {
+        el.textContent = newText;
       }
-    }
-
-    if (anchor && anchor.parentElement) {
-      anchor.parentElement.insertBefore(block, anchor.nextSibling);
-    } else {
-      document.body.appendChild(block);
-    }
+    });
   }
 
   function mergeRuntimeData(base, dashboard, courant, precedent, comparaison) {
@@ -174,6 +87,7 @@
 
     data.sprintCourantDetail = courant;
     data.sprintPrecedentDetail = precedent;
+
     data.comparaisonSprints = comparaison;
     data.comparaisonSprintsJiraOfficielle = comparaison;
 
@@ -189,15 +103,15 @@
 
     data.architectureJira = {
       chargeeDepuisJsonRuntime: true,
-      sprintCourant: true,
-      sprintPrecedent: true,
-      comparaison: true
+      sprintCourant: !!courant,
+      sprintPrecedent: !!precedent,
+      comparaison: Array.isArray(comparaison) && comparaison.length >= 2
     };
 
     return data;
   }
 
-  function renderData(data) {
+  function renderExistingTemplate(data) {
     window.currentData = data;
 
     if (typeof window.render === "function") {
@@ -209,7 +123,6 @@
     }
 
     patchTitles(data);
-    renderOfficialComparison(data.comparaisonSprintsJiraOfficielle || data.comparaisonSprints || []);
   }
 
   function loadRuntimeJsonsAndRender() {
@@ -226,35 +139,34 @@
       var precedent = values[2];
       var comparaison = values[3];
 
-      var architectureOk =
+      var ok =
         !!dashboard &&
         !!courant &&
         !!precedent &&
         Array.isArray(comparaison) &&
         comparaison.length >= 2;
 
-      if (!architectureOk) {
+      if (!ok) {
+        showRuntimeError(
+          "Architecture sprint Jira incomplète",
+          "Les fichiers commun/dashboard_gil_data.json, commun/sprint_courant.json, commun/sprint_precedent.json et commun/comparaison_sprints.json doivent être produits après l'import Jira."
+        );
         console.warn("[GIL] Architecture sprint incomplète", {
           dashboard_gil_data: !!dashboard,
           sprint_courant: !!courant,
           sprint_precedent: !!precedent,
           comparaison_sprints: Array.isArray(comparaison) ? comparaison.length : 0
         });
-
-        showRuntimeError(
-          "Architecture sprint Jira incomplète",
-          "Les fichiers commun/dashboard_gil_data.json, commun/sprint_courant.json, commun/sprint_precedent.json et commun/comparaison_sprints.json doivent être produits après l'import Jira."
-        );
         return;
       }
 
       var data = mergeRuntimeData(base, dashboard, courant, precedent, comparaison);
-      renderData(data);
+      renderExistingTemplate(data);
 
-      console.log("[GIL] JSON runtime chargés", {
+      console.log("[GIL] Template existant alimenté par JSON runtime", {
         sprintCourant: data.sprintCourant,
         sprintPrecedent: data.sprintPrecedent,
-        comparaison: comparaison.length
+        comparaisonSprints: comparaison.length
       });
     });
   }
@@ -304,7 +216,6 @@
     setTimeout(loadRuntimeJsonsAndRender, 0);
     setTimeout(loadRuntimeJsonsAndRender, 1000);
     setTimeout(loadRuntimeJsonsAndRender, 3000);
-
     installAutoReload();
   }
 

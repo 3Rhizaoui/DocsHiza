@@ -54,6 +54,9 @@ if errorlevel 1 goto erreur
 python "%PROJECT_DIR%\jira\auditer_architecture_sprints.py"
 if errorlevel 1 goto erreur
 
+python "%PROJECT_DIR%\jira\construire_comparaison_dashboard.py"
+if errorlevel 1 goto erreur
+
 echo.
 echo ============================================================
 echo [4/7] PREPARATION SOURCE DASHBOARD
