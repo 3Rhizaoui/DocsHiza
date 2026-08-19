@@ -488,16 +488,240 @@ def load_sprints_dashboard() -> dict:
         return {}
 
 
+def first_int(*values):
+    for value in values:
+        if value is None or isinstance(value, bool):
+            continue
+        if isinstance(value, int):
+            return value
+        try:
+            return int(value)
+        except Exception:
+            continue
+    return None
+
+
+def normalise_comparaison_sprints_jira(sprint_data: dict) -> list:
+    # Convertit les sprints Jira officiels vers le format attendu par le graphe legacy.
+    if not isinstance(sprint_data, dict):
+        return []
+
+    raw_rows = sprint_data.get("comparaisonSprints")
+    if not isinstance(raw_rows, list):
+        raw_rows = []
+
+    def raw_for_name(name, index):
+        for row in raw_rows:
+            if not isinstance(row, dict):
+                continue
+            row_name = row.get("sprint") or row.get("nom") or row.get("label") or row.get("name")
+            if name and row_name == name:
+                return dict(row)
+        if index < len(raw_rows) and isinstance(raw_rows[index], dict):
+            return dict(raw_rows[index])
+        return {}
+
+    rows = []
+
+    for index, key in enumerate(["precedent", "courant"]):
+        summary = sprint_data.get(key) or {}
+        if not isinstance(summary, dict):
+            continue
+
+        nom = (
+            summary.get("nom")
+            or summary.get("name")
+            or summary.get("sprint")
+            or summary.get("label")
+            or ("Sprint précédent" if key == "precedent" else "Sprint courant")
+        )
+
+        src = raw_for_name(nom, index)
+        src.update(summary)
+
+        flux = first_int(
+            src.get("flux"),
+            src.get("demandes"),
+            src.get("demandesTotal"),
+            src.get("totalFlux"),
+            src.get("fluxTotal"),
+        )
+
+        anomalies = first_int(
+            src.get("anomalies"),
+            src.get("bugs"),
+            src.get("defauts"),
+            0,
+        )
+
+        total = first_int(
+            src.get("total"),
+            src.get("fluxTotal"),
+            src.get("totalFlux"),
+            src.get("demandesTotal"),
+            src.get("totalDemandes"),
+            src.get("fluxDemandesTotal"),
+        )
+
+        if total is None:
+            total = (flux or 0) + (anomalies or 0)
+
+        livres = first_int(
+            src.get("livres"),
+            src.get("livrés"),
+            src.get("fluxLivres"),
+            src.get("fluxLivrés"),
+            src.get("done"),
+            src.get("termines"),
+            src.get("terminés"),
+            src.get("prets"),
+            src.get("prêts"),
+            src.get("pretTester"),
+            0,
+        )
+
+        en_cours = first_int(
+            src.get("enCours"),
+            src.get("fluxEnCours"),
+            src.get("inProgress"),
+            src.get("ouverts"),
+            0,
+        )
+
+        bloques = first_int(
+            src.get("bloques"),
+            src.get("bloqués"),
+            src.get("rejetes"),
+            src.get("rejetés"),
+            src.get("fluxBloquesRejetes"),
+            src.get("fluxBloquésRejetés"),
+            src.get("blocked"),
+            0,
+        )
+
+        row = {
+            "sprint": nom,
+            "nom": nom,
+            "label": nom,
+            "name": nom,
+
+            # Aliases total utilisés par différents rendus legacy.
+            "total": total,
+            "flux": total,
+            "demandes": total,
+            "demandesTotal": total,
+            "totalDemandes": total,
+            "fluxTotal": total,
+            "totalFlux": total,
+            "fluxDemandesTotal": total,
+            "fluxDemandes": total,
+
+            # Aliases livrés.
+            "livres": livres,
+            "livrés": livres,
+            "fluxLivres": livres,
+            "fluxLivrés": livres,
+
+            # Aliases en cours.
+            "enCours": en_cours,
+            "fluxEnCours": en_cours,
+
+            # Aliases bloqués / rejetés.
+            "bloques": bloques,
+            "bloqués": bloques,
+            "rejetes": bloques,
+            "rejetés": bloques,
+            "fluxBloquesRejetes": bloques,
+            "fluxBloquésRejetés": bloques,
+
+            "anomalies": anomalies,
+            "source": "jira_agile_api",
+            "typeDonnee": "Réel",
+        }
+
+        rows.append(row)
+
+    return rows
+
+
+def inject_auto_reload_after_actions(html: str) -> str:
+    # Recharge automatiquement la page après une action lancée depuis les boutons HTML.
+    script = """
+<script id="autoReloadAfterActionScript">
+(function(){
+  if (window.__gilAutoReloadAfterActionInstalled) return;
+  window.__gilAutoReloadAfterActionInstalled = true;
+
+  function mustReload(action) {
+    var a = String(action || "").toLowerCase();
+    return (
+      a.indexOf("jira") >= 0 ||
+      a.indexOf("excel") >= 0 ||
+      a.indexOf("confluence") >= 0 ||
+      a.indexOf("sync") >= 0 ||
+      a.indexOf("synchron") >= 0 ||
+      a.indexOf("archiver") >= 0 ||
+      a.indexOf("valider") >= 0
+    );
+  }
+
+  function reloadDashboard() {
+    try {
+      var url = new URL(window.location.href);
+      url.searchParams.set("_gil_refresh", String(Date.now()));
+      window.location.replace(url.toString());
+    } catch(e) {
+      window.location.reload();
+    }
+  }
+
+  function installWrapper() {
+    if (typeof window.runLocalAction !== "function") {
+      setTimeout(installWrapper, 100);
+      return;
+    }
+
+    if (window.runLocalAction.__gilWrappedForReload) return;
+
+    var original = window.runLocalAction;
+
+    window.runLocalAction = function(action) {
+      var result = original.apply(this, arguments);
+
+      Promise.resolve(result).finally(function(){
+        if (mustReload(action)) {
+          setTimeout(reloadDashboard, 800);
+        }
+      });
+
+      return result;
+    };
+
+    window.runLocalAction.__gilWrappedForReload = true;
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", installWrapper);
+  } else {
+    installWrapper();
+  }
+})();
+</script>
+"""
+
+    html = re.sub(
+        r'\n?<script id="autoReloadAfterActionScript">[\s\S]*?</script>\n?',
+        "\n",
+        html,
+        flags=re.S,
+    )
+
+    if "</body>" in html:
+        return html.replace("</body>", script + "\n</body>", 1)
+
+    return html + "\n" + script
+
 def apply_sprint_comparison_from_jira(payload: dict) -> dict:
-    """Ajoute les vrais noms Jira sans casser le dashboard legacy.
-
-    Pour l'instant :
-    - on injecte sprintCourant / sprintPrecedent ;
-    - on garde la comparaison legacy existante ;
-    - on stocke la comparaison officielle dans comparaisonSprintsJiraOfficielle ;
-    - on ne remplace pas comparaisonSprints tant que le rendu legacy n'est pas adapté.
-    """
-
     sprint_data = load_sprints_dashboard()
     if not sprint_data:
         return payload
@@ -529,12 +753,10 @@ def apply_sprint_comparison_from_jira(payload: dict) -> dict:
     if nom_precedent:
         payload["sprintPrecedent"] = nom_precedent
 
-    comparaison = sprint_data.get("comparaisonSprints")
-    if isinstance(comparaison, list):
-        payload["comparaisonSprintsJiraOfficielle"] = comparaison
-
-    # On ne remplace PAS payload["comparaisonSprints"] ici.
-    # Le rendu legacy reste stable avec ses données déjà connues.
+    comparaison_officielle = normalise_comparaison_sprints_jira(sprint_data)
+    if comparaison_officielle:
+        payload["comparaisonSprintsJiraOfficielle"] = comparaison_officielle
+        payload["comparaisonSprints"] = comparaison_officielle
 
     tendance = payload.get("tendanceHebdo") or {}
     rows = tendance.get("rows") or []
@@ -960,6 +1182,7 @@ def main() -> None:
     html = remove_dynamic_sprint_label_script(html)
     html = remove_dynamic_sprint_label_script(html)
     html = inject_stable_fallback_loader(html)
+    html = inject_auto_reload_after_actions(html)
     write_text(HTML, html)
 
     # Fichier canonique générique.
