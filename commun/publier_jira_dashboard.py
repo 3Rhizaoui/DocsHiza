@@ -797,6 +797,48 @@ def inject_auto_reload_after_actions(html: str) -> str:
 
     return html + "\n" + script
 
+def load_json_optional(path, default=None):
+    if default is None:
+        default = {}
+    if not path.exists():
+        return default
+    try:
+        return json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    except Exception:
+        return default
+
+
+def apply_architecture_sprints(payload: dict) -> dict:
+    base = PROJECT / "jira"
+
+    sprint_courant = load_json_optional(base / "sprints" / "sprint_courant.json", {})
+    sprint_precedent = load_json_optional(base / "sprints" / "sprint_precedent.json", {})
+    comparaison = load_json_optional(base / "presentation" / "comparaison_sprints.json", [])
+
+    if sprint_courant:
+        payload["sprintCourantDetail"] = sprint_courant
+        nom = (sprint_courant.get("sprint") or {}).get("nom")
+        if nom:
+            payload["sprintCourant"] = nom
+
+    if sprint_precedent:
+        payload["sprintPrecedentDetail"] = sprint_precedent
+        nom = (sprint_precedent.get("sprint") or {}).get("nom")
+        if nom:
+            payload["sprintPrecedent"] = nom
+
+    if isinstance(comparaison, list) and comparaison:
+        payload["comparaisonSprints"] = comparaison
+        payload["comparaisonSprintsJiraOfficielle"] = comparaison
+
+    payload["architectureJira"] = {
+        "sprintsComplets": bool(sprint_courant and sprint_precedent),
+        "comparaisonPresentation": bool(isinstance(comparaison, list) and comparaison),
+        "source": "jira/sprints + jira/presentation",
+    }
+
+    return payload
+
 def apply_sprint_comparison_from_jira(payload: dict) -> dict:
     sprint_data = load_sprints_dashboard()
     if not sprint_data:
@@ -1189,6 +1231,7 @@ def replace_fallback_data(html: str, payload: dict) -> str:
     payload = apply_sprint_context(payload)
     payload = enrich_score_detail(payload)
     payload = apply_sprint_comparison_from_jira(payload)
+    payload = apply_architecture_sprints(payload)
     clean_json = json_for_script(payload)
 
     new_block = "const fallbackData = " + clean_json + ";\nlet currentData = fallbackData;"

@@ -42,6 +42,10 @@ echo   - produire sprints_dashboard.json
 echo.
 
 python "construire_sprints_jira.py"
+if errorlevel 1 goto erreur
+python "%PROJECT_DIR%\jira\construire_architecture_sprints.py"
+if errorlevel 1 goto erreur
+python "%PROJECT_DIR%\jira\auditer_architecture_sprints.py"
 if errorlevel 1 py -3 "construire_sprints_jira.py"
 if errorlevel 1 goto :sprint_error
 
