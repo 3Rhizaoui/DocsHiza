@@ -156,5 +156,18 @@ exit /b 1
 :missing_dashboard
 echo.
 echo [ERREUR BLOQUANTE] dashboard_gil_data.json n'a pas ete genere.
+
+
+echo.
+echo ============================================================
+echo [AUTO] AUDIT RUNTIME DASHBOARD GIL
+echo ============================================================
+if not defined PROJECT_DIR set "PROJECT_DIR=%~dp0.."
+if exist "%PROJECT_DIR%\audit_dashboard_gil.py" (
+  python "%PROJECT_DIR%\audit_dashboard_gil.py" --mode runtime
+) else (
+  echo [INFO] audit_dashboard_gil.py introuvable, audit runtime ignore.
+)
+
 pause
 exit /b 1

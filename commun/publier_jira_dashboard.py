@@ -488,6 +488,10 @@ def load_sprints_dashboard() -> dict:
         return {}
 
 
+
+
+
+
 def first_int(*values):
     for value in values:
         if value is None or isinstance(value, bool):
@@ -502,7 +506,7 @@ def first_int(*values):
 
 
 def normalise_comparaison_sprints_jira(sprint_data: dict) -> list:
-    # Convertit les sprints Jira officiels vers le format attendu par le graphe legacy.
+    # Convertit les deux sprints Jira officiels vers le format attendu par le graphe legacy.
     if not isinstance(sprint_data, dict):
         return []
 
@@ -539,23 +543,11 @@ def normalise_comparaison_sprints_jira(sprint_data: dict) -> list:
         src = raw_for_name(nom, index)
         src.update(summary)
 
-        flux = first_int(
-            src.get("flux"),
-            src.get("demandes"),
-            src.get("demandesTotal"),
-            src.get("totalFlux"),
-            src.get("fluxTotal"),
-        )
-
-        anomalies = first_int(
-            src.get("anomalies"),
-            src.get("bugs"),
-            src.get("defauts"),
-            0,
-        )
+        anomalies = first_int(src.get("anomalies"), src.get("bugs"), src.get("defauts"), 0)
 
         total = first_int(
             src.get("total"),
+            src.get("flux"),
             src.get("fluxTotal"),
             src.get("totalFlux"),
             src.get("demandesTotal"),
@@ -564,7 +556,7 @@ def normalise_comparaison_sprints_jira(sprint_data: dict) -> list:
         )
 
         if total is None:
-            total = (flux or 0) + (anomalies or 0)
+            total = anomalies or 0
 
         livres = first_int(
             src.get("livres"),
@@ -582,6 +574,7 @@ def normalise_comparaison_sprints_jira(sprint_data: dict) -> list:
 
         en_cours = first_int(
             src.get("enCours"),
+            src.get("encours"),
             src.get("fluxEnCours"),
             src.get("inProgress"),
             src.get("ouverts"),
@@ -593,6 +586,8 @@ def normalise_comparaison_sprints_jira(sprint_data: dict) -> list:
             src.get("bloqués"),
             src.get("rejetes"),
             src.get("rejetés"),
+            src.get("bloquesRejetes"),
+            src.get("bloquésRejetés"),
             src.get("fluxBloquesRejetes"),
             src.get("fluxBloquésRejetés"),
             src.get("blocked"),
@@ -605,7 +600,6 @@ def normalise_comparaison_sprints_jira(sprint_data: dict) -> list:
             "label": nom,
             "name": nom,
 
-            # Aliases total utilisés par différents rendus legacy.
             "total": total,
             "flux": total,
             "demandes": total,
@@ -613,26 +607,45 @@ def normalise_comparaison_sprints_jira(sprint_data: dict) -> list:
             "totalDemandes": total,
             "fluxTotal": total,
             "totalFlux": total,
-            "fluxDemandesTotal": total,
             "fluxDemandes": total,
+            "fluxDemandesTotal": total,
 
-            # Aliases livrés.
+            "sitTotal": total,
+            "uatTotal": 0,
+            "totalSIT": total,
+            "totalUAT": 0,
+            "fluxSIT": total,
+            "fluxUAT": 0,
+
             "livres": livres,
             "livrés": livres,
             "fluxLivres": livres,
             "fluxLivrés": livres,
+            "livresSIT": livres,
+            "livresUAT": 0,
+            "fluxLivresSIT": livres,
+            "fluxLivresUAT": 0,
 
-            # Aliases en cours.
             "enCours": en_cours,
+            "encours": en_cours,
             "fluxEnCours": en_cours,
+            "enCoursSIT": en_cours,
+            "enCoursUAT": 0,
+            "fluxEnCoursSIT": en_cours,
+            "fluxEnCoursUAT": 0,
 
-            # Aliases bloqués / rejetés.
             "bloques": bloques,
             "bloqués": bloques,
             "rejetes": bloques,
             "rejetés": bloques,
+            "bloquesRejetes": bloques,
+            "bloquésRejetés": bloques,
             "fluxBloquesRejetes": bloques,
             "fluxBloquésRejetés": bloques,
+            "bloquesSIT": bloques,
+            "bloquesUAT": 0,
+            "fluxBloquesSIT": bloques,
+            "fluxBloquesUAT": 0,
 
             "anomalies": anomalies,
             "source": "jira_agile_api",
@@ -644,13 +657,38 @@ def normalise_comparaison_sprints_jira(sprint_data: dict) -> list:
     return rows
 
 
+def inject_build_stamp(html: str) -> str:
+    import datetime as _dt
+
+    stamp = _dt.datetime.now().strftime("%Y%m%d%H%M%S")
+    html = re.sub(
+        r'\n?<meta name="gil-build-stamp" content="[^"]*">\n?',
+        "\n",
+        html,
+        flags=re.S,
+    )
+
+    meta = f'<meta name="gil-build-stamp" content="{stamp}">'
+
+    if "</head>" in html:
+        return html.replace("</head>", meta + "\n</head>", 1)
+
+    return meta + "\n" + html
+
+
 def inject_auto_reload_after_actions(html: str) -> str:
-    # Recharge automatiquement la page après une action lancée depuis les boutons HTML.
     script = """
 <script id="autoReloadAfterActionScript">
 (function(){
   if (window.__gilAutoReloadAfterActionInstalled) return;
   window.__gilAutoReloadAfterActionInstalled = true;
+
+  var currentStamp = "";
+  var meta = document.querySelector('meta[name="gil-build-stamp"]');
+  if (meta) currentStamp = meta.getAttribute("content") || "";
+
+  var polling = false;
+  var startedAt = 0;
 
   function mustReload(action) {
     var a = String(action || "").toLowerCase();
@@ -665,6 +703,11 @@ def inject_auto_reload_after_actions(html: str) -> str:
     );
   }
 
+  function extractStamp(text) {
+    var m = String(text || "").match(/<meta name="gil-build-stamp" content="([^"]+)"/);
+    return m ? m[1] : "";
+  }
+
   function reloadDashboard() {
     try {
       var url = new URL(window.location.href);
@@ -674,6 +717,39 @@ def inject_auto_reload_after_actions(html: str) -> str:
       window.location.reload();
     }
   }
+
+  function pollOnce() {
+    if (!polling) return;
+
+    if (Date.now() - startedAt > 15 * 60 * 1000) {
+      polling = false;
+      return;
+    }
+
+    fetch(window.location.pathname + "?_gil_poll=" + Date.now(), { cache: "no-store" })
+      .then(function(r){ return r.text(); })
+      .then(function(text){
+        var nextStamp = extractStamp(text);
+        if (nextStamp && currentStamp && nextStamp !== currentStamp) {
+          polling = false;
+          reloadDashboard();
+          return;
+        }
+        setTimeout(pollOnce, 2000);
+      })
+      .catch(function(){
+        setTimeout(pollOnce, 3000);
+      });
+  }
+
+  function startPolling() {
+    if (polling) return;
+    polling = true;
+    startedAt = Date.now();
+    setTimeout(pollOnce, 1500);
+  }
+
+  window.__gilStartAutoReloadPolling = startPolling;
 
   function installWrapper() {
     if (typeof window.runLocalAction !== "function") {
@@ -686,12 +762,12 @@ def inject_auto_reload_after_actions(html: str) -> str:
     var original = window.runLocalAction;
 
     window.runLocalAction = function(action) {
+      if (mustReload(action)) startPolling();
+
       var result = original.apply(this, arguments);
 
       Promise.resolve(result).finally(function(){
-        if (mustReload(action)) {
-          setTimeout(reloadDashboard, 800);
-        }
+        if (mustReload(action)) startPolling();
       });
 
       return result;
@@ -1182,6 +1258,7 @@ def main() -> None:
     html = remove_dynamic_sprint_label_script(html)
     html = remove_dynamic_sprint_label_script(html)
     html = inject_stable_fallback_loader(html)
+    html = inject_build_stamp(html)
     html = inject_auto_reload_after_actions(html)
     write_text(HTML, html)
 

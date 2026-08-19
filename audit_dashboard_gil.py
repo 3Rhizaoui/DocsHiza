@@ -377,6 +377,11 @@ if generic_html.exists():
     else:
         add("PASS", "NO_EXTERNAL_FETCH", "Pas de fetch externe actif vers rapport_gil_v6_data.json")
 
+    if "autoReloadAfterActionScript" in html:
+        add("PASS", "HTML_AUTO_RELOAD", "autoReloadAfterActionScript présent dans le HTML")
+    else:
+        add("FAIL" if runtime else "WARN", "HTML_AUTO_RELOAD_MISSING", "autoReloadAfterActionScript absent du HTML publié")
+
     if "stableFallbackLoader" in html:
         add("PASS", "HTML_STABLE_LOADER", "stableFallbackLoader présent dans le HTML")
     else:
