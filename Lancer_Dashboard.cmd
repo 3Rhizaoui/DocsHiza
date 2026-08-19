@@ -1,6 +1,10 @@
 @echo off
 setlocal
 cd /d "%~dp0"
+if exist "commun\preparer_dashboard_runtime.py" (
+  python "commun\preparer_dashboard_runtime.py" --bootstrap
+)
+
 title Dashboard GIL - page legacy
 
 echo Demarrage du dashboard local GIL...

@@ -160,6 +160,19 @@ echo [ERREUR BLOQUANTE] dashboard_gil_data.json n'a pas ete genere.
 
 echo.
 echo ============================================================
+
+
+echo.
+echo ============================================================
+echo [AUTO] PREPARATION HTML RUNTIME
+echo ============================================================
+if not defined PROJECT_DIR set "PROJECT_DIR=%~dp0.."
+if exist "%PROJECT_DIR%\commun\preparer_dashboard_runtime.py" (
+  python "%PROJECT_DIR%\commun\preparer_dashboard_runtime.py" --after-import
+) else (
+  echo [INFO] preparer_dashboard_runtime.py introuvable.
+)
+
 echo [AUTO] AUDIT RUNTIME DASHBOARD GIL
 echo ============================================================
 if not defined PROJECT_DIR set "PROJECT_DIR=%~dp0.."
