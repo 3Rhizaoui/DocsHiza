@@ -843,9 +843,21 @@ async function collectOfficialSprintDiagnostics(cdp, baseUrl, projectKey) {
     throw new Error(`Aucun board Jira trouvé pour le projet ${projectKey}`);
   }
 
+  const preferredBoards = boards
+    .filter(board => {
+      const type = String(board.type || '').toLowerCase();
+      const name = String(board.name || '').toLowerCase();
+      return type === 'scrum' || name.includes(String(projectKey || '').toLowerCase()) || name.includes('gil');
+    })
+    .concat(boards.filter(board => {
+      const type = String(board.type || '').toLowerCase();
+      const name = String(board.name || '').toLowerCase();
+      return !(type === 'scrum' || name.includes(String(projectKey || '').toLowerCase()) || name.includes('gil'));
+    }));
+
   let selected = null;
 
-  for (const board of boards) {
+  for (const board of preferredBoards) {
     try {
       const sprintResult = await agilePaged(
         cdp,
@@ -867,7 +879,12 @@ async function collectOfficialSprintDiagnostics(cdp, baseUrl, projectKey) {
 
       if (!selected && active) selected = {board, sprints, active, previous: closed[0] || null};
     } catch (error) {
-      console.log(`[diagnostic_sprints_officiel] Board ${board.id} ignoré : ${error.message || error}`);
+      const msg = String(error.message || error);
+      if (msg.includes('ne prend pas en charge les sprints')) {
+        console.log(`[diagnostic_sprints_officiel][INFO] Board ${board.id} ignoré : tableau sans sprint`);
+      } else {
+        console.log(`[diagnostic_sprints_officiel][INFO] Board ${board.id} ignoré : ${msg}`);
+      }
     }
   }
 

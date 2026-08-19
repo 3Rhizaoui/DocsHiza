@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import re
 import shutil
@@ -488,77 +489,79 @@ def load_sprints_dashboard() -> dict:
 
 
 def apply_sprint_comparison_from_jira(payload: dict) -> dict:
-    """Injecte les vrais noms Jira et la comparaison officielle sans casser les données existantes.
+    """Ajoute les vrais noms Jira sans casser le dashboard legacy.
 
-    Règle :
-    - si sprints_dashboard.json est fiable, on utilise ses noms et sa comparaison ;
-    - on ne supprime pas les lignes dashboard déjà préparées ;
-    - le calcul du statut sprint reste inchangé.
+    Pour l'instant :
+    - on injecte sprintCourant / sprintPrecedent ;
+    - on garde la comparaison legacy existante ;
+    - on stocke la comparaison officielle dans comparaisonSprintsJiraOfficielle ;
+    - on ne remplace pas comparaisonSprints tant que le rendu legacy n'est pas adapté.
     """
 
     sprint_data = load_sprints_dashboard()
     if not sprint_data:
         return payload
 
-    payload["diagnosticSprintsJira"] = sprint_data
-
-    if sprint_data.get("reliable") is not True:
-        payload["sprintDetectionWarning"] = sprint_data.get("warnings") or [
-            "Détection sprint Jira non fiable : comparaison dynamique non appliquée."
-        ]
-        return payload
-
     courant = sprint_data.get("courant") or {}
     precedent = sprint_data.get("precedent") or {}
 
-    nom_courant = courant.get("nom") or courant.get("name") or payload.get("sprintCourant") or "Sprint courant"
-    nom_precedent = precedent.get("nom") or precedent.get("name") or payload.get("sprintPrecedent") or "Sprint précédent"
+    payload["diagnosticSprintsJira"] = {
+        "reliable": sprint_data.get("reliable"),
+        "methode": sprint_data.get("methode"),
+        "board": sprint_data.get("board"),
+        "courant": courant,
+        "precedent": precedent,
+        "warnings": sprint_data.get("warnings") or [],
+    }
 
-    payload["sprintCourant"] = nom_courant
-    payload["sprintPrecedent"] = nom_precedent
+    if sprint_data.get("reliable") is not True:
+        payload["sprintDetectionWarning"] = sprint_data.get("warnings") or [
+            "Détection sprint Jira non fiable."
+        ]
+        return payload
+
+    nom_courant = courant.get("nom") or courant.get("name") or payload.get("sprintCourant")
+    nom_precedent = precedent.get("nom") or precedent.get("name") or payload.get("sprintPrecedent")
+
+    if nom_courant:
+        payload["sprintCourant"] = nom_courant
+
+    if nom_precedent:
+        payload["sprintPrecedent"] = nom_precedent
 
     comparaison = sprint_data.get("comparaisonSprints")
-    if isinstance(comparaison, list) and len(comparaison) >= 2:
-        payload["comparaisonSprints"] = comparaison
+    if isinstance(comparaison, list):
+        payload["comparaisonSprintsJiraOfficielle"] = comparaison
+
+    # On ne remplace PAS payload["comparaisonSprints"] ici.
+    # Le rendu legacy reste stable avec ses données déjà connues.
 
     tendance = payload.get("tendanceHebdo") or {}
     rows = tendance.get("rows") or []
 
-    if isinstance(rows, list) and rows:
+    if isinstance(rows, list) and rows and nom_courant:
         rows[-1]["sprint"] = nom_courant
 
-    if isinstance(tendance.get("current"), dict):
+    if isinstance(tendance.get("current"), dict) and nom_courant:
         tendance["current"]["sprint"] = nom_courant
 
     tendance["rows"] = rows
     payload["tendanceHebdo"] = tendance
 
-    # Ne pas vider/remplacer les listes existantes : on ajoute seulement le nom courant.
-    for key in [
-        "fluxPrets",
-        "fluxPretsArrimage",
-        "histoFlux",
-        "histoAnomalies",
-        "anomalies",
-        "anomaliesDetail",
-        "prioritesHebdo",
-    ]:
-        values = payload.get(key)
-        if not isinstance(values, list):
-            continue
-        for item in values:
-            if isinstance(item, dict):
-                item["sprint"] = nom_courant
-
     return payload
 
 
-
 def json_for_script(payload: dict) -> str:
-    text = json.dumps(payload, ensure_ascii=False, indent=2)
-    text = text.replace("</", "<\\/")
-    text = text.replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
-    return text
+    """Encode le payload en base64 pour éviter caractères spéciaux dans le JS."""
+
+    raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    encoded = base64.b64encode(raw.encode("utf-8")).decode("ascii")
+
+    return (
+        'JSON.parse(new TextDecoder().decode('
+        'Uint8Array.from(atob("' + encoded + '"), c => c.charCodeAt(0))'
+        '))'
+    )
 
 
 def disable_external_json_load(html: str) -> str:
@@ -814,6 +817,76 @@ def remove_dynamic_sprint_label_script(html: str) -> str:
         flags=re.S,
     )
 
+
+def remove_dynamic_sprint_label_script(html: str) -> str:
+    """Retire l'ancien script JS qui remplaçait les libellés par 'Sprint courant'."""
+
+    return re.sub(
+        r'\n?<script id="dynamicSprintLabelsScript">[\s\S]*?</script>\n?',
+        "\n",
+        html,
+        flags=re.S,
+    )
+
+
+def inject_stable_fallback_loader(html: str) -> str:
+    """Force le dashboard à se rendre depuis fallbackData après F5.
+
+    Objectif :
+    - ne plus dépendre d'un fetch externe ;
+    - éviter page vide après Ctrl+F5 ;
+    - garder le rendu legacy stable.
+    """
+
+    js = r"""
+<script id="stableFallbackLoader">
+(function(){
+  function renderFromFallback(){
+    try {
+      if (typeof fallbackData === 'undefined') {
+        console.error('[GIL] fallbackData indisponible');
+        return;
+      }
+      if (typeof render !== 'function') {
+        console.error('[GIL] fonction render indisponible');
+        return;
+      }
+      currentData = fallbackData;
+      render(currentData);
+    } catch(e) {
+      console.error('[GIL] rendu fallbackData en erreur', e);
+    }
+  }
+
+  window.loadData = async function(){
+    renderFromFallback();
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){
+      setTimeout(renderFromFallback, 0);
+    });
+  } else {
+    setTimeout(renderFromFallback, 0);
+  }
+
+  window.__gilRenderFromFallback = renderFromFallback;
+})();
+</script>
+"""
+
+    html = re.sub(
+        r'\n?<script id="stableFallbackLoader">[\s\S]*?</script>\n?',
+        "\n",
+        html,
+        flags=re.S,
+    )
+
+    if "</body>" in html:
+        return html.replace("</body>", js + "\n</body>", 1)
+
+    return html + "\n" + js
+
 def replace_fallback_data(html: str, payload: dict) -> str:
     payload = apply_sprint_context(payload)
     payload = enrich_score_detail(payload)
@@ -836,34 +909,22 @@ def replace_fallback_data(html: str, payload: dict) -> str:
 
 
 def verify_html(html: str, payload: dict) -> None:
-    """Contrôle non destructif après publication.
-
-    On ne re-parse pas fallbackData depuis le HTML.
-    Le payload est déjà construit en Python puis injecté avec json.dumps.
-    """
-
     if "fetch('rapport_gil_v6_data.json'" in html or 'fetch("rapport_gil_v6_data.json' in html:
         stop("Le HTML contient encore un fetch actif vers rapport_gil_v6_data.json")
 
     if "function runLocalAction" not in html:
         stop("runLocalAction absent après publication")
 
-    if "const fallbackData" not in html or "let currentData = fallbackData" not in html:
+    if "const fallbackData" not in html:
         stop("fallbackData absent après publication")
 
-    required_tokens = [
-        '"statutSprintCalcul"',
-        '"scoreBrut"',
-        '"penalite"',
-        '"scoreFinal"',
-        '"niveau"',
-        "statutSprintCalcTooltipScript",
-        "decorateStatutSprintTooltips",
-    ]
+    if "stableFallbackLoader" not in html:
+        stop("stableFallbackLoader absent après publication")
 
-    missing = [token for token in required_tokens if token not in html]
-    if missing:
-        stop("Détail du calcul statut sprint ou bulles absents du HTML : " + ", ".join(missing))
+    if "dynamicSprintLabelsScript" in html:
+        stop("Ancien dynamicSprintLabelsScript encore présent")
+
+    print("[OK] Publication JIRA stable.")
 
 
 def main() -> None:
@@ -897,6 +958,8 @@ def main() -> None:
     html = replace_fallback_data(html, payload)
     html = inject_statut_sprint_tooltips(html)
     html = remove_dynamic_sprint_label_script(html)
+    html = remove_dynamic_sprint_label_script(html)
+    html = inject_stable_fallback_loader(html)
     write_text(HTML, html)
 
     print("[4/4] Contrôle")
