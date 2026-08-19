@@ -3,9 +3,11 @@ import argparse
 import datetime as dt
 import json
 import re
+import shutil
 
 ROOT = Path(__file__).resolve().parents[1]
 COMMUN = ROOT / "commun"
+JIRA = ROOT / "jira"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--bootstrap", action="store_true")
@@ -18,57 +20,32 @@ HTML_FILES = [
 ]
 
 
-def safe_int(value, default=0):
-    try:
-        if value is None or value == "":
-            return default
-        return int(value)
-    except Exception:
-        return default
+def copy_if_exists(src: Path, dst: Path) -> bool:
+    if not src.exists():
+        return False
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(src, dst)
+    return True
 
 
-def official_rows():
-    path = ROOT / "jira" / "sprints_dashboard.json"
+def copy_runtime_jsons():
+    copied = []
 
-    if not path.exists():
-        return []
+    mappings = [
+        (JIRA / "dashboard_gil_data.json", COMMUN / "dashboard_gil_data.json"),
+        (JIRA / "sprints" / "sprint_courant.json", COMMUN / "sprint_courant.json"),
+        (JIRA / "sprints" / "sprint_precedent.json", COMMUN / "sprint_precedent.json"),
+        (JIRA / "presentation" / "comparaison_sprints.json", COMMUN / "comparaison_sprints.json"),
+        (JIRA / "sprint_courant.json", COMMUN / "sprint_courant.json"),
+        (JIRA / "sprint_precedent.json", COMMUN / "sprint_precedent.json"),
+        (JIRA / "comparaison_sprints.json", COMMUN / "comparaison_sprints.json"),
+    ]
 
-    try:
-        data = json.loads(path.read_text(encoding="utf-8", errors="replace"))
-    except Exception:
-        return []
+    for src, dst in mappings:
+        if copy_if_exists(src, dst):
+            copied.append(str(dst.relative_to(ROOT)))
 
-    rows = []
-
-    for key in ["precedent", "courant"]:
-        item = data.get(key) or {}
-        if not isinstance(item, dict):
-            continue
-
-        name = (
-            item.get("nom")
-            or item.get("name")
-            or item.get("sprint")
-            or item.get("label")
-            or ("Sprint précédent" if key == "precedent" else "Sprint courant")
-        )
-
-        flux = safe_int(item.get("flux"))
-        anomalies = safe_int(item.get("anomalies"))
-        total = safe_int(item.get("total"), flux + anomalies)
-
-        if not total:
-            total = flux + anomalies
-
-        rows.append({
-            "sprint": name,
-            "flux": flux,
-            "anomalies": anomalies,
-            "total": total,
-            "type": key,
-        })
-
-    return rows
+    return copied
 
 
 def clean_runtime(html: str) -> str:
@@ -105,19 +82,9 @@ def clean_runtime(html: str) -> str:
     return html
 
 
-def inject_runtime(html: str, rows: list) -> str:
+def inject_runtime(html: str) -> str:
     stamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
-
     meta = f'<meta name="gil-build-stamp" content="{stamp}">'
-
-    safe_json = (
-        json.dumps(rows, ensure_ascii=False)
-        .replace("<", "\\u003c")
-        .replace(">", "\\u003e")
-        .replace("&", "\\u0026")
-    )
-
-    data_tag = f'<script id="jiraOfficialSprintRowsData" type="application/json">{safe_json}</script>'
 
     js_tag = (
         f'<script id="stableFallbackLoader" '
@@ -132,31 +99,31 @@ def inject_runtime(html: str, rows: list) -> str:
         html = meta + "\n" + html
 
     if "</body>" in html:
-        html = html.replace("</body>", data_tag + "\n" + js_tag + "\n</body>", 1)
+        html = html.replace("</body>", js_tag + "\n</body>", 1)
     else:
-        html = html + "\n" + data_tag + "\n" + js_tag
+        html = html + "\n" + js_tag
 
     return html
 
 
-def patch_html(path: Path, rows: list) -> bool:
+def patch_html(path: Path) -> bool:
     if not path.exists():
         return False
 
     html = path.read_text(encoding="utf-8", errors="replace")
     html = clean_runtime(html)
-    html = inject_runtime(html, rows)
+    html = inject_runtime(html)
 
     path.write_text(html, encoding="utf-8")
     return True
 
 
 def main():
-    rows = official_rows()
-    done = []
+    copied = copy_runtime_jsons()
 
+    done = []
     for path in HTML_FILES:
-        if patch_html(path, rows):
+        if patch_html(path):
             done.append(str(path.relative_to(ROOT)))
 
     if not done:
@@ -166,12 +133,12 @@ def main():
     for item in done:
         print(" -", item)
 
-    if rows:
-        print("[OK] Comparaison officielle injectée :")
-        for row in rows:
-            print(f" - {row['sprint']} | total:{row['total']} | flux:{row['flux']} | anomalies:{row['anomalies']}")
+    if copied:
+        print("[OK] JSON runtime copiés dans commun/ :")
+        for item in copied:
+            print(" -", item)
     else:
-        print("[INFO] Aucun sprints_dashboard.json disponible : comparaison officielle non injectée.")
+        print("[INFO] Aucun JSON runtime à copier pour l'instant.")
 
 
 if __name__ == "__main__":
