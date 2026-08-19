@@ -4,10 +4,10 @@ cd /d "%~dp0"
 title Dashboard GIL - page legacy
 
 echo Demarrage du dashboard local GIL...
-echo URL : http://127.0.0.1:8765/dashboard_gil_sprint21.html
+echo URL : http://127.0.0.1:8765/dashboard_gil.html
 echo.
 
-start "" "http://127.0.0.1:8765/dashboard_gil_sprint21.html"
+start "" "http://127.0.0.1:8765/dashboard_gil.html"
 
 python "commun\serveur_dashboard.py"
 if errorlevel 1 py -3 "commun\serveur_dashboard.py"

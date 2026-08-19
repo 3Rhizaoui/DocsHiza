@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "dashboard_gil_data.json"
 TEMPLATE_DATA = ROOT / "rapport_gil_v6_w28_data.json"
-HTML = ROOT / "dashboard_gil_sprint21.html"
+HTML = ROOT / "dashboard_gil.html"
 GENERATOR_VERSION = "2026.08.11.2"
 
 print(f"Generateur dashboard GIL - version {GENERATOR_VERSION}")
@@ -22,7 +22,7 @@ def load_payload_template():
 
     if not HTML.exists():
         raise SystemExit(
-            "Modele introuvable : copiez dashboard_gil_sprint21.html dans le meme "
+            "Modele introuvable : copiez dashboard_gil.html dans le meme "
             "dossier que ce script."
         )
 

@@ -15,3 +15,5 @@ confluence/confluence_diagnostic.json
 sources/*.raw.json
 archives_sprints/*/rev*/
 !archives_sprints/index_sprints.json
+audit_reports/
+node_modules/

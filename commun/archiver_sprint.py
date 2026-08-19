@@ -14,7 +14,7 @@ INDEX = ARCHIVES / "index_sprints.json"
 DATA = ROOT / "dashboard_gil_data.json"
 PAYLOAD = ROOT / "rapport_gil_v6_w28_data.json"
 HTML = ROOT / "dashboard_gil.html"
-LEGACY_HTML = ROOT / "dashboard_gil_sprint21.html"
+LEGACY_HTML = ROOT / "dashboard_gil.html"
 VERSION_CALCUL = "dynamic-v1"
 
 

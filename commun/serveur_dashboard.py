@@ -101,7 +101,7 @@ class Handler(SimpleHTTPRequestHandler):
         path = urlparse(self.path).path
 
         if path in {"", "/"}:
-            self.path = "/dashboard_gil_sprint21.html"
+            self.path = "/dashboard_gil.html"
             return super().do_GET()
 
         if path == "/favicon.ico":
@@ -194,7 +194,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.wfile.write(f"Erreur lancement {action}: {exc}".encode("utf-8", errors="replace"))
 
 if __name__ == "__main__":
-    print(f"Dashboard local : http://127.0.0.1:{PORT}/dashboard_gil_sprint21.html")
+    print(f"Dashboard local : http://127.0.0.1:{PORT}/dashboard_gil.html")
     print("Projet detecte  :", PROJECT)
     print("Actions detectees :")
     for name, target in ACTIONS.items():

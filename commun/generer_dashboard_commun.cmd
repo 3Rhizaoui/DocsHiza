@@ -24,7 +24,7 @@ if exist "dashboard_gil_data.json" copy /Y "dashboard_gil_data.json" "dashboard_
 
 echo.
 echo Dashboard legacy regenere :
-echo   %CD%\dashboard_gil_sprint21.html
+echo   %CD%\dashboard_gil.html
 echo.
 exit /b 0
 

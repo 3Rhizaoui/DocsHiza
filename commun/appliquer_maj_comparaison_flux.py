@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 
 PYTHON_FILE = ROOT / "generer_dashboard_gil_classique.py"
-HTML_FILE = ROOT / "dashboard_gil_sprint21.html"
+HTML_FILE = ROOT / "dashboard_gil.html"
 
 
 def backup(path: Path):
@@ -521,7 +521,7 @@ def update_html():
     )
 
     print(
-        "OK : dashboard_gil_sprint21.html mis à jour."
+        "OK : dashboard_gil.html mis à jour."
     )
 
 

@@ -1,3 +1,19 @@
+
+// Compatibilité CDP : certains runtimes Node ne fournissent pas WebSocket global.
+// On utilise le WebSocket natif si disponible, sinon le module npm "ws".
+(function ensureWebSocketForCDP() {
+  if (typeof globalThis.WebSocket === "function") {
+    return;
+  }
+
+  try {
+    const wsModule = require("ws");
+    globalThis.WebSocket = wsModule.WebSocket || wsModule;
+  } catch (error) {
+    // Le constructeur CDP affichera une erreur explicite si WebSocket reste absent.
+  }
+})();
+
 const fs = require('fs');
 const path = require('path');
 const cp = require('child_process');

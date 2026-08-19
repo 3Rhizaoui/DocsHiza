@@ -14,7 +14,7 @@ PROJECT = ROOT.parent
 
 JIRA_SOURCE = PROJECT / "jira" / "dashboard_gil_data.json"
 COMMUN_SOURCE = ROOT / "dashboard_gil_data.json"
-HTML = ROOT / "dashboard_gil_sprint21.html"
+HTML = ROOT / "dashboard_gil.html"
 GENERATOR = ROOT / "generer_dashboard_gil_classique.py"
 
 
@@ -903,7 +903,7 @@ def replace_fallback_data(html: str, payload: dict) -> str:
     )
 
     if count == 0:
-        stop("Impossible de remplacer fallbackData dans dashboard_gil_sprint21.html")
+        stop("Impossible de remplacer fallbackData dans dashboard_gil.html")
 
     return html2
 
@@ -962,6 +962,13 @@ def main() -> None:
     html = inject_stable_fallback_loader(html)
     write_text(HTML, html)
 
+    # Fichier canonique générique.
+    # Le nom du fichier ne doit pas porter le numéro du sprint.
+    GENERIC_HTML = HTML.with_name("dashboard_gil.html")
+    LEGACY_HTML = HTML.with_name("dashboard_gil_sprint21.html")
+    write_text(GENERIC_HTML, html)
+    write_text(LEGACY_HTML, html)
+
     print("[4/4] Contrôle")
     html2 = read_text(HTML)
     verify_html(html2, payload)
@@ -970,7 +977,9 @@ def main() -> None:
     print("Flux :", payload["kpis"]["total"])
     print("Prêts :", payload["kpis"]["prets"])
     print("Taux :", str(payload["kpis"]["taux"]) + "%")
-    print("HTML :", HTML)
+    print("HTML legacy :", HTML)
+    print("HTML générique :", GENERIC_HTML)
+    print("HTML legacy    :", LEGACY_HTML)
 
 
 if __name__ == "__main__":

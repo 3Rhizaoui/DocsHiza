@@ -8,7 +8,7 @@ Le dashboard HTML est unique dans `commun`. Chaque connecteur produit le meme fi
 - Confluence SSO : renseigner `confluence\confluence_urls.txt`, puis lancer `confluence\Importer_Confluence.cmd`.
 - JIRA SSO : renseigner l'URL principale et les requêtes JQL dans `jira\jira_config.json`, adapter si nécessaire `jira\regles_domaines.json`, puis lancer `jira\Importer_JIRA.cmd`. Le fichier `jira_urls.txt` reste uniquement une compatibilité avec l'ancienne version.
 
-Le resultat est `commun\dashboard_gil_sprint21.html`.
+Le resultat est `commun\dashboard_gil.html`.
 
 ## Logique JIRA Domaine / Sous-domaine
 

@@ -49,7 +49,7 @@ def main():
                 errors += 1; ko(f"JSON invalide : {path.relative_to(PROJECT)} : {exc}")
     html_path = ROOT / "dashboard_gil.html"
     if not html_path.exists():
-        html_path = ROOT / "dashboard_gil_sprint21.html"
+        html_path = ROOT / "dashboard_gil.html"
     if html_path.exists():
         html = html_path.read_text(encoding="utf-8", errors="ignore")
         missing = [label for label in LABELS if label not in html]

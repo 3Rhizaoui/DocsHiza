@@ -73,7 +73,7 @@ echo ============================================================
 echo [4/5] PUBLICATION HTML LEGACY
 echo ============================================================
 echo Objectif :
-echo   - publier les donnees JIRA dans commun\dashboard_gil_sprint21.html
+echo   - publier les donnees JIRA dans commun\dashboard_gil.html
 echo   - injecter les noms de sprint dynamiques
 echo   - injecter la comparaison sprint precedent / sprint courant
 echo   - conserver les donnees apres Ctrl+F5

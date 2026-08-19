@@ -9,7 +9,7 @@ PROJECT = ROOT.parent
 DIAG = ROOT / "jira_diagnostic.json"
 BRUT = ROOT / "jira_brut.json"
 SOURCE = ROOT / "dashboard_gil_data.json"
-HTML = PROJECT / "commun" / "dashboard_gil_sprint21.html"
+HTML = PROJECT / "commun" / "dashboard_gil.html"
 SPRINTS_DASHBOARD = ROOT / "sprints_dashboard.json"
 
 
