@@ -376,6 +376,83 @@ def main():
 
     payload["comparaisonSprints"] = normalize_comparison(comparison, courant, precedent)
 
+    # Les champs legacy kpis/tendanceHebdo sont lus par le template historique
+    # pour la jauge et le bandeau statut. Ils doivent être alignés sur la source Jira courante,
+    # sinon le HTML affiche l'ancien score Sprint 21.
+    non_pret = max(0, total - prets)
+
+    payload["kpis"] = {
+        "flux": total,
+        "pretTester": prets,
+        "nonPret": non_pret,
+        "bugsBloquants": bugs,
+        "servicesRougeOrange": 0,
+        "testsKoBloques": bugs,
+    }
+
+    previous_row = {}
+    current_row = {}
+
+    comparaison_rows = payload.get("comparaisonSprints") or []
+    if len(comparaison_rows) >= 1 and isinstance(comparaison_rows[0], dict):
+        previous_row = comparaison_rows[0]
+    if len(comparaison_rows) >= 2 and isinstance(comparaison_rows[1], dict):
+        current_row = comparaison_rows[1]
+
+    semaine_precedente = (
+        clean_label(previous_row.get("semaine"), "")
+        or clean_label((previous_row.get("semaines") or [""])[0] if isinstance(previous_row.get("semaines"), list) else "", "")
+    )
+
+    payload["semainePrecedente"] = semaine_precedente
+    payload["semainesSprint"] = [semaine_courante]
+
+    prev_total = as_int(previous_row.get("fluxTotal"), 0)
+    prev_livres = as_int(previous_row.get("fluxLivresTotal"), 0)
+    prev_bloques = as_int(previous_row.get("fluxBloquesTotal"), 0)
+    prev_en_cours = as_int(previous_row.get("fluxEnCoursTotal"), 0)
+    prev_non_pret = max(0, prev_total - prev_livres)
+
+    current_tendance = {
+        "semaine": semaine_courante,
+        "dateRapport": "",
+        "flux": total,
+        "pretTester": prets,
+        "nonPret": non_pret,
+        "bugsBloquants": bugs,
+        "servicesRisque": 0,
+        "testsKoBloques": bugs,
+        "prioritesTraitees": prets,
+        "sante": "Vert" if score >= 80 else "Orange" if score >= 60 else "Rouge",
+        "faitMarquant": "Réel — import Jira courant",
+        "risque": f"{non_pret} élément(s) non prêt(s) ({bugs} KO, {en_cours} en cours)",
+    }
+
+    previous_tendance = {
+        "semaine": semaine_precedente,
+        "dateRapport": "",
+        "flux": prev_total,
+        "pretTester": prev_livres,
+        "nonPret": prev_non_pret,
+        "bugsBloquants": prev_bloques,
+        "servicesRisque": 0,
+        "testsKoBloques": prev_bloques,
+        "prioritesTraitees": prev_livres,
+        "sante": "Vert" if prev_total and round(prev_livres / prev_total * 100) >= 80 else "Orange",
+        "faitMarquant": "Sprint précédent — API Agile Jira",
+        "risque": f"{prev_non_pret} élément(s) non prêt(s) ({prev_bloques} bloqué(s), {prev_en_cours} en cours)",
+    }
+
+    payload["tendanceHebdo"] = {
+        "rows": [previous_tendance, current_tendance],
+        "previous": previous_tendance,
+        "current": current_tendance,
+        "deltaPret": prets - prev_livres,
+        "deltaBugs": bugs - prev_bloques,
+        "deltaTestsKo": bugs - prev_bloques,
+    }
+
+
     # On ne recycle pas les anciennes priorités Sprint 21 comme si elles étaient Sprint 23.
     payload["prioritesHebdo"] = []
 
