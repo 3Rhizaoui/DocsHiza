@@ -89,41 +89,65 @@ def get_source_metrics(source: dict):
     if not isinstance(source, dict):
         return 0, 0, 0, 0
 
+    def as_int(value, default=0):
+        if isinstance(value, bool):
+            return int(value)
+        if isinstance(value, (int, float)):
+            return int(value)
+        if isinstance(value, str):
+            value = value.strip()
+            if value.isdigit():
+                return int(value)
+            try:
+                return int(float(value.replace(",", ".")))
+            except Exception:
+                return default
+        return default
+
+    def count_list(value):
+        return len(value) if isinstance(value, list) else 0
+
     sante = source.get("santeFluxArrimage")
     if isinstance(sante, dict):
-        total = int(sante.get("total") or sante.get("flux") or 0)
-        prets = int(sante.get("prets") or sante.get("pretTester") or 0)
-        en_cours = int(sante.get("enCours") or sante.get("en_cours") or 0)
-        bugs = int(sante.get("bugsBloquants") or 0)
+        total = as_int(sante.get("total") or sante.get("flux") or sante.get("epics"))
+        prets = as_int(sante.get("prets") or sante.get("pretTester") or sante.get("ready"))
+        en_cours = as_int(sante.get("enCours") or sante.get("en_cours") or sante.get("inProgress"))
+        bugs = as_int(sante.get("bugsBloquants") or sante.get("bloquants"))
         return total, prets, en_cours, bugs
 
-    total = int(
-        source.get("flux")
-        or source.get("fluxTotal")
-        or source.get("total")
-        or source.get("epics")
-        or 0
-    )
-    prets = int(
-        source.get("prets")
-        or source.get("pretTester")
-        or source.get("fluxPrets")
-        or 0
-    )
-    en_cours = int(
-        source.get("enCours")
-        or source.get("encours")
-        or source.get("fluxEnCours")
-        or 0
-    )
-    bugs = int(source.get("bugsBloquants") or source.get("bloquants") or 0)
+    # Cas réel observé : source["flux"] peut être une liste.
+    total = as_int(source.get("epics"))
+    if total <= 0:
+        total = as_int(source.get("fluxTotal"))
+    if total <= 0:
+        total = as_int(source.get("total"))
+    if total <= 0:
+        total = count_list(source.get("flux"))
+    if total <= 0:
+        total = count_list(source.get("lignesDashboard"))
+    if total <= 0:
+        total = count_list(source.get("lignes"))
+    if total <= 0:
+        total = count_list(source.get("fluxPretsArrimage"))
 
-    if not total:
-        lignes = source.get("lignesDashboard") or source.get("lignes") or source.get("fluxPretsArrimage")
-        if isinstance(lignes, list):
-            total = len(lignes)
+    prets = as_int(source.get("prets"))
+    if prets <= 0:
+        prets = as_int(source.get("pretTester"))
+    if prets <= 0:
+        prets = as_int(source.get("fluxPrets"))
+
+    en_cours = as_int(source.get("enCours"))
+    if en_cours <= 0:
+        en_cours = as_int(source.get("encours"))
+    if en_cours <= 0:
+        en_cours = as_int(source.get("fluxEnCours"))
+
+    bugs = as_int(source.get("bugsBloquants"))
+    if bugs <= 0:
+        bugs = as_int(source.get("bloquants"))
 
     return total, prets, en_cours, bugs
+
 
 
 def compute_score(total: int, prets: int, bugs: int):
