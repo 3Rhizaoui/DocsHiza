@@ -202,11 +202,90 @@ def verify_html(html: str, courant: str):
         )
 
 
+def normalize_payload_for_template(data: dict, courant: str, precedent: str) -> dict:
+    """Aligne les lignes internes sur les libellés sprint/semaine attendus par le template historique."""
+    data = json.loads(json.dumps(data, ensure_ascii=False))
+
+    semaine_courante = data.get("semaineCourante") or ""
+    semaine_precedente = data.get("semainePrecedente") or ""
+
+    comparaison = data.get("comparaisonSprints")
+    if isinstance(comparaison, list):
+        for idx, row in enumerate(comparaison):
+            if not isinstance(row, dict):
+                continue
+
+            if idx == 0 and precedent:
+                row["sprint"] = precedent
+                if semaine_precedente:
+                    row["semaine"] = semaine_precedente
+                    row["semaines"] = [semaine_precedente]
+
+            if idx == 1 and courant:
+                row["sprint"] = courant
+                if semaine_courante:
+                    row["semaine"] = semaine_courante
+                    row["semaines"] = [semaine_courante]
+
+            label = row.get("sprint")
+            semaine = row.get("semaine")
+
+            for detail_key in [
+                "fluxTotalDetail",
+                "fluxLivresDetail",
+                "fluxEnCoursDetail",
+                "fluxBloquesDetail",
+            ]:
+                details = row.get(detail_key)
+                if isinstance(details, list):
+                    for item in details:
+                        if isinstance(item, dict):
+                            if label:
+                                item["sprint"] = label
+                            if semaine:
+                                item["semaine"] = semaine
+
+    # Blocs du sprint courant : ils doivent porter le sprint courant,
+    # sinon le JS historique du template les filtre et affiche 0.
+    current_lists = [
+        "fluxPretsArrimage",
+        "histoFlux",
+        "anomaliesDetail",
+        "ventilation",
+    ]
+
+    for key in current_lists:
+        rows = data.get(key)
+        if not isinstance(rows, list):
+            continue
+
+        for item in rows:
+            if not isinstance(item, dict):
+                continue
+
+            item["sprint"] = courant
+
+            if semaine_courante and ("semaine" in item or key in ["histoFlux", "ventilation"]):
+                item["semaine"] = semaine_courante
+
+    priorites = data.get("prioritesHebdo")
+    if isinstance(priorites, list):
+        for item in priorites:
+            if isinstance(item, dict):
+                item["sprint"] = courant
+                if semaine_courante:
+                    item["semaineSuivi"] = semaine_courante
+
+    return data
+
+
+
 def generate():
     if not TEMPLATE.exists():
         fail(f"Template absent : {TEMPLATE}")
 
     data, courant, precedent = load_payload()
+    data = normalize_payload_for_template(data, courant, precedent)
 
     template_html = TEMPLATE.read_text(encoding="utf-8", errors="replace")
     html = clean_runtime(template_html)
