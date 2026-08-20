@@ -64,19 +64,67 @@ def extract_fallback_from_html(path: Path):
     return None
 
 
-def sprint_name(value, default=""):
-    if isinstance(value, str):
-        return value.strip() or default
+def clean_sprint_label(value, fallback=""):
+    """Retourne toujours un libellé sprint texte, jamais un dict."""
+    import ast
+
+    if value is None:
+        return fallback
+
     if isinstance(value, dict):
-        for key in ["name", "nom", "sprint", "label", "titre"]:
-            if value.get(key):
-                return str(value[key]).strip()
-    return default
+        for key in ["nom", "name", "sprint", "label", "titre"]:
+            if key in value and value[key]:
+                return clean_sprint_label(value[key], fallback)
+        return fallback
+
+    if isinstance(value, list):
+        for item in value:
+            label = clean_sprint_label(item, "")
+            if label:
+                return label
+        return fallback
+
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return fallback
+
+        # Cas où un dict Python aurait été converti en texte.
+        if raw.startswith("{") and raw.endswith("}"):
+            try:
+                parsed = ast.literal_eval(raw)
+                label = clean_sprint_label(parsed, "")
+                if label:
+                    return label
+            except Exception:
+                pass
+
+        return raw
+
+    return str(value).strip() or fallback
+
+
+
+def sprint_name(value, default=""):
+    return clean_sprint_label(value, default)
+
 
 
 def pick_sprint_name(path: Path, fallback: str):
     data = read_json(path, {})
-    return sprint_name(data, fallback)
+
+    # Formats possibles :
+    # - {"nom": "Scrum Sprint 23", ...}
+    # - {"sprint": {"nom": "Scrum Sprint 23", ...}}
+    # - {"courant": {...}} / {"precedent": {...}}
+    for key in ["nom", "name", "sprint", "courant", "precedent", "data", "value"]:
+        if isinstance(data, dict) and key in data:
+            label = clean_sprint_label(data[key], "")
+            if label:
+                return label
+
+    return clean_sprint_label(data, fallback)
+
 
 
 def iso_week_now():
@@ -440,6 +488,9 @@ def main():
                         row[detail_key] = copy.deepcopy(old_rows[idx].get(detail_key) or [])
 
         payload["comparaisonSprints"] = comparison_rows
+
+    courant = clean_sprint_label(courant, "Scrum Sprint 23")
+    precedent = clean_sprint_label(precedent, "Scrum Sprint 22")
 
     payload = normalize_payload_for_current(
         payload,
