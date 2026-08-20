@@ -218,32 +218,117 @@ def main():
                 r[official_key] = [normalize_item(x, sprint=sprint) for x in official]
                 r[legacy_key] = deepcopy(r[official_key])
 
-    # 2) Reconstruit les anomalies du sprint courant depuis la comparaison officielle.
-    anomalies_sprint = []
-    if current_row:
-        for x in current_row.get("fluxBloquesDetail") or []:
-            y = normalize_item(
-                x,
-                sprint=sprint_current,
-                forced_status="Ouverte",
-                forced_type="Anomalie sprint",
-            )
-            y["source"] = "API Agile Jira officielle - anomalies sprint"
-            if is_generic(y.get("severite")):
-                y["severite"] = "Majeure"
-            anomalies_sprint.append(y)
+    # 2) Reconstruit les anomalies du sprint courant depuis les vrais détails Jira.
+    #    Refuse les lignes synthétiques BLOQUE-1 / ENCOURS-1.
+    def is_synthetic_detail(x):
+        if not isinstance(x, dict):
+            return True
+        vals = [
+            clean(x.get("jiraKey")),
+            clean(x.get("key")),
+            clean(x.get("cle")),
+            clean(x.get("reference")),
+            clean(x.get("flux")),
+        ]
+        joined = " ".join(vals).upper()
+        return any(token in joined for token in ["BLOQUE-", "ENCOURS-", "TOTAL-", "LIVRE-"])
 
-        for x in current_row.get("fluxEnCoursDetail") or []:
-            y = normalize_item(
-                x,
-                sprint=sprint_current,
-                forced_status="En cours",
-                forced_type="Anomalie sprint",
-            )
-            y["source"] = "API Agile Jira officielle - anomalies sprint"
-            if is_generic(y.get("severite")):
-                y["severite"] = "Mineure"
-            anomalies_sprint.append(y)
+    def has_real_jira_key(x):
+        if not isinstance(x, dict):
+            return False
+        vals = [
+            clean(x.get("jiraKey")),
+            clean(x.get("key")),
+            clean(x.get("cle")),
+            clean(x.get("reference")),
+            clean(x.get("flux")),
+            clean(x.get("resume")),
+            clean(x.get("summary")),
+            clean(x.get("titre")),
+        ]
+        return any(re.search(r"\b[A-Z][A-Z0-9_]+-\d+\b", v) for v in vals)
+
+    def load_comparaison_sprints():
+        path = ROOT / "jira" / "presentation" / "comparaison_sprints.json"
+        if not path.exists():
+            return []
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            return raw if isinstance(raw, list) else []
+        except Exception:
+            return []
+
+    def find_row(rows, sprint):
+        for r in rows:
+            if isinstance(r, dict) and clean(r.get("sprint")) == sprint:
+                return r
+        return None
+
+    def best_details(*lists):
+        candidates = []
+        for arr in lists:
+            if isinstance(arr, list):
+                candidates.append(arr)
+        if not candidates:
+            return []
+
+        real = []
+        for arr in candidates:
+            good = [x for x in arr if has_real_jira_key(x) and not is_synthetic_detail(x)]
+            if len(good) > len(real):
+                real = good
+
+        if real:
+            return real
+
+        # Dernier recours seulement : garder les synthèses si rien de réel n'existe.
+        return candidates[0]
+
+    comparaison_file = load_comparaison_sprints()
+    current_file_row = find_row(comparaison_file, sprint_current)
+
+    if current_file_row:
+        current_row = current_file_row
+
+    anomalies_sprint = []
+
+    bloques_source = best_details(
+        current_file_row.get("fluxBloquesDetail") if current_file_row else None,
+        current_file_row.get("bloquesDetail") if current_file_row else None,
+        current_row.get("fluxBloquesDetail") if current_row else None,
+        current_row.get("bloquesDetail") if current_row else None,
+    )
+
+    encours_source = best_details(
+        current_file_row.get("fluxEnCoursDetail") if current_file_row else None,
+        current_file_row.get("enCoursDetail") if current_file_row else None,
+        current_row.get("fluxEnCoursDetail") if current_row else None,
+        current_row.get("enCoursDetail") if current_row else None,
+    )
+
+    for x in bloques_source:
+        y = normalize_item(
+            x,
+            sprint=sprint_current,
+            forced_status="Ouverte",
+            forced_type="Anomalie sprint",
+        )
+        y["source"] = "API Agile Jira officielle - anomalies sprint"
+        if is_generic(y.get("severite")):
+            y["severite"] = "Majeure"
+        anomalies_sprint.append(y)
+
+    for x in encours_source:
+        y = normalize_item(
+            x,
+            sprint=sprint_current,
+            forced_status="En cours",
+            forced_type="Anomalie sprint",
+        )
+        y["source"] = "API Agile Jira officielle - anomalies sprint"
+        if is_generic(y.get("severite")):
+            y["severite"] = "Mineure"
+        anomalies_sprint.append(y)
 
     # 3) Isole les anomalies d'arrimage : Octane/référence non vide ET sprint courant seulement.
     old_anomalies = data.get("anomaliesArrimageDetail") or data.get("anomaliesDetail") or []
