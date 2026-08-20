@@ -759,6 +759,13 @@ python "%PROJECT_DIR%\jira\construire_payload_dashboard_final.py"
 
 
 if errorlevel 1 goto erreur
+
+echo [INFO] Normalisation payload dashboard...
+python "%PROJECT_DIR%\jira\normaliser_payload_dashboard.py"
+if errorlevel 1 (
+    echo [ERREUR BLOQUANTE] Normalisation payload dashboard en echec.
+    exit /b 1
+)
 python "%PROJECT_DIR%\jira\enrichir_payload_comparaison.py"
 if errorlevel 1 goto erreur
 
