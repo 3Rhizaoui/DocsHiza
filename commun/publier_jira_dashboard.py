@@ -1331,7 +1331,7 @@ def verify_html(html: str, payload: dict) -> None:
 
     if "const fallbackData" not in html:
         stop("fallbackData absent après publication")
-if "dynamicSprintLabelsScript" in html:
+    if "dynamicSprintLabelsScript" in html:
         stop("Ancien dynamicSprintLabelsScript encore présent")
 
     print("[OK] Publication JIRA stable.")

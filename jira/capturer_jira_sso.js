@@ -254,57 +254,118 @@ class CDP {
     } catch (_) {}
   }
 }
-
 async function attachToAuthenticatedJira(baseUrl) {
+  const expected = new URL(baseUrl);
+  const expectedOrigin = expected.origin;
+  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+  async function readPageState(cdp) {
+    const state = await cdp.send('Runtime.evaluate', {
+      expression: '({href: location.href, origin: location.origin, title: document.title, readyState: document.readyState})',
+      returnByValue: true
+    });
+
+    return state.result && state.result.value ? state.result.value : {};
+  }
+
+  function scoreTarget(target) {
+    try {
+      const url = new URL(target.url || 'about:blank');
+      const title = String(target.title || '').toLowerCase();
+      const path = url.pathname || '';
+
+      let score = 0;
+
+      if (url.origin === expectedOrigin) score += 100;
+      if (String(target.url || '').startsWith('chrome-error://')) score += 70;
+      if (String(target.title || '').includes(expected.host)) score += 60;
+      if (path === '/' || path.includes('/secure') || path.includes('/browse') || path.includes('/projects')) score += 20;
+      if (path.startsWith('/rest/')) score -= 20;
+      if (title.includes('error') || title.includes('erreur')) score -= 20;
+      if (String(target.url || '').includes('127.0.0.1')) score -= 1000;
+      if (String(target.url || '').includes('dashboard_gil')) score -= 1000;
+
+      return score;
+    } catch (_) {
+      return -1000;
+    }
+  }
+
+  async function waitForRealJiraPage(cdp, targetUrl) {
+    let page = await readPageState(cdp).catch(() => ({}));
+
+    if (page.origin === expectedOrigin) {
+      return page;
+    }
+
+    console.log(`[CDP_NAVIGATE_TO_JIRA] actuel=${page.href || targetUrl || '(inconnu)'}`);
+    await cdp.send('Page.navigate', {url: baseUrl}).catch(() => {});
+
+    for (let i = 0; i < 90; i++) {
+      await delay(1000);
+
+      page = await readPageState(cdp).catch(() => ({}));
+
+      if (page.origin === expectedOrigin && page.readyState !== 'loading') {
+        return page;
+      }
+    }
+
+    throw new Error(
+      '[CDP_CONTEXT_ERROR] Onglet CDP non Jira apres navigation. ' +
+      'Attendu=' + expectedOrigin +
+      ' | Actuel=' + (page.href || page.origin || '(inconnu)')
+    );
+  }
+
   const targets = await getJson(
     `http://127.0.0.1:${PORT}/json/list`,
     10
   );
 
-  const pages = targets.filter(
-    target =>
-      target.type === 'page' &&
-      target.webSocketDebuggerUrl
-  );
+  const pages = targets
+    .filter(target => target.type === 'page' && target.webSocketDebuggerUrl)
+    .sort((a, b) => scoreTarget(b) - scoreTarget(a));
 
-  const expected = new URL(baseUrl);
-
-  const target = pages.find(page => {
-    try {
-      return new URL(page.url).origin === expected.origin;
-    } catch (_) {
-      return false;
-    }
-  });
-
-  if (!target) {
-    throw new Error(
-      'Aucun onglet Jira authentifié trouvé. ' +
-      'Affichez une vraie page Jira après le SSO, puis relancez.'
-    );
+  if (!pages.length) {
+    throw new Error('Aucun onglet Chrome CDP disponible.');
   }
 
-  const cdp = new CDP(target.webSocketDebuggerUrl);
+  let lastError = null;
 
-  await cdp.open();
-  await cdp.send('Runtime.enable');
+  for (const target of pages) {
+    if (scoreTarget(target) <= -500) {
+      continue;
+    }
 
-  const state = await cdp.send('Runtime.evaluate', {
-    expression: '({href: location.href, title: document.title})',
-    returnByValue: true
-  });
+    const cdp = new CDP(target.webSocketDebuggerUrl);
 
-  const page =
-    state.result && state.result.value
-      ? state.result.value
-      : {};
+    try {
+      await cdp.open();
+      await cdp.send('Runtime.enable');
+      await cdp.send('Page.enable').catch(() => {});
+      await cdp.send('Page.bringToFront').catch(() => {});
 
-  console.log(
-    `Session Jira réutilisée : ${page.title || page.href || baseUrl}`
-  );
+      const page = await waitForRealJiraPage(cdp, target.url);
 
-  return cdp;
+      console.log(`Session Jira reutilisee : ${page.title || page.href || baseUrl}`);
+      console.log(`[CDP_TARGET_SELECTED] ${page.href || target.url || baseUrl}`);
+
+      return cdp;
+    } catch (error) {
+      lastError = error;
+      cdp.close();
+    }
+  }
+
+  console.log('[CDP_TARGETS_FOUND]');
+  for (const page of pages) {
+    console.log(`- ${page.title || '(sans titre)'} | ${page.url || '(sans url)'} | score=${scoreTarget(page)}`);
+  }
+
+  throw lastError || new Error('Aucun onglet Jira CDP utilisable.');
 }
+
 
 async function executeJql(cdp, baseUrl, jql) {
   const expression = `
@@ -313,6 +374,29 @@ async function executeJql(cdp, baseUrl, jql) {
       const apiUrl = ${JSON.stringify(
         `${baseUrl}/rest/api/2/search`
       )};
+
+      const apiParsed = new URL(apiUrl);
+
+      if (location.origin !== apiParsed.origin) {
+
+        throw new Error(
+
+          '[CDP_CONTEXT_ERROR] JQL origin invalide : actuel=' +
+
+          location.href +
+
+          ' attendu=' +
+
+          apiParsed.origin
+
+        );
+
+      }
+
+      const apiPath = apiParsed.pathname + apiParsed.search;
+
+      // CDP_JQL_RELATIVE_FETCH
+
 
       const pageSize = ${PAGE_SIZE};
 
@@ -330,7 +414,7 @@ async function executeJql(cdp, baseUrl, jql) {
           expand: ['names']
         };
 
-        let response = await fetch(apiUrl, {
+        let response = await fetch(apiPath, {
           method: 'POST',
           credentials: 'include',
           headers: {
@@ -751,7 +835,18 @@ async function executeJiraGet(cdp, url) {
   const expression = `
     (async () => {
       const url = ${JSON.stringify(url)};
-      const response = await fetch(url, {
+      const apiParsed = new URL(url);
+      if (location.origin !== apiParsed.origin) {
+        throw new Error(
+          '[CDP_CONTEXT_ERROR] API Agile origin invalide : actuel=' +
+          location.href +
+          ' attendu=' +
+          apiParsed.origin
+        );
+      }
+      const apiPath = apiParsed.pathname + apiParsed.search;
+      // CDP_AGILE_RELATIVE_FETCH
+      const response = await fetch(apiPath, {
         method: 'GET',
         credentials: 'include',
         headers: {'Accept': 'application/json'}

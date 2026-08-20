@@ -29,3 +29,10 @@ jira/dashboard_gil_data.json
 jira/comparaison_sprints.json
 jira/sprints/
 jira/presentation/*.json
+# Fichiers temporaires / diagnostics locaux
+fix_indent_publisher.py
+patch_*.py
+dev_generer_payload_mock_dashboard.py
+jira/architecture_sprints_diagnostic.json
+jira/sprint_courant.json
+jira/sprint_precedent.json
