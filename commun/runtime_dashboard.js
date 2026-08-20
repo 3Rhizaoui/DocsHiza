@@ -107,46 +107,8 @@
       });
   }
 
-  function installAutoReload() {
-    var meta = document.querySelector('meta[name="gil-build-stamp"]');
-    var currentStamp = meta ? (meta.getAttribute("content") || "") : "";
-    var startedAt = Date.now();
+  // Auto-refresh désactivé : Importer_JIRA.cmd ouvre la page une seule fois en fin de pipeline.
 
-    function extractStamp(text) {
-      var match = String(text || "").match(/<meta name="gil-build-stamp" content="([^"]+)"/);
-      return match ? match[1] : "";
-    }
-
-    function reloadDashboard() {
-      try {
-        var url = new URL(window.location.href);
-        url.searchParams.set("_gil_refresh", String(Date.now()));
-        window.location.replace(url.toString());
-      } catch (e) {
-        window.location.reload();
-      }
-    }
-
-    function poll() {
-      if (Date.now() - startedAt > 60 * 60 * 1000) return;
-
-      fetch(window.location.pathname + "?_gil_poll=" + Date.now(), { cache: "no-store" })
-        .then(function (response) { return response.text(); })
-        .then(function (text) {
-          var nextStamp = extractStamp(text);
-          if (nextStamp && currentStamp && nextStamp !== currentStamp) {
-            reloadDashboard();
-            return;
-          }
-          setTimeout(poll, 2000);
-        })
-        .catch(function () {
-          setTimeout(poll, 3000);
-        });
-    }
-
-    setTimeout(poll, 2000);
-  }
 
   function boot() {
     /*
@@ -154,8 +116,8 @@
       Le runtime ne vient remplacer le rendu que si le payload final est complet.
     */
     setTimeout(loadAndRender, 500);
-    installAutoReload();
-  }
+    // Auto-refresh désactivé : Importer_JIRA.cmd ouvre la page une seule fois en fin de pipeline.
+}
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);

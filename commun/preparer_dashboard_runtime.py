@@ -18,19 +18,36 @@ HTML_FILES = [
     COMMUN / "dashboard_gil_sprint21.html",
 ]
 
+RUNTIME_JSONS = [
+    COMMUN / "dashboard_gil_data.json",
+    COMMUN / "sprint_courant.json",
+    COMMUN / "sprint_precedent.json",
+    COMMUN / "comparaison_sprints.json",
+]
 
-def copy_runtime_jsons():
+
+def remove_stale_runtime_jsons():
+    removed = []
+    for path in RUNTIME_JSONS:
+        if path.exists():
+            path.unlink()
+            removed.append(str(path.relative_to(ROOT)))
+    return removed
+
+
+def copy_runtime_jsons_after_import():
+    final_payload = JIRA / "presentation" / "payload_dashboard_final.json"
+
+    if not final_payload.exists():
+        raise SystemExit(
+            "[ERREUR] Payload final absent : jira\\presentation\\payload_dashboard_final.json. "
+            "La préparation runtime doit être lancée après construire_payload_dashboard_final.py."
+        )
+
     copied = []
 
-    final_payload = JIRA / "presentation" / "payload_dashboard_final.json"
-    base_payload = JIRA / "dashboard_gil_data.json"
-
-    if final_payload.exists():
-        shutil.copyfile(final_payload, COMMUN / "dashboard_gil_data.json")
-        copied.append("commun/dashboard_gil_data.json")
-    elif base_payload.exists():
-        shutil.copyfile(base_payload, COMMUN / "dashboard_gil_data.json")
-        copied.append("commun/dashboard_gil_data.json")
+    shutil.copyfile(final_payload, COMMUN / "dashboard_gil_data.json")
+    copied.append("commun/dashboard_gil_data.json")
 
     optional = [
         (JIRA / "sprints" / "sprint_courant.json", COMMUN / "sprint_courant.json"),
@@ -108,7 +125,16 @@ def patch_html(path: Path):
 
 
 def main():
-    copied = copy_runtime_jsons()
+    copied = []
+
+    if args.after_import:
+        copied = copy_runtime_jsons_after_import()
+    else:
+        removed = remove_stale_runtime_jsons()
+        if removed:
+            print("[OK] JSON runtime obsolètes supprimés :")
+            for item in removed:
+                print(" -", item)
 
     prepared = []
     for path in HTML_FILES:
@@ -128,23 +154,19 @@ def main():
             print(" -", item)
 
     if args.after_import:
+        payload = COMMUN / "dashboard_gil_data.json"
+        text = payload.read_text(encoding="utf-8", errors="replace")
         required = [
-            COMMUN / "dashboard_gil_data.json",
-            COMMUN / "sprint_courant.json",
-            COMMUN / "sprint_precedent.json",
-            COMMUN / "comparaison_sprints.json",
+            "architectureDashboardFinal",
+            "santeFluxArrimage",
+            "comparaisonSprints",
+            "fluxPretsArrimage",
+            "histoFlux",
         ]
 
-        missing = [path for path in required if not path.exists()]
+        missing = [key for key in required if key not in text]
         if missing:
-            print("[ERREUR] JSON runtime manquants :")
-            for path in missing:
-                print(" -", path)
-            raise SystemExit(1)
-
-        text = (COMMUN / "dashboard_gil_data.json").read_text(encoding="utf-8", errors="replace")
-        if "architectureDashboardFinal" not in text:
-            raise SystemExit("[ERREUR] commun/dashboard_gil_data.json n'est pas le payload final")
+            raise SystemExit("[ERREUR] Payload runtime incomplet : " + ", ".join(missing))
 
         print("[OK] Architecture runtime disponible pour le dashboard HTML.")
 

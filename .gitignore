@@ -17,3 +17,5 @@ archives_sprints/*/rev*/
 !archives_sprints/index_sprints.json
 audit_reports/
 node_modules/
+
+jira/.jira_sso_profile_manuel/

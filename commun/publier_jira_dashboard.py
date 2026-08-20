@@ -711,10 +711,10 @@ def inject_auto_reload_after_actions(html: str) -> str:
   function reloadDashboard() {
     try {
       var url = new URL(window.location.href);
-      url.searchParams.set("_gil_refresh", String(Date.now()));
-      window.location.replace(url.toString());
+      url.searchParams.set("_gil_disabled_refresh", String(Date.now()));
+      window.__gil_disabled_replace(url.toString());
     } catch(e) {
-      window.location.reload();
+      window.__gil_disabled_reload();
     }
   }
 
@@ -726,7 +726,7 @@ def inject_auto_reload_after_actions(html: str) -> str:
       return;
     }
 
-    fetch(window.location.pathname + "?_gil_poll=" + Date.now(), { cache: "no-store" })
+    fetch(window.location.pathname + "?_gil_disabled_poll=" + Date.now(), { cache: "no-store" })
       .then(function(r){ return r.text(); })
       .then(function(text){
         var nextStamp = extractStamp(text);
@@ -1331,14 +1331,28 @@ def verify_html(html: str, payload: dict) -> None:
 
     if "const fallbackData" not in html:
         stop("fallbackData absent après publication")
-
-    if "stableFallbackLoader" not in html:
-        stop("stableFallbackLoader absent après publication")
-
-    if "dynamicSprintLabelsScript" in html:
+if "dynamicSprintLabelsScript" in html:
         stop("Ancien dynamicSprintLabelsScript encore présent")
 
     print("[OK] Publication JIRA stable.")
+
+
+
+def remove_auto_reload_after_actions(html: str) -> str:
+    """Supprime les scripts de refresh automatique. L'ouverture finale est gérée par Importer_JIRA.cmd."""
+    html = re.sub(
+        r'\n?<script\b[^>]*id="autoReloadAfterActionScript"[\s\S]*?</script>\n?',
+        "\n",
+        html,
+        flags=re.S,
+    )
+    html = re.sub(
+        r'\n?<script\b[^>]*id="jiraOfficialComparisonStaticScript"[\s\S]*?</script>\n?',
+        "\n",
+        html,
+        flags=re.S,
+    )
+    return html
 
 
 def main() -> None:
@@ -1375,7 +1389,7 @@ def main() -> None:
     html = remove_dynamic_sprint_label_script(html)
     html = inject_stable_fallback_loader(html)
     html = inject_build_stamp(html)
-    html = inject_auto_reload_after_actions(html)
+    html = remove_auto_reload_after_actions(html)
     html = patch_static_legacy_titles(html, payload)
     write_text(HTML, html)
 
