@@ -1,35 +1,37 @@
 from pathlib import Path
 import base64
 import copy
+import datetime as dt
 import json
 import re
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-JIRA = ROOT / "jira"
 COMMUN = ROOT / "commun"
+JIRA = ROOT / "jira"
 
-BASE_JSON = JIRA / "dashboard_gil_data.json"
-BASE_HTML = COMMUN / "dashboard_gil.html"
+TEMPLATE_HTML = COMMUN / "templates" / "dashboard_gil_template.html"
+CURRENT_HTML = COMMUN / "dashboard_gil.html"
 
-CUR = JIRA / "sprints" / "sprint_courant.json"
-PREV = JIRA / "sprints" / "sprint_precedent.json"
-COMP = JIRA / "presentation" / "comparaison_sprints.json"
+SOURCE_DASHBOARD = JIRA / "dashboard_gil_data.json"
+COMPARAISON = JIRA / "presentation" / "comparaison_sprints.json"
+SPRINT_COURANT = JIRA / "sprints" / "sprint_courant.json"
+SPRINT_PRECEDENT = JIRA / "sprints" / "sprint_precedent.json"
 
-OUT_PRESENTATION = JIRA / "presentation" / "payload_dashboard_final.json"
-OUT_COMMUN = COMMUN / "dashboard_gil_data.json"
+OUT = JIRA / "presentation" / "payload_dashboard_final.json"
 
 
-def load_json(path: Path, default=None):
-    if default is None:
-        default = {}
+def fail(message: str):
+    raise SystemExit("[ERREUR] " + message)
+
+
+def read_json(path: Path, default=None):
     if not path.exists():
         return default
-    return json.loads(path.read_text(encoding="utf-8", errors="replace"))
-
-
-def write_json(path: Path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    try:
+        return json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    except Exception as exc:
+        fail(f"JSON invalide {path} : {exc}")
 
 
 def extract_fallback_from_html(path: Path):
@@ -38,296 +40,341 @@ def extract_fallback_from_html(path: Path):
 
     html = path.read_text(encoding="utf-8", errors="replace")
 
-    # Cas fallback encodé en base64.
-    m = re.search(r'atob\("([^"]+)"\)', html)
-    if m:
-        try:
-            return json.loads(base64.b64decode(m.group(1)).decode("utf-8"))
-        except Exception:
-            pass
-
-    # Cas fallbackData JSON direct.
-    patterns = [
-        r"const fallbackData\s*=\s*([\s\S]*?);\s*let currentData",
-        r"const fallbackData\s*=\s*([\s\S]*?);\s*window",
+    b64_patterns = [
+        r'const\s+fallbackData\s*=\s*JSON\.parse\(atob\("([^"]+)"\)\)',
+        r"const\s+fallbackData\s*=\s*JSON\.parse\(atob\('([^']+)'\)\)",
     ]
 
-    for pattern in patterns:
-        m = re.search(pattern, html)
-        if not m:
-            continue
-        try:
-            return json.loads(m.group(1))
-        except Exception:
-            pass
+    for pattern in b64_patterns:
+        m = re.search(pattern, html, flags=re.S)
+        if m:
+            return json.loads(base64.b64decode(m.group(1)).decode("utf-8"))
+
+    json_patterns = [
+        r"const\s+fallbackData\s*=\s*([\s\S]*?);\s*let\s+currentData",
+        r"const\s+fallbackData\s*=\s*([\s\S]*?);\s*var\s+currentData",
+        r"const\s+fallbackData\s*=\s*([\s\S]*?);\s*window",
+    ]
+
+    for pattern in json_patterns:
+        m = re.search(pattern, html, flags=re.S)
+        if m:
+            return json.loads(m.group(1).strip())
 
     return None
 
 
-def first_int(*values, default=0):
-    for value in values:
-        try:
-            if value not in (None, ""):
-                return int(value)
-        except Exception:
-            pass
+def sprint_name(value, default=""):
+    if isinstance(value, str):
+        return value.strip() or default
+    if isinstance(value, dict):
+        for key in ["name", "nom", "sprint", "label", "titre"]:
+            if value.get(key):
+                return str(value[key]).strip()
     return default
 
 
-def sprint_name(doc, fallback):
-    sprint = doc.get("sprint") or {}
-    return sprint.get("nom") or sprint.get("name") or doc.get("nom") or doc.get("name") or fallback
+def pick_sprint_name(path: Path, fallback: str):
+    data = read_json(path, {})
+    return sprint_name(data, fallback)
 
 
-def official_total(doc):
-    stats = doc.get("statistiques") or {}
-    return first_int(stats.get("total"), stats.get("flux"), default=0)
+def iso_week_now():
+    today = dt.date.today()
+    year, week, _ = today.isocalendar()
+    return f"{year}-W{week:02d}"
 
 
-def get_current_row(payload):
-    tendance = payload.setdefault("tendanceHebdo", {})
-    current = tendance.get("current")
+def get_source_metrics(source: dict):
+    if not isinstance(source, dict):
+        return 0, 0, 0, 0
 
-    if isinstance(current, dict):
-        return current
+    sante = source.get("santeFluxArrimage")
+    if isinstance(sante, dict):
+        total = int(sante.get("total") or sante.get("flux") or 0)
+        prets = int(sante.get("prets") or sante.get("pretTester") or 0)
+        en_cours = int(sante.get("enCours") or sante.get("en_cours") or 0)
+        bugs = int(sante.get("bugsBloquants") or 0)
+        return total, prets, en_cours, bugs
 
-    rows = tendance.get("rows")
-    if isinstance(rows, list) and rows:
-        current = rows[-1]
-        tendance["current"] = current
-        return current
-
-    current = {}
-    tendance["current"] = current
-    return current
-
-
-def compute_health_from_legacy(payload):
-    current = get_current_row(payload)
-    kpis = payload.get("kpis") or {}
-
-    total = first_int(
-        current.get("flux"),
-        current.get("fluxTotal"),
-        kpis.get("flux"),
-        kpis.get("totalFlux"),
-        default=0,
+    total = int(
+        source.get("flux")
+        or source.get("fluxTotal")
+        or source.get("total")
+        or source.get("epics")
+        or 0
     )
-
-    ready = first_int(
-        current.get("pretTester"),
-        current.get("prets"),
-        kpis.get("pretTester"),
-        kpis.get("prets"),
-        default=0,
+    prets = int(
+        source.get("prets")
+        or source.get("pretTester")
+        or source.get("fluxPrets")
+        or 0
     )
-
-    blocked = first_int(
-        current.get("bugsBloquants"),
-        kpis.get("bugsBloquants"),
-        default=0,
+    en_cours = int(
+        source.get("enCours")
+        or source.get("encours")
+        or source.get("fluxEnCours")
+        or 0
     )
+    bugs = int(source.get("bugsBloquants") or source.get("bloquants") or 0)
 
-    if total:
-        score = round((ready / total) * 100 - min(35, blocked * 3))
-    else:
-        score = 100
+    if not total:
+        lignes = source.get("lignesDashboard") or source.get("lignes") or source.get("fluxPretsArrimage")
+        if isinstance(lignes, list):
+            total = len(lignes)
 
-    score = max(0, min(100, score))
-
-    if score >= 80:
-        niveau = "Vert"
-    elif score >= 60:
-        niveau = "Orange"
-    else:
-        niveau = "Rouge"
-
-    return {
-        "source": "JQL Arrimage",
-        "totalFluxOuverts": total,
-        "prets": ready,
-        "enCours": max(0, total - ready),
-        "bloques": blocked,
-        "score": score,
-        "niveau": niveau,
-        "formule": "score historique conservé : prêts / flux ouverts - pénalité bugs bloquants",
-    }
+    return total, prets, en_cours, bugs
 
 
-def force_legacy_health_fields(payload, current_name):
-    sante = compute_health_from_legacy(payload)
-    current = get_current_row(payload)
-
-    current["sprint"] = current_name
-    current["flux"] = sante["totalFluxOuverts"]
-    current["pretTester"] = sante["prets"]
-    current["nonPret"] = sante["enCours"]
-    current["bugsBloquants"] = sante["bloques"]
-    current["sante"] = sante["niveau"]
-
-    tendance = payload.setdefault("tendanceHebdo", {})
-    rows = tendance.get("rows")
-    if isinstance(rows, list) and rows:
-        rows[-1]["sprint"] = current_name
-        rows[-1]["flux"] = sante["totalFluxOuverts"]
-        rows[-1]["pretTester"] = sante["prets"]
-        rows[-1]["nonPret"] = sante["enCours"]
-        rows[-1]["bugsBloquants"] = sante["bloques"]
-        rows[-1]["sante"] = sante["niveau"]
-
-    kpis = payload.setdefault("kpis", {})
-    kpis["flux"] = sante["totalFluxOuverts"]
-    kpis["pretTester"] = sante["prets"]
-    kpis["prets"] = sante["prets"]
-    kpis["enCours"] = sante["enCours"]
-    kpis["bugsBloquants"] = sante["bloques"]
-
-    payload["santeFluxArrimage"] = sante
+def compute_score(total: int, prets: int, bugs: int):
+    base = 100 if total == 0 else prets / total * 100
+    penalty = min(35, bugs * 3)
+    return max(0, min(100, round(base - penalty)))
 
 
-def assert_comparison_consistency(comparison, current_doc, previous_doc):
-    current_name = sprint_name(current_doc, "Sprint courant")
-    previous_name = sprint_name(previous_doc, "Sprint précédent")
+def normalize_comparison_rows(rows, courant, precedent, semaine_courante, semaine_precedente):
+    if isinstance(rows, dict):
+        rows = rows.get("comparaisonSprints") or rows.get("rows") or rows.get("lignes") or []
 
-    expected = {
-        current_name: official_total(current_doc),
-        previous_name: official_total(previous_doc),
-    }
+    if not isinstance(rows, list):
+        rows = []
 
-    for row in comparison:
-        name = row.get("sprint")
-        if name in expected and int(row.get("fluxTotal", -1)) != expected[name]:
-            raise SystemExit(
-                f"[ERREUR] Comparaison incohérente pour {name} : "
-                f"{row.get('fluxTotal')} au lieu du total officiel {expected[name]}"
-            )
+    normalized = []
+
+    for idx, row in enumerate(rows[:2]):
+        if not isinstance(row, dict):
+            continue
+
+        r = copy.deepcopy(row)
+
+        if idx == 0:
+            r["sprint"] = r.get("sprint") or precedent
+            if precedent:
+                r["sprint"] = precedent
+            if semaine_precedente:
+                r["semaine"] = r.get("semaine") or semaine_precedente
+                r["semaines"] = r.get("semaines") or [semaine_precedente]
+
+        if idx == 1:
+            r["sprint"] = r.get("sprint") or courant
+            if courant:
+                r["sprint"] = courant
+            if semaine_courante:
+                r["semaine"] = r.get("semaine") or semaine_courante
+                r["semaines"] = r.get("semaines") or [semaine_courante]
+
+        total = r.get("fluxTotal", r.get("total", r.get("flux", 0)))
+        livres = r.get("fluxLivresTotal", r.get("livres", r.get("livresTotal", 0)))
+        en_cours = r.get("fluxEnCoursTotal", r.get("enCours", r.get("en_cours", 0)))
+        bloques = r.get("fluxBloquesTotal", r.get("bloques", r.get("rejetes", 0)))
+
+        r["fluxTotal"] = int(total or 0)
+        r["fluxLivresTotal"] = int(livres or 0)
+        r["fluxEnCoursTotal"] = int(en_cours or 0)
+        r["fluxBloquesTotal"] = int(bloques or 0)
+
+        for detail_key in [
+            "fluxTotalDetail",
+            "fluxLivresDetail",
+            "fluxEnCoursDetail",
+            "fluxBloquesDetail",
+        ]:
+            if not isinstance(r.get(detail_key), list):
+                r[detail_key] = []
+
+        normalized.append(r)
+
+    return normalized
 
 
-def assert_legacy_blocks(payload):
-    required_lists = [
-        "comparaisonSprints",
-        "fluxPretsArrimage",
-        "histoFlux",
-        "anomaliesDetail",
-        "prioritesHebdo",
-    ]
+def normalize_payload_for_current(payload, courant, precedent, semaine_courante, semaine_precedente):
+    payload["sprintCourant"] = courant
+    payload["sprintPrecedent"] = precedent
+    payload["semaineCourante"] = semaine_courante
+    payload["semainePrecedente"] = semaine_precedente
+    payload["architectureDashboardFinal"] = True
 
-    warnings = []
+    for key in ["fluxPretsArrimage", "histoFlux", "anomaliesDetail", "ventilation"]:
+        rows = payload.get(key)
+        if not isinstance(rows, list):
+            continue
 
-    for key in required_lists:
-        value = payload.get(key)
-        if not isinstance(value, list) or len(value) == 0:
-            warnings.append(key)
+        for item in rows:
+            if not isinstance(item, dict):
+                continue
 
-    # Les anomalies peuvent être à 0 selon le périmètre, mais les flux ne doivent pas être vides.
-    blocking = []
-    for key in ["fluxPretsArrimage", "histoFlux"]:
-        value = payload.get(key)
-        if not isinstance(value, list) or len(value) == 0:
-            blocking.append(key)
+            item["sprint"] = courant
+            if semaine_courante and ("semaine" in item or key in ["histoFlux", "ventilation"]):
+                item["semaine"] = semaine_courante
 
-    if blocking:
-        raise SystemExit(
-            "[ERREUR] Payload final incomplet : blocs legacy vides : "
-            + ", ".join(blocking)
-            + ". Le payload doit être construit depuis fallbackData HTML, pas depuis un JSON minimal."
-        )
+    priorites = payload.get("prioritesHebdo")
+    if isinstance(priorites, list):
+        for item in priorites:
+            if isinstance(item, dict):
+                item["sprint"] = courant
+                if semaine_courante:
+                    item["semaineSuivi"] = semaine_courante
 
-    return warnings
+    rows = payload.get("comparaisonSprints")
+    if isinstance(rows, list):
+        for idx, row in enumerate(rows):
+            if not isinstance(row, dict):
+                continue
+
+            label = precedent if idx == 0 else courant
+            semaine = semaine_precedente if idx == 0 else semaine_courante
+
+            row["sprint"] = label
+            if semaine:
+                row["semaine"] = semaine
+                row["semaines"] = [semaine]
+
+            for detail_key in [
+                "fluxTotalDetail",
+                "fluxLivresDetail",
+                "fluxEnCoursDetail",
+                "fluxBloquesDetail",
+            ]:
+                details = row.get(detail_key)
+                if isinstance(details, list):
+                    for item in details:
+                        if isinstance(item, dict):
+                            item["sprint"] = label
+                            if semaine:
+                                item["semaine"] = semaine
+
+    return payload
 
 
 def main():
-    html_payload = extract_fallback_from_html(BASE_HTML)
-    json_payload = load_json(BASE_JSON, {})
+    # Base obligatoire : le bon dashboard Sprint 21 riche.
+    base = extract_fallback_from_html(TEMPLATE_HTML)
 
-    if html_payload:
-        base = html_payload
-        base_source = "fallbackData HTML publié"
-    elif json_payload:
-        base = json_payload
-        base_source = "jira/dashboard_gil_data.json"
-    else:
-        raise SystemExit("[ERREUR] Aucune base dashboard exploitable trouvée")
+    if not isinstance(base, dict):
+        base = extract_fallback_from_html(CURRENT_HTML)
 
-    current_doc = load_json(CUR)
-    previous_doc = load_json(PREV)
-    comparison = load_json(COMP, [])
+    if not isinstance(base, dict):
+        fail("fallbackData riche introuvable dans le template HTML")
 
-    if not isinstance(comparison, list) or len(comparison) < 2:
-        raise SystemExit("[ERREUR] comparaison_sprints.json doit contenir deux lignes")
+    required_sources = [
+        (SOURCE_DASHBOARD, "source dashboard JQL Arrimage"),
+        (COMPARAISON, "comparaison officielle Sprint N-1 / Sprint courant"),
+        (SPRINT_COURANT, "sprint courant officiel"),
+        (SPRINT_PRECEDENT, "sprint précédent officiel"),
+    ]
 
-    assert_comparison_consistency(comparison, current_doc, previous_doc)
+    missing = [
+        f"{label} : {path}"
+        for path, label in required_sources
+        if not path.exists()
+    ]
+
+    if missing:
+        fail(
+            "Sources Jira intermédiaires absentes. "
+            "Le payload final ne doit pas être construit depuis le template seul.\n- "
+            + "\n- ".join(missing)
+        )
+
+    source = read_json(SOURCE_DASHBOARD, {})
+    comparison = read_json(COMPARAISON, [])
+
+    courant = pick_sprint_name(SPRINT_COURANT, "")
+    precedent = pick_sprint_name(SPRINT_PRECEDENT, "")
+
+    comparison_rows = normalize_comparison_rows(
+        comparison,
+        courant or "Scrum Sprint 23",
+        precedent or "Scrum Sprint 22",
+        "",
+        "",
+    )
+
+    if comparison_rows:
+        if not precedent:
+            precedent = comparison_rows[0].get("sprint") or "Scrum Sprint 22"
+        if not courant and len(comparison_rows) > 1:
+            courant = comparison_rows[1].get("sprint") or "Scrum Sprint 23"
+
+    courant = courant or "Scrum Sprint 23"
+    precedent = precedent or "Scrum Sprint 22"
+
+    semaine_courante = (
+        source.get("semaineCourante")
+        or source.get("semaine")
+        or source.get("constatSemaine")
+        or iso_week_now()
+    )
+    semaine_precedente = source.get("semainePrecedente") or ""
 
     payload = copy.deepcopy(base)
 
-    current_name = sprint_name(current_doc, "Sprint courant")
-    previous_name = sprint_name(previous_doc, "Sprint précédent")
+    total, prets, en_cours, bugs = get_source_metrics(source)
 
-    payload["sprintCourant"] = current_name
-    payload["sprintPrecedent"] = previous_name
-
-    payload["sprintCourantDetail"] = current_doc
-    payload["sprintPrecedentDetail"] = previous_doc
-
-    payload["comparaisonSprints"] = comparison
-    payload["comparaisonSprintsJiraOfficielle"] = comparison
-
-    force_legacy_health_fields(payload, current_name)
-
-    categories_current = load_json(JIRA / "presentation" / "categories_sprint_courant.json", {})
-    if categories_current:
-        payload["categoriesSprintCourant"] = categories_current
-
-    payload["architectureDashboardFinal"] = {
-        "baseSource": base_source,
-        "sourceSanteProjet": "JQL Arrimage",
-        "sourceComparaisonSprint": "API Agile Jira officielle",
-        "comparaisonRespecteTotauxOfficiels": True,
-        "runtimeNeRecalculePasLeScore": True,
-    }
-
-    warnings = assert_legacy_blocks(payload)
-
-    write_json(OUT_PRESENTATION, payload)
-    write_json(OUT_COMMUN, payload)
-
-    print("[OK] Payload dashboard final produit :")
-    print(" -", OUT_PRESENTATION)
-    print(" -", OUT_COMMUN)
-    print("Base utilisée :", base_source)
-
-    sante = payload["santeFluxArrimage"]
-    print()
-    print("Santé projet GIL / JQL Arrimage :")
-    print(
-        "- total:", sante["totalFluxOuverts"],
-        "| prêts:", sante["prets"],
-        "| en cours:", sante["enCours"],
-        "| score:", sante["score"],
-        "| niveau:", sante["niveau"],
-    )
-
-    print()
-    print("Comparaison officielle API Agile :")
-    for row in comparison:
-        print(
-            "-",
-            row.get("sprint"),
-            "| total:", row.get("fluxTotal"),
-            "| livrés:", row.get("fluxLivresTotal"),
-            "| en cours:", row.get("fluxEnCoursTotal"),
-            "| bloqués:", row.get("fluxBloquesTotal"),
+    if total <= 0:
+        keys = ", ".join(sorted(source.keys())) if isinstance(source, dict) else type(source).__name__
+        fail(
+            "Métriques JQL Arrimage absentes ou invalides dans jira/dashboard_gil_data.json. "
+            f"Impossible de calculer la santé réelle. Clés disponibles : {keys}"
         )
 
-    print()
-    print("Blocs legacy préservés :")
-    for key in ["fluxPretsArrimage", "histoFlux", "anomaliesDetail", "prioritesHebdo"]:
-        value = payload.get(key)
-        print("-", key, ":", len(value) if isinstance(value, list) else "absent")
+    score = compute_score(total, prets, bugs)
 
-    if warnings:
-        print()
-        print("[WARN] Blocs à surveiller :", ", ".join(warnings))
+    payload["santeFluxArrimage"] = {
+        "total": total,
+        "prets": prets,
+        "enCours": en_cours,
+        "bugsBloquants": bugs,
+        "score": score,
+        "statut": "Vert" if score >= 80 else "Orange" if score >= 60 else "Rouge",
+        "source": "JQL Arrimage",
+    }
+
+    if comparison_rows:
+        # On garde les détails legacy du template si la comparaison officielle n'en fournit pas.
+        old_rows = payload.get("comparaisonSprints") if isinstance(payload.get("comparaisonSprints"), list) else []
+
+        for idx, row in enumerate(comparison_rows):
+            if idx < len(old_rows) and isinstance(old_rows[idx], dict):
+                for detail_key in [
+                    "fluxTotalDetail",
+                    "fluxLivresDetail",
+                    "fluxEnCoursDetail",
+                    "fluxBloquesDetail",
+                ]:
+                    if not row.get(detail_key):
+                        row[detail_key] = copy.deepcopy(old_rows[idx].get(detail_key) or [])
+
+        payload["comparaisonSprints"] = comparison_rows
+
+    payload = normalize_payload_for_current(
+        payload,
+        courant,
+        precedent,
+        semaine_courante,
+        semaine_precedente,
+    )
+
+    required = ["fluxPretsArrimage", "histoFlux", "comparaisonSprints"]
+    empty = [
+        key for key in required
+        if not isinstance(payload.get(key), list) or len(payload.get(key)) == 0
+    ]
+
+    if empty:
+        fail("Payload final incomplet : blocs legacy vides : " + ", ".join(empty))
+
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    OUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    print("[OK] Payload dashboard final produit :", OUT)
+    print("Sprint courant   :", payload.get("sprintCourant"))
+    print("Sprint précédent :", payload.get("sprintPrecedent"))
+    print("Semaine courante :", payload.get("semaineCourante"))
+    print("Score            :", payload.get("santeFluxArrimage", {}).get("score"))
+    print("Flux arrimage    :", len(payload.get("fluxPretsArrimage") or []))
+    print("Histo flux       :", len(payload.get("histoFlux") or []))
+    print("Comparaison      :", len(payload.get("comparaisonSprints") or []))
 
 
 if __name__ == "__main__":
