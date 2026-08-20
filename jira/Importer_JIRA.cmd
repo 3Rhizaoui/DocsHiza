@@ -90,6 +90,9 @@ echo   - copier les JSON utiles dans commun\
 echo   - permettre au HTML generique de les charger directement
 echo.
 
+python "%PROJECT_DIR%\jira\construire_payload_dashboard_final.py"
+if errorlevel 1 goto erreur
+
 python "%PROJECT_DIR%\commun\preparer_dashboard_runtime.py" --after-import
 if errorlevel 1 goto erreur
 

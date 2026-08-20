@@ -5,19 +5,9 @@
   function fetchJson(path) {
     return fetch(path + "?_ts=" + Date.now(), { cache: "no-store" })
       .then(function (r) {
-        if (!r.ok) return null;
+        if (!r.ok) throw new Error(path + " HTTP " + r.status);
         return r.json();
-      })
-      .catch(function () {
-        return null;
       });
-  }
-
-  function sprintName(doc, fallback) {
-    if (!doc || typeof doc !== "object") return fallback || "";
-    if (doc.sprint && doc.sprint.nom) return doc.sprint.nom;
-    if (doc.sprint && doc.sprint.name) return doc.sprint.name;
-    return doc.nom || doc.name || doc.sprint || doc.label || fallback || "";
   }
 
   function showRuntimeError(title, message) {
@@ -76,99 +66,42 @@
     });
   }
 
-  function mergeRuntimeData(base, dashboard, courant, precedent, comparaison) {
-    var data = Object.assign({}, base || {}, dashboard || {});
-
-    var nomCourant = sprintName(courant, data.sprintCourant);
-    var nomPrecedent = sprintName(precedent, data.sprintPrecedent);
-
-    if (nomCourant) data.sprintCourant = nomCourant;
-    if (nomPrecedent) data.sprintPrecedent = nomPrecedent;
-
-    data.sprintCourantDetail = courant;
-    data.sprintPrecedentDetail = precedent;
-
-    data.comparaisonSprints = comparaison;
-    data.comparaisonSprintsJiraOfficielle = comparaison;
-
-    if (data.tendanceHebdo) {
-      if (data.tendanceHebdo.current && nomCourant) {
-        data.tendanceHebdo.current.sprint = nomCourant;
-      }
-
-      if (Array.isArray(data.tendanceHebdo.rows) && data.tendanceHebdo.rows.length && nomCourant) {
-        data.tendanceHebdo.rows[data.tendanceHebdo.rows.length - 1].sprint = nomCourant;
-      }
-    }
-
-    data.architectureJira = {
-      chargeeDepuisJsonRuntime: true,
-      sprintCourant: !!courant,
-      sprintPrecedent: !!precedent,
-      comparaison: Array.isArray(comparaison) && comparaison.length >= 2
-    };
-
-    return data;
-  }
-
-  function renderExistingTemplate(data) {
+  function renderDashboard(data) {
     window.currentData = data;
 
     if (typeof window.render === "function") {
-      try {
-        window.render(data);
-      } catch (e) {
-        console.error("[GIL] render(data) impossible", e);
-      }
+      window.render(data);
     }
 
     patchTitles(data);
+
+    console.log("[GIL] Dashboard alimenté par commun/dashboard_gil_data.json", {
+      sprintCourant: data.sprintCourant,
+      sprintPrecedent: data.sprintPrecedent,
+      santeFluxArrimage: data.santeFluxArrimage,
+      comparaisonSprints: Array.isArray(data.comparaisonSprints) ? data.comparaisonSprints.length : 0
+    });
   }
 
-  function loadRuntimeJsonsAndRender() {
-    var base = window.fallbackData || window.currentData || {};
+  function loadAndRender() {
+    fetchJson("dashboard_gil_data.json")
+      .then(function (data) {
+        if (!data || !data.architectureDashboardFinal) {
+          showRuntimeError(
+            "Payload dashboard final absent",
+            "commun/dashboard_gil_data.json existe, mais il n'est pas le payload final attendu. Relance l'import Jira complet."
+          );
+          return;
+        }
 
-    return Promise.all([
-      fetchJson("dashboard_gil_data.json"),
-      fetchJson("sprint_courant.json"),
-      fetchJson("sprint_precedent.json"),
-      fetchJson("comparaison_sprints.json")
-    ]).then(function (values) {
-      var dashboard = values[0];
-      var courant = values[1];
-      var precedent = values[2];
-      var comparaison = values[3];
-
-      var ok =
-        !!dashboard &&
-        !!courant &&
-        !!precedent &&
-        Array.isArray(comparaison) &&
-        comparaison.length >= 2;
-
-      if (!ok) {
+        renderDashboard(data);
+      })
+      .catch(function (e) {
         showRuntimeError(
-          "Architecture sprint Jira incomplète",
-          "Les fichiers commun/dashboard_gil_data.json, commun/sprint_courant.json, commun/sprint_precedent.json et commun/comparaison_sprints.json doivent être produits après l'import Jira."
+          "Chargement dashboard_gil_data.json impossible",
+          String(e && e.message ? e.message : e)
         );
-        console.warn("[GIL] Architecture sprint incomplète", {
-          dashboard_gil_data: !!dashboard,
-          sprint_courant: !!courant,
-          sprint_precedent: !!precedent,
-          comparaison_sprints: Array.isArray(comparaison) ? comparaison.length : 0
-        });
-        return;
-      }
-
-      var data = mergeRuntimeData(base, dashboard, courant, precedent, comparaison);
-      renderExistingTemplate(data);
-
-      console.log("[GIL] Template existant alimenté par JSON runtime", {
-        sprintCourant: data.sprintCourant,
-        sprintPrecedent: data.sprintPrecedent,
-        comparaisonSprints: comparaison.length
       });
-    });
   }
 
   function installAutoReload() {
@@ -213,9 +146,8 @@
   }
 
   function boot() {
-    setTimeout(loadRuntimeJsonsAndRender, 0);
-    setTimeout(loadRuntimeJsonsAndRender, 1000);
-    setTimeout(loadRuntimeJsonsAndRender, 3000);
+    setTimeout(loadAndRender, 0);
+    setTimeout(loadAndRender, 1000);
     installAutoReload();
   }
 
@@ -225,5 +157,5 @@
     boot();
   }
 
-  window.__gilLoadRuntimeJsonsAndRender = loadRuntimeJsonsAndRender;
+  window.__gilLoadDashboardData = loadAndRender;
 })();

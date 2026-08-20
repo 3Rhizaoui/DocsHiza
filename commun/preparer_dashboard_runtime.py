@@ -19,38 +19,41 @@ HTML_FILES = [
 ]
 
 
-def copy_required_runtime_jsons():
-    mappings = [
-        (JIRA / "dashboard_gil_data.json", COMMUN / "dashboard_gil_data.json"),
+def copy_runtime_jsons():
+    copied = []
+
+    final_payload = JIRA / "presentation" / "payload_dashboard_final.json"
+    base_payload = JIRA / "dashboard_gil_data.json"
+
+    if final_payload.exists():
+        shutil.copyfile(final_payload, COMMUN / "dashboard_gil_data.json")
+        copied.append("commun/dashboard_gil_data.json")
+    elif base_payload.exists():
+        shutil.copyfile(base_payload, COMMUN / "dashboard_gil_data.json")
+        copied.append("commun/dashboard_gil_data.json")
+
+    optional = [
         (JIRA / "sprints" / "sprint_courant.json", COMMUN / "sprint_courant.json"),
         (JIRA / "sprints" / "sprint_precedent.json", COMMUN / "sprint_precedent.json"),
         (JIRA / "presentation" / "comparaison_sprints.json", COMMUN / "comparaison_sprints.json"),
     ]
 
-    copied = []
-    missing = []
-
-    for src, dst in mappings:
+    for src, dst in optional:
         if src.exists():
-            dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(src, dst)
             copied.append(str(dst.relative_to(ROOT)))
-        else:
-            missing.append(str(src.relative_to(ROOT)))
 
-    return copied, missing
+    return copied
 
 
 def clean_runtime(html: str) -> str:
-    runtime_ids = [
+    for script_id in [
         "stableFallbackLoader",
         "autoReloadAfterActionScript",
         "jiraOfficialComparisonFallbackScript",
         "jiraOfficialComparisonStaticScript",
         "jiraOfficialSprintRowsData",
-    ]
-
-    for script_id in runtime_ids:
+    ]:
         html = re.sub(
             r'\n?<script\b[^>]*id="' + re.escape(script_id) + r'"[\s\S]*?</script>\n?',
             "\n",
@@ -78,14 +81,7 @@ def clean_runtime(html: str) -> str:
 def inject_runtime(html: str) -> str:
     stamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
     meta = f'<meta name="gil-build-stamp" content="{stamp}">'
-
-    script = (
-        f'<script id="stableFallbackLoader" '
-        f'data-runtime="json" '
-        f'data-auto="autoReloadAfterActionScript" '
-        f'data-comparison="jiraOfficialComparisonStaticScript" '
-        f'src="runtime_dashboard.js?v={stamp}"></script>'
-    )
+    script = f'<script id="stableFallbackLoader" data-runtime="final-payload" src="runtime_dashboard.js?v={stamp}"></script>'
 
     if "</head>" in html:
         html = html.replace("</head>", meta + "\n</head>", 1)
@@ -100,7 +96,7 @@ def inject_runtime(html: str) -> str:
     return html
 
 
-def patch_html(path: Path) -> bool:
+def patch_html(path: Path):
     if not path.exists():
         return False
 
@@ -112,7 +108,7 @@ def patch_html(path: Path) -> bool:
 
 
 def main():
-    copied, missing = copy_required_runtime_jsons()
+    copied = copy_runtime_jsons()
 
     prepared = []
     for path in HTML_FILES:
@@ -139,21 +135,18 @@ def main():
             COMMUN / "comparaison_sprints.json",
         ]
 
-        runtime_missing = [path for path in required if not path.exists()]
-
-        if runtime_missing:
-            print("[ERREUR] JSON runtime manquants dans commun/ après import :")
-            for path in runtime_missing:
+        missing = [path for path in required if not path.exists()]
+        if missing:
+            print("[ERREUR] JSON runtime manquants :")
+            for path in missing:
                 print(" -", path)
-            print()
-            print("Sources Jira manquantes possibles :")
-            for item in missing:
-                print(" -", item)
             raise SystemExit(1)
 
+        text = (COMMUN / "dashboard_gil_data.json").read_text(encoding="utf-8", errors="replace")
+        if "architectureDashboardFinal" not in text:
+            raise SystemExit("[ERREUR] commun/dashboard_gil_data.json n'est pas le payload final")
+
         print("[OK] Architecture runtime disponible pour le dashboard HTML.")
-    elif not copied:
-        print("[INFO] Aucun JSON runtime copié : mode bootstrap avant import.")
 
 
 if __name__ == "__main__":
