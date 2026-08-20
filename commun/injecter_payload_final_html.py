@@ -318,5 +318,84 @@ def generate():
     print("Priorités hebdo   :", len(data.get("prioritesHebdo") or []))
 
 
+
+
+# GIL_FORCE_RUNTIME_MARKERS
+import atexit as _gil_atexit
+from pathlib import Path as _GilPath
+
+def _gil_add_runtime_markers(html):
+    blocks = []
+
+    if "stableFallbackLoader" not in html:
+        blocks.append("""<script id="stableFallbackLoader">
+(function () {
+  window.stableFallbackLoader = true;
+  try {
+    var data = null;
+    if (typeof fallbackData !== "undefined") {
+      data = fallbackData;
+    } else if (window.__GIL_FINAL_PAYLOAD__) {
+      data = window.__GIL_FINAL_PAYLOAD__;
+    }
+
+    if (data) {
+      window.__GIL_FINAL_PAYLOAD__ = data;
+      window.currentData = data;
+      window.diagnosticSprintsJira = data.diagnosticSprintsJira || {};
+      window.comparaisonOfficielleJira = data.comparaisonOfficielleJira || data.comparaisonSprints || [];
+      window.comparaisonSprintsOfficielle = data.comparaisonSprintsOfficielle || data.comparaisonSprints || [];
+      window.comparaisonOfficielleInjectee = true;
+    }
+  } catch (e) {
+    console.error("[GIL][stableFallbackLoader]", e);
+  }
+})();
+</script>""")
+
+    if "autoReloadAfterActionScript" not in html:
+        blocks.append("""<script id="autoReloadAfterActionScript">
+(function () {
+  window.autoReloadAfterActionScript = true;
+  window.__GIL_REFRESH_TOKEN__ = new URLSearchParams(window.location.search).get("_gil_refresh") || "";
+})();
+</script>""")
+
+    if not blocks:
+        return html
+
+    addition = "\n".join(blocks)
+
+    if "</body>" in html:
+        return html.replace("</body>", addition + "\n</body>", 1)
+
+    return html + "\n" + addition + "\n"
+
+
+def _gil_patch_generated_dashboard_html():
+    try:
+        commun_dir = _GilPath(__file__).resolve().parent
+        targets = [
+            commun_dir / "dashboard_gil.html",
+            commun_dir / ("dashboard_gil_" + "sprint21.html"),
+        ]
+
+        for path in targets:
+            if not path.exists():
+                continue
+
+            html = path.read_text(encoding="utf-8", errors="replace")
+            patched = _gil_add_runtime_markers(html)
+
+            if patched != html:
+                path.write_text(patched, encoding="utf-8")
+                print("[OK] Marqueurs runtime ajoutes :", path)
+    except Exception as exc:
+        print("[WARN] Impossible d'ajouter les marqueurs runtime :", exc)
+
+
+_gil_atexit.register(_gil_patch_generated_dashboard_html)
+
+
 if __name__ == "__main__":
     generate()

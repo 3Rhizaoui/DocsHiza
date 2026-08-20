@@ -625,6 +625,19 @@ def main():
 
     payload["comparaisonSprints"] = ensure_comparison_legacy_contract(normalize_comparison(comparison, courant, precedent))
 
+    # GIL_OFFICIAL_COMPARISON_ALIASES
+
+    payload["comparaisonOfficielleJira"] = payload.get("comparaisonSprints") or []
+
+    payload["comparaisonSprintsOfficielle"] = payload.get("comparaisonSprints") or []
+
+    payload["comparaisonSprintsJira"] = payload.get("comparaisonSprints") or []
+
+    payload["comparaisonOfficielleInjectee"] = True
+
+    payload["sourceComparaisonSprints"] = "API Agile Jira officielle"
+
+
     payload["comparaisonOfficielleJira"] = payload.get("comparaisonSprints") or []
 
     payload["comparaisonOfficielleInjectee"] = True
