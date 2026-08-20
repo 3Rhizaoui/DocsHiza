@@ -36,3 +36,7 @@ dev_generer_payload_mock_dashboard.py
 jira/architecture_sprints_diagnostic.json
 jira/sprint_courant.json
 jira/sprint_precedent.json
+
+# Profil navigateur local Jira / SSO
+jira/.jira_sso_profile_manuel/
+audit_reports/
