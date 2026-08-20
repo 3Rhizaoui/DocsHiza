@@ -1,8 +1,16 @@
 @echo off
 
+
+
 chcp 65001 >nul
 
+
+
 set "PYTHONIOENCODING=utf-8"
+
+
+
+
 
 
 
@@ -14,7 +22,19 @@ setlocal EnableDelayedExpansion
 
 
 
+
+
+
+
+
+
+
+
 set "JIRA_DIR=%~dp0"
+
+
+
+
 
 
 
@@ -22,7 +42,19 @@ for %%I in ("%JIRA_DIR%..") do set "PROJECT_DIR=%%~fI"
 
 
 
+
+
+
+
 set "REPORT_DIR=%PROJECT_DIR%\audit_reports"
+
+
+
+
+
+
+
+
 
 
 
@@ -38,7 +70,23 @@ if not exist "%REPORT_DIR%" mkdir "%REPORT_DIR%"
 
 
 
+
+
+
+
+
+
+
+
 for /f %%I in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss"') do set "STAMP=%%I"
+
+
+
+
+
+
+
+
 
 
 
@@ -50,7 +98,19 @@ set "TRACE=%REPORT_DIR%\pipeline_trace_latest.txt"
 
 
 
+
+
+
+
 set "TRACE_STAMPED=%REPORT_DIR%\pipeline_trace_%STAMP%.txt"
+
+
+
+
+
+
+
+
 
 
 
@@ -66,7 +126,19 @@ set "GIL_PROJECT_DIR=%PROJECT_DIR%"
 
 
 
+
+
+
+
+
+
+
+
 echo ============================================================ > "%TRACE%"
+
+
+
+
 
 
 
@@ -74,7 +146,15 @@ echo TRACE UNIQUE IMPORT JIRA - DASHBOARD GIL >> "%TRACE%"
 
 
 
+
+
+
+
 echo ============================================================ >> "%TRACE%"
+
+
+
+
 
 
 
@@ -82,7 +162,15 @@ echo Date     : %DATE% %TIME% >> "%TRACE%"
 
 
 
+
+
+
+
 echo Projet   : %PROJECT_DIR% >> "%TRACE%"
+
+
+
+
 
 
 
@@ -90,7 +178,19 @@ echo Commande : %JIRA_DIR%Importer_JIRA.cmd >> "%TRACE%"
 
 
 
+
+
+
+
 echo. >> "%TRACE%"
+
+
+
+
+
+
+
+
 
 
 
@@ -106,7 +206,23 @@ type "%TRACE%"
 
 
 
+
+
+
+
+
+
+
+
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Continue'; & cmd.exe /d /s /c 'call ""%JIRA_DIR%Importer_JIRA.cmd""' 2>&1 | Tee-Object -FilePath '%TRACE%' -Append; exit $LASTEXITCODE"
+
+
+
+
+
+
+
+
 
 
 
@@ -122,11 +238,27 @@ set "RC=%ERRORLEVEL%"
 
 
 
+
+
+
+
+
+
+
+
 echo. >> "%TRACE%"
 
 
 
+
+
+
+
 echo ============================================================ >> "%TRACE%"
+
+
+
+
 
 
 
@@ -134,7 +266,15 @@ echo DIAGNOSTIC FINAL TRACE >> "%TRACE%"
 
 
 
+
+
+
+
 echo ============================================================ >> "%TRACE%"
+
+
+
+
 
 
 
@@ -142,7 +282,19 @@ echo Code retour Importer_JIRA.cmd : %RC% >> "%TRACE%"
 
 
 
+
+
+
+
 echo. >> "%TRACE%"
+
+
+
+
+
+
+
+
 
 
 
@@ -154,7 +306,19 @@ echo FICHIERS SUIVIS - PRESENT NE VEUT PAS DIRE PRODUIT PAR CE RUN >> "%TRACE%"
 
 
 
+
+
+
+
 echo ------------------------------------------------------------ >> "%TRACE%"
+
+
+
+
+
+
+
+
 
 
 
@@ -166,7 +330,15 @@ for %%F in (
 
 
 
+
+
+
+
 "jira\jira_brut.json"
+
+
+
+
 
 
 
@@ -174,7 +346,15 @@ for %%F in (
 
 
 
+
+
+
+
 "jira\sprints_dashboard.json"
+
+
+
+
 
 
 
@@ -182,7 +362,15 @@ for %%F in (
 
 
 
+
+
+
+
 "jira\presentation\comparaison_sprints.json"
+
+
+
+
 
 
 
@@ -190,7 +378,15 @@ for %%F in (
 
 
 
+
+
+
+
 "jira\sprints\sprint_courant.json"
+
+
+
+
 
 
 
@@ -198,11 +394,22 @@ for %%F in (
 
 
 
+
+
+
+
 "commun\dashboard_gil.html"
 
 
 
-"commun\dashboard_gil_sprint21.html"
+
+
+
+
+
+
+
+
 
 
 
@@ -210,7 +417,15 @@ for %%F in (
 
 
 
+
+
+
+
 ) do (
+
+
+
+
 
 
 
@@ -218,7 +433,15 @@ for %%F in (
 
 
 
+
+
+
+
         echo OK     %%~F >> "%TRACE%"
+
+
+
+
 
 
 
@@ -226,11 +449,23 @@ for %%F in (
 
 
 
+
+
+
+
         echo ABSENT %%~F >> "%TRACE%"
 
 
 
+
+
+
+
     )
+
+
+
+
 
 
 
@@ -242,13 +477,31 @@ for %%F in (
 
 
 
+
+
+
+
+
+
+
+
 echo. >> "%TRACE%"
+
+
+
+
 
 
 
 echo RESUME PAYLOAD FINAL >> "%TRACE%"
 
+
+
 echo ------------------------------------------------------------ >> "%TRACE%"
+
+
+
+
 
 
 
@@ -256,11 +509,27 @@ python -c "import os,json,pathlib; root=pathlib.Path(os.environ['GIL_PROJECT_DIR
 
 
 
+
+
+
+
 echo ORDRE PIPELINE DANS Importer_JIRA.cmd >> "%TRACE%"
 
 
 
+
+
+
+
 echo ------------------------------------------------------------ >> "%TRACE%"
+
+
+
+
+
+
+
+
 
 
 
@@ -276,11 +545,27 @@ findstr /n /i "publier_jira_dashboard construire_comparaison_dashboard construir
 
 
 
+
+
+
+
+
+
+
+
 echo. >> "%TRACE%"
 
 
 
+
+
+
+
 echo ============================================================ >> "%TRACE%"
+
+
+
+
 
 
 
@@ -288,7 +573,15 @@ echo TRACE TERMINEE - CODE RETOUR %RC% >> "%TRACE%"
 
 
 
+
+
+
+
 echo Fichier principal : %TRACE% >> "%TRACE%"
+
+
+
+
 
 
 
@@ -296,7 +589,19 @@ echo Copie horodatée   : %TRACE_STAMPED% >> "%TRACE%"
 
 
 
+
+
+
+
 echo ============================================================ >> "%TRACE%"
+
+
+
+
+
+
+
+
 
 
 
@@ -312,11 +617,27 @@ copy /Y "%TRACE%" "%TRACE_STAMPED%" >nul
 
 
 
+
+
+
+
+
+
+
+
 echo.
 
 
 
+
+
+
+
 echo ============================================================
+
+
+
+
 
 
 
@@ -324,7 +645,15 @@ echo TRACE TERMINEE
 
 
 
+
+
+
+
 echo ============================================================
+
+
+
+
 
 
 
@@ -332,7 +661,15 @@ echo Fichier à transmettre :
 
 
 
+
+
+
+
 echo %TRACE%
+
+
+
+
 
 
 
@@ -340,11 +677,27 @@ echo.
 
 
 
+
+
+
+
 echo Code retour : %RC%
 
 
 
+
+
+
+
 echo ============================================================
+
+
+
+
+
+
+
+
 
 
 
@@ -353,6 +706,10 @@ echo ============================================================
 
 
 exit /b %RC%
+
+
+
+
 
 
 

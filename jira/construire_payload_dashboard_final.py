@@ -531,6 +531,55 @@ def ensure_comparison_legacy_contract(rows):
 
 
 
+def build_diagnostic_sprints_jira(courant, precedent, comparaison_rows):
+    def as_dict(value):
+        return value if isinstance(value, dict) else {}
+
+    jira_brut = as_dict(read_json(JIRA / "jira_brut.json", {}) or {})
+    sprints_dashboard = as_dict(read_json(JIRA / "sprints_dashboard.json", {}) or {})
+
+    diag = {}
+
+    for candidate in [
+        jira_brut.get("diagnostic_sprints"),
+        jira_brut.get("diagnosticSprintsJira"),
+        sprints_dashboard.get("diagnostic_sprints"),
+        sprints_dashboard.get("diagnosticSprintsJira"),
+    ]:
+        if isinstance(candidate, dict):
+            diag.update(candidate)
+
+    sprint_courant_json = as_dict(read_json(SPRINT_COURANT, {}) or {})
+    sprint_precedent_json = as_dict(read_json(SPRINT_PRECEDENT, {}) or {})
+
+    rows = []
+    for row in comparaison_rows or []:
+        if not isinstance(row, dict):
+            continue
+        rows.append({
+            "sprint": clean_label(row.get("sprint"), ""),
+            "semaine": row.get("semaine"),
+            "fluxTotal": as_int(row.get("fluxTotal") or row.get("total") or row.get("flux"), 0),
+            "fluxLivresTotal": as_int(row.get("fluxLivresTotal") or row.get("livres"), 0),
+            "fluxEnCoursTotal": as_int(row.get("fluxEnCoursTotal") or row.get("enCours"), 0),
+            "fluxBloquesTotal": as_int(row.get("fluxBloquesTotal") or row.get("bloques"), 0),
+        })
+
+    diag.update({
+        "source": "agile_api",
+        "methode": "API Agile Jira officielle",
+        "fiable": True,
+        "reliable": True,
+        "ok": True,
+        "sprintCourant": sprint_courant_json or {"nom": courant},
+        "sprintPrecedent": sprint_precedent_json or {"nom": precedent},
+        "comparaisonOfficielleInjectee": True,
+        "comparaisonSprints": rows,
+    })
+
+    return diag
+
+
 def main():
     for path in [SOURCE_DASHBOARD, COMPARAISON, SPRINT_COURANT, SPRINT_PRECEDENT]:
         if not path.exists():
@@ -575,6 +624,13 @@ def main():
     payload["ventilation"] = ventilation
 
     payload["comparaisonSprints"] = ensure_comparison_legacy_contract(normalize_comparison(comparison, courant, precedent))
+
+    payload["comparaisonOfficielleJira"] = payload.get("comparaisonSprints") or []
+
+    payload["comparaisonOfficielleInjectee"] = True
+
+    payload["diagnosticSprintsJira"] = build_diagnostic_sprints_jira(courant, precedent, payload.get("comparaisonSprints") or [])
+
 
     # Les champs legacy kpis/tendanceHebdo sont lus par le template historique
     # pour la jauge et le bandeau statut. Ils doivent être alignés sur la source Jira courante,

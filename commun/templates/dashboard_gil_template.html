@@ -1102,6 +1102,30 @@ function hardRefreshDashboard(){
 
 
 
+
+<script id="stableFallbackLoader">
+(function () {
+  window.stableFallbackLoader = true;
+  try {
+    if (typeof fallbackData !== "undefined") {
+      window.__GIL_FINAL_PAYLOAD__ = fallbackData;
+      window.currentData = fallbackData;
+      window.comparaisonOfficielleJira = fallbackData.comparaisonSprints || [];
+      window.diagnosticSprintsJira = fallbackData.diagnosticSprintsJira || {};
+    }
+  } catch (e) {
+    console.error("[GIL][stableFallbackLoader]", e);
+  }
+})();
+</script>
+
+<script id="autoReloadAfterActionScript">
+(function () {
+  window.autoReloadAfterActionScript = true;
+  window.__GIL_REFRESH_TOKEN__ = new URLSearchParams(window.location.search).get("_gil_refresh") || "";
+})();
+</script>
+
 </body>
 
 </html>
