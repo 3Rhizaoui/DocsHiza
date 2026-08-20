@@ -272,19 +272,34 @@ def build_flux_blocks(source, sprint, semaine):
     return rows, histo, list(ventilation_map.values())
 
 
-def make_detail(count, sprint, semaine, env="SIT"):
-    return [
-        {
+def make_detail(count, sprint, semaine, env="SIT", statut="Synthèse Jira", categorie="total"):
+    rows = []
+    for i in range(max(0, int(count or 0))):
+        ref = f"{categorie.upper()}-{i + 1}"
+        rows.append({
             "sprint": sprint,
             "semaine": semaine,
+            "semaines": [semaine] if semaine else [],
             "environnement": env,
-            "domaine": "Non renseigné",
-            "sousDomaine": "Non renseigné",
-            "flux": "Non détaillé",
-            "statut": "Synthèse Jira",
-        }
-        for _ in range(max(0, int(count or 0)))
-    ]
+            "env": env,
+            "domaine": "Non ventilé",
+            "sousDomaine": "Non ventilé",
+            "flux": ref,
+            "reference": ref,
+            "jiraKey": "",
+            "type": "Synthèse Jira",
+            "pattern": "Synthèse Jira",
+            "statut": statut,
+            "statutJira": statut,
+            "status": statut,
+            "etat": statut,
+            "version": "",
+            "versionLivree": "",
+            "responsable": "Non renseigné",
+            "source": "API Agile Jira — synthèse sprint",
+        })
+    return rows
+
 
 
 def normalize_comparison(comparison, courant, precedent):
@@ -308,10 +323,39 @@ def normalize_comparison(comparison, courant, precedent):
         en_cours = as_int(row_value(row, "fluxEnCoursTotal", "enCours", "en_cours"))
         bloques = as_int(row_value(row, "fluxBloquesTotal", "bloques", "rejetes"))
 
+        # Champs legacy lus par le template pour les pastilles SIT/UAT.
         sit_total = as_int(row_value(row, "sitTotal", "SIT", "sit"))
         uat_total = as_int(row_value(row, "uatTotal", "UAT", "uat"))
 
+        sit_livres = as_int(row_value(row, "sitLivres"))
+        uat_livres = as_int(row_value(row, "uatLivres"))
+
+        sit_en_cours = as_int(row_value(row, "sitEnCours"))
+        uat_en_cours = as_int(row_value(row, "uatEnCours"))
+
+        sit_bloques = as_int(row_value(row, "sitBloques"))
+        uat_bloques = as_int(row_value(row, "uatBloques"))
+
+        # Si Jira ne ventile pas SIT/UAT, on ne laisse pas le template à zéro.
+        # On met la synthèse officielle en SIT par défaut pour préserver les totaux visibles.
+        if sit_total + uat_total == 0:
+            sit_total = total
+            uat_total = 0
+
+        if sit_livres + uat_livres == 0:
+            sit_livres = livres
+            uat_livres = 0
+
+        if sit_en_cours + uat_en_cours == 0:
+            sit_en_cours = en_cours
+            uat_en_cours = 0
+
+        if sit_bloques + uat_bloques == 0:
+            sit_bloques = bloques
+            uat_bloques = 0
+
         r = copy.deepcopy(row)
+
         r["sprint"] = label
         r["semaine"] = semaine
         r["semaines"] = semaines
@@ -321,14 +365,44 @@ def normalize_comparison(comparison, courant, precedent):
         r["fluxEnCoursTotal"] = en_cours
         r["fluxBloquesTotal"] = bloques
 
-        r["fluxTotalDetail"] = make_detail(sit_total or total, label, semaine, "SIT") + make_detail(uat_total, label, semaine, "UAT")
-        r["fluxLivresDetail"] = make_detail(livres, label, semaine, "SIT")
-        r["fluxEnCoursDetail"] = make_detail(en_cours, label, semaine, "SIT")
-        r["fluxBloquesDetail"] = make_detail(bloques, label, semaine, "SIT")
+        # Alias simples, au cas où le JS historique les lit directement.
+        r["total"] = total
+        r["livres"] = livres
+        r["enCours"] = en_cours
+        r["bloques"] = bloques
+
+        r["sitTotal"] = sit_total
+        r["uatTotal"] = uat_total
+        r["sitLivres"] = sit_livres
+        r["uatLivres"] = uat_livres
+        r["sitEnCours"] = sit_en_cours
+        r["uatEnCours"] = uat_en_cours
+        r["sitBloques"] = sit_bloques
+        r["uatBloques"] = uat_bloques
+
+        r["fluxTotalDetail"] = (
+            make_detail(sit_total, label, semaine, "SIT", "Total", "total")
+            + make_detail(uat_total, label, semaine, "UAT", "Total", "total")
+        )
+        r["fluxLivresDetail"] = (
+            make_detail(sit_livres, label, semaine, "SIT", "Livré", "livre")
+            + make_detail(uat_livres, label, semaine, "UAT", "Livré", "livre")
+        )
+        r["fluxEnCoursDetail"] = (
+            make_detail(sit_en_cours, label, semaine, "SIT", "En cours", "encours")
+            + make_detail(uat_en_cours, label, semaine, "UAT", "En cours", "encours")
+        )
+        r["fluxBloquesDetail"] = (
+            make_detail(sit_bloques, label, semaine, "SIT", "Bloqué", "bloque")
+            + make_detail(uat_bloques, label, semaine, "UAT", "Bloqué", "bloque")
+        )
+
+        r["statut"] = "Vert" if total and round(livres / total * 100) >= 80 else "Rouge"
 
         normalized.append(r)
 
     return normalized
+
 
 
 def main():
