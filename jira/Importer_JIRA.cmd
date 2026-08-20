@@ -54,9 +54,6 @@ if errorlevel 1 goto erreur
 python "%PROJECT_DIR%\jira\auditer_architecture_sprints.py"
 if errorlevel 1 goto erreur
 
-python "%PROJECT_DIR%\jira\construire_comparaison_dashboard.py"
-if errorlevel 1 goto erreur
-
 echo.
 echo ============================================================
 echo [4/7] PREPARATION SOURCE DASHBOARD
@@ -83,18 +80,33 @@ if errorlevel 1 goto erreur
 
 echo.
 echo ============================================================
-echo [6/7] PREPARATION RUNTIME HTML
+echo [6/7] PAYLOAD DASHBOARD FINAL
 echo ============================================================
 echo Objectif :
-echo   - copier les JSON utiles dans commun\
-echo   - permettre au HTML generique de les charger directement
-echo.
+echo   - conserver la sante GIL basee sur JQL Arrimage
+echo   - conserver les blocs legacy enrichis
+echo   - injecter la comparaison officielle API Agile
+echo   - produire commun\dashboard_gil_data.json final
+
+python "%PROJECT_DIR%\jira\construire_comparaison_dashboard.py"
+if errorlevel 1 goto erreur
 
 python "%PROJECT_DIR%\jira\construire_payload_dashboard_final.py"
 if errorlevel 1 goto erreur
 
 python "%PROJECT_DIR%\commun\preparer_dashboard_runtime.py" --after-import
 if errorlevel 1 goto erreur
+
+if errorlevel 1 goto erreur
+
+echo.
+echo ============================================================
+echo [6/7] PREPARATION RUNTIME HTML
+echo ============================================================
+echo Objectif :
+echo   - copier les JSON utiles dans commun\
+echo   - permettre au HTML generique de les charger directement
+echo.
 
 echo.
 echo ============================================================
