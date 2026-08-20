@@ -4,14 +4,13 @@ import copy
 import datetime as dt
 import json
 import re
-import sys
+import unicodedata
 
 ROOT = Path(__file__).resolve().parents[1]
 COMMUN = ROOT / "commun"
 JIRA = ROOT / "jira"
 
 TEMPLATE_HTML = COMMUN / "templates" / "dashboard_gil_template.html"
-CURRENT_HTML = COMMUN / "dashboard_gil.html"
 
 SOURCE_DASHBOARD = JIRA / "dashboard_gil_data.json"
 COMPARAISON = JIRA / "presentation" / "comparaison_sprints.json"
@@ -21,110 +20,98 @@ SPRINT_PRECEDENT = JIRA / "sprints" / "sprint_precedent.json"
 OUT = JIRA / "presentation" / "payload_dashboard_final.json"
 
 
-def fail(message: str):
+def fail(message):
     raise SystemExit("[ERREUR] " + message)
 
 
-def read_json(path: Path, default=None):
+def read_json(path, default=None):
     if not path.exists():
         return default
-    try:
-        return json.loads(path.read_text(encoding="utf-8", errors="replace"))
-    except Exception as exc:
-        fail(f"JSON invalide {path} : {exc}")
+    return json.loads(path.read_text(encoding="utf-8", errors="replace"))
 
 
-def extract_fallback_from_html(path: Path):
-    if not path.exists():
-        return None
-
+def extract_template_shell(path):
     html = path.read_text(encoding="utf-8", errors="replace")
 
-    b64_patterns = [
-        r'const\s+fallbackData\s*=\s*JSON\.parse\(atob\("([^"]+)"\)\)',
-        r"const\s+fallbackData\s*=\s*JSON\.parse\(atob\('([^']+)'\)\)",
-    ]
+    m = re.search(r'const\s+fallbackData\s*=\s*JSON\.parse\(atob\("([^"]+)"\)\)', html, re.S)
+    if m:
+        return json.loads(base64.b64decode(m.group(1)).decode("utf-8"))
 
-    for pattern in b64_patterns:
-        m = re.search(pattern, html, flags=re.S)
-        if m:
-            return json.loads(base64.b64decode(m.group(1)).decode("utf-8"))
-
-    json_patterns = [
+    for pattern in [
         r"const\s+fallbackData\s*=\s*([\s\S]*?);\s*let\s+currentData",
         r"const\s+fallbackData\s*=\s*([\s\S]*?);\s*var\s+currentData",
         r"const\s+fallbackData\s*=\s*([\s\S]*?);\s*window",
-    ]
-
-    for pattern in json_patterns:
-        m = re.search(pattern, html, flags=re.S)
+    ]:
+        m = re.search(pattern, html, re.S)
         if m:
-            return json.loads(m.group(1).strip())
+            return json.loads(m.group(1))
 
-    return None
+    fail("fallbackData introuvable dans le template")
 
 
-def clean_sprint_label(value, fallback=""):
-    """Retourne toujours un libellé sprint texte, jamais un dict."""
-    import ast
-
-    if value is None:
-        return fallback
-
+def clean_label(value, fallback=""):
     if isinstance(value, dict):
         for key in ["nom", "name", "sprint", "label", "titre"]:
-            if key in value and value[key]:
-                return clean_sprint_label(value[key], fallback)
+            if value.get(key):
+                return clean_label(value[key], fallback)
         return fallback
 
     if isinstance(value, list):
         for item in value:
-            label = clean_sprint_label(item, "")
+            label = clean_label(item, "")
             if label:
                 return label
         return fallback
 
-    if isinstance(value, str):
-        raw = value.strip()
-        if not raw:
-            return fallback
-
-        # Cas où un dict Python aurait été converti en texte.
-        if raw.startswith("{") and raw.endswith("}"):
-            try:
-                parsed = ast.literal_eval(raw)
-                label = clean_sprint_label(parsed, "")
-                if label:
-                    return label
-            except Exception:
-                pass
-
-        return raw
+    if value is None:
+        return fallback
 
     return str(value).strip() or fallback
 
 
+def norm(value):
+    value = unicodedata.normalize("NFD", str(value or ""))
+    value = "".join(ch for ch in value if unicodedata.category(ch) != "Mn")
+    return re.sub(r"[^a-z0-9]", "", value.lower())
 
-def sprint_name(value, default=""):
-    return clean_sprint_label(value, default)
+
+def as_int(value, default=0):
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, (int, float)):
+        return int(value)
+    if isinstance(value, str):
+        value = value.strip()
+        if value.isdigit():
+            return int(value)
+        try:
+            return int(float(value.replace(",", ".")))
+        except Exception:
+            return default
+    if isinstance(value, list):
+        return len(value)
+    return default
 
 
+def find_metric(obj, aliases):
+    aliases = {norm(a) for a in aliases}
 
-def pick_sprint_name(path: Path, fallback: str):
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            if norm(key) in aliases:
+                return as_int(value, 0)
+
+        for value in obj.values():
+            found = find_metric(value, aliases)
+            if found:
+                return found
+
+    return 0
+
+
+def pick_sprint(path, fallback):
     data = read_json(path, {})
-
-    # Formats possibles :
-    # - {"nom": "Scrum Sprint 23", ...}
-    # - {"sprint": {"nom": "Scrum Sprint 23", ...}}
-    # - {"courant": {...}} / {"precedent": {...}}
-    for key in ["nom", "name", "sprint", "courant", "precedent", "data", "value"]:
-        if isinstance(data, dict) and key in data:
-            label = clean_sprint_label(data[key], "")
-            if label:
-                return label
-
-    return clean_sprint_label(data, fallback)
-
+    return clean_label(data, fallback)
 
 
 def iso_week_now():
@@ -133,153 +120,178 @@ def iso_week_now():
     return f"{year}-W{week:02d}"
 
 
-def get_source_metrics(source: dict):
-    if not isinstance(source, dict):
-        return 0, 0, 0, 0
-
-    import unicodedata
-    import re as _re
-
-    def norm_key(value):
-        value = str(value or "")
-        value = unicodedata.normalize("NFD", value)
-        value = "".join(ch for ch in value if unicodedata.category(ch) != "Mn")
-        value = value.lower()
-        value = _re.sub(r"[^a-z0-9]", "", value)
-        return value
-
-    def as_int(value, default=0):
-        if isinstance(value, bool):
-            return int(value)
-        if isinstance(value, (int, float)):
-            return int(value)
-        if isinstance(value, str):
-            value = value.strip()
-            if value.isdigit():
-                return int(value)
-            try:
-                return int(float(value.replace(",", ".")))
-            except Exception:
-                return default
-        if isinstance(value, list):
-            return len(value)
+def row_value(row, *keys, default=""):
+    if not isinstance(row, dict):
         return default
+    for key in keys:
+        if key in row and row[key] not in [None, ""]:
+            return row[key]
+    return default
 
-    def find_metric(obj, aliases):
-        aliases = {norm_key(a) for a in aliases}
 
-        if isinstance(obj, dict):
-            for key, value in obj.items():
-                if norm_key(key) in aliases:
-                    n = as_int(value, None)
-                    if n is not None:
-                        return n
+def row_text(row):
+    if not isinstance(row, dict):
+        return ""
+    return " ".join(str(row.get(k, "")) for k in ["statut", "statutJira", "status", "etat"]).lower()
 
-            for value in obj.values():
-                found = find_metric(value, aliases)
-                if found is not None:
-                    return found
 
-        return None
+def is_ready(row):
+    text = row_text(row)
+    return any(token in text for token in ["prêt", "pret", "livré", "livre", "ready"])
 
-    def first_list(*keys):
-        for key in keys:
-            value = source.get(key)
-            if isinstance(value, list):
-                return value
-        return []
 
+def is_in_progress(row):
+    text = row_text(row)
+    return any(token in text for token in ["en cours", "progress"])
+
+
+def is_blocked(row):
+    text = row_text(row)
+    return any(token in text for token in ["bloqué", "bloque", "blocked", "ko"])
+
+
+def source_rows(source):
+    for key in ["records", "epics", "flux", "lignesDashboard", "lignes"]:
+        rows = source.get(key)
+        if isinstance(rows, list) and rows:
+            return rows
+    return []
+
+
+def source_metrics(source):
     indicateurs = source.get("indicateurs") if isinstance(source.get("indicateurs"), dict) else {}
+    rows = source_rows(source)
 
-    total = find_metric(indicateurs, [
-        "epicsFlux",
-        "epics_flux",
-        "epics",
-        "flux",
-        "fluxTotal",
-        "totalFlux",
-        "total",
-        "lignesDashboard",
-        "lignes_dashboard",
-    ])
+    total = find_metric(indicateurs, ["total", "flux", "epics", "epicsFlux", "lignesDashboard"]) or len(rows)
+    prets = find_metric(indicateurs, ["prets", "prêts", "pretTester", "pretsArrimage", "ready"])
+    en_cours = find_metric(indicateurs, ["enCours", "encours", "fluxEnCours", "inProgress"])
+    bugs = find_metric(indicateurs, ["bugsBloquants", "bloquants", "ko", "anomaliesBloquantes"])
 
-    prets = find_metric(indicateurs, [
-        "prets",
-        "prêts",
-        "pretTester",
-        "pret_tester",
-        "pretsTester",
-        "pretsArrimage",
-        "ready",
-    ])
-
-    en_cours = find_metric(indicateurs, [
-        "enCours",
-        "en_cours",
-        "encours",
-        "fluxEnCours",
-        "inProgress",
-    ])
-
-    bugs = find_metric(indicateurs, [
-        "bugsBloquants",
-        "bugs_bloquants",
-        "bloquants",
-        "anomaliesBloquantes",
-        "ko",
-    ])
-
-    rows = first_list("records", "epics", "flux", "lignesDashboard", "lignes", "fluxPretsArrimage")
-
-    if total is None:
-        total = len(rows) if rows else 0
-
-    if prets is None:
-        prets = 0
-        for row in rows:
-            if not isinstance(row, dict):
-                continue
-            text = " ".join(str(row.get(k, "")) for k in ["statut", "statutJira", "status", "etat"])
-            text = text.lower()
-            if any(token in text for token in ["prêt", "pret", "livré", "livre", "ready"]):
-                prets += 1
-
-    if en_cours is None:
-        en_cours = 0
-        for row in rows:
-            if not isinstance(row, dict):
-                continue
-            text = " ".join(str(row.get(k, "")) for k in ["statut", "statutJira", "status", "etat"])
-            text = text.lower()
-            if any(token in text for token in ["en cours", "progress"]):
-                en_cours += 1
-
-    if bugs is None:
-        bugs = 0
-        for row in rows:
-            if not isinstance(row, dict):
-                continue
-            text = " ".join(str(row.get(k, "")) for k in ["statut", "statutJira", "status", "etat"])
-            text = text.lower()
-            if any(token in text for token in ["bloqué", "bloque", "blocked", "ko"]):
-                bugs += 1
+    if not prets:
+        prets = sum(1 for row in rows if is_ready(row))
+    if not en_cours:
+        en_cours = sum(1 for row in rows if is_in_progress(row))
+    if not bugs:
+        bugs = sum(1 for row in rows if is_blocked(row))
 
     return int(total or 0), int(prets or 0), int(en_cours or 0), int(bugs or 0)
 
 
-
-def compute_score(total: int, prets: int, bugs: int):
+def score_sante(total, prets, bugs):
     base = 100 if total == 0 else prets / total * 100
     penalty = min(35, bugs * 3)
     return max(0, min(100, round(base - penalty)))
 
 
-def normalize_comparison_rows(rows, courant, precedent, semaine_courante, semaine_precedente):
-    if isinstance(rows, dict):
-        rows = rows.get("comparaisonSprints") or rows.get("rows") or rows.get("lignes") or []
+def normalize_flux_row(row, sprint, semaine):
+    env = clean_label(row_value(row, "environnement", "env", "environment"), "Non renseigné")
+    domaine = clean_label(row_value(row, "domaine", "domain"), "Non renseigné")
+    sous = clean_label(row_value(row, "sousDomaine", "sous_domaine", "subdomain"), "Non renseigné")
+    flux = clean_label(row_value(row, "flux", "reference", "key", "jiraKey", "nom", "name"), "À qualifier")
+    statut = clean_label(row_value(row, "statut", "statutJira", "status", "etat"), "À qualifier")
 
-    if not isinstance(rows, list):
-        rows = []
+    return {
+        "sprint": sprint,
+        "semaine": semaine,
+        "environnement": env,
+        "domaine": domaine,
+        "sousDomaine": sous,
+        "flux": flux,
+        "jiraKey": clean_label(row_value(row, "jiraKey", "key"), ""),
+        "pattern": clean_label(row_value(row, "pattern", "type"), "Réel"),
+        "version": clean_label(row_value(row, "version", "versionLivree"), ""),
+        "statut": statut,
+        "statutJira": statut,
+        "resume": clean_label(row_value(row, "resume", "summary"), ""),
+        "description": clean_label(row_value(row, "description"), ""),
+        "url": clean_label(row_value(row, "url"), ""),
+        "responsable": clean_label(row_value(row, "responsable", "assignee"), "Non renseigné"),
+        "tachesTotal": as_int(row_value(row, "tachesTotal"), 0),
+        "tachesTerminees": as_int(row_value(row, "tachesTerminees"), 0),
+        "taches": row.get("taches", []) if isinstance(row, dict) else [],
+        "source": "JIRA — source dynamique",
+    }
+
+
+def build_flux_blocks(source, sprint, semaine):
+    rows = [normalize_flux_row(row, sprint, semaine) for row in source_rows(source)]
+
+    histo = []
+    for row in rows:
+        statut = row["statut"].upper()
+        histo.append({
+            "sprint": sprint,
+            "semaine": semaine,
+            "flux": row["flux"],
+            "domaine": row["domaine"],
+            "sousDomaine": row["sousDomaine"],
+            "environnement": row["environnement"],
+            "type": row["pattern"],
+            "statut": "PRÊT" if is_ready(row) else "EN COURS" if is_in_progress(row) else statut,
+            "versionLivree": row["version"],
+            "bugsBloquants": 1 if is_blocked(row) else 0,
+            "testsOk": 1 if is_ready(row) else 0,
+            "evenement": "Livré" if is_ready(row) else "En cours" if is_in_progress(row) else "À qualifier",
+            "action": "",
+            "responsable": row["responsable"],
+        })
+
+    ventilation_map = {}
+    for row in rows:
+        key = (row["domaine"], row["sousDomaine"], row["environnement"])
+        item = ventilation_map.setdefault(key, {
+            "sprint": sprint,
+            "semaine": semaine,
+            "environnement": row["environnement"],
+            "domaine": row["domaine"],
+            "sousDomaine": row["sousDomaine"],
+            "total": 0,
+            "prets": 0,
+            "anomaliesOuvertes": 0,
+            "ko": 0,
+            "enCours": 0,
+            "referencesFlux": [],
+            "referencesLivrees": [],
+            "referencesBloquees": [],
+        })
+
+        ref = row["flux"]
+        item["total"] += 1
+        item["referencesFlux"].append(ref)
+
+        if is_ready(row):
+            item["prets"] += 1
+            item["referencesLivrees"].append(ref)
+        elif is_in_progress(row):
+            item["enCours"] += 1
+
+        if is_blocked(row):
+            item["ko"] += 1
+            item["referencesBloquees"].append(ref)
+
+    return rows, histo, list(ventilation_map.values())
+
+
+def make_detail(count, sprint, semaine, env="SIT"):
+    return [
+        {
+            "sprint": sprint,
+            "semaine": semaine,
+            "environnement": env,
+            "domaine": "Non renseigné",
+            "sousDomaine": "Non renseigné",
+            "flux": "Non détaillé",
+            "statut": "Synthèse Jira",
+        }
+        for _ in range(max(0, int(count or 0)))
+    ]
+
+
+def normalize_comparison(comparison, courant, precedent):
+    if isinstance(comparison, dict):
+        rows = comparison.get("comparaisonSprints") or comparison.get("rows") or comparison.get("lignes") or []
+    else:
+        rows = comparison if isinstance(comparison, list) else []
 
     normalized = []
 
@@ -287,180 +299,64 @@ def normalize_comparison_rows(rows, courant, precedent, semaine_courante, semain
         if not isinstance(row, dict):
             continue
 
+        label = precedent if idx == 0 else courant
+        semaine = clean_label(row_value(row, "semaine"), "")
+        semaines = row.get("semaines") if isinstance(row.get("semaines"), list) else ([semaine] if semaine else [])
+
+        total = as_int(row_value(row, "fluxTotal", "total", "flux"))
+        livres = as_int(row_value(row, "fluxLivresTotal", "livres", "livresTotal"))
+        en_cours = as_int(row_value(row, "fluxEnCoursTotal", "enCours", "en_cours"))
+        bloques = as_int(row_value(row, "fluxBloquesTotal", "bloques", "rejetes"))
+
+        sit_total = as_int(row_value(row, "sitTotal", "SIT", "sit"))
+        uat_total = as_int(row_value(row, "uatTotal", "UAT", "uat"))
+
         r = copy.deepcopy(row)
+        r["sprint"] = label
+        r["semaine"] = semaine
+        r["semaines"] = semaines
 
-        if idx == 0:
-            r["sprint"] = r.get("sprint") or precedent
-            if precedent:
-                r["sprint"] = precedent
-            if semaine_precedente:
-                r["semaine"] = r.get("semaine") or semaine_precedente
-                r["semaines"] = r.get("semaines") or [semaine_precedente]
+        r["fluxTotal"] = total
+        r["fluxLivresTotal"] = livres
+        r["fluxEnCoursTotal"] = en_cours
+        r["fluxBloquesTotal"] = bloques
 
-        if idx == 1:
-            r["sprint"] = r.get("sprint") or courant
-            if courant:
-                r["sprint"] = courant
-            if semaine_courante:
-                r["semaine"] = r.get("semaine") or semaine_courante
-                r["semaines"] = r.get("semaines") or [semaine_courante]
-
-        total = r.get("fluxTotal", r.get("total", r.get("flux", 0)))
-        livres = r.get("fluxLivresTotal", r.get("livres", r.get("livresTotal", 0)))
-        en_cours = r.get("fluxEnCoursTotal", r.get("enCours", r.get("en_cours", 0)))
-        bloques = r.get("fluxBloquesTotal", r.get("bloques", r.get("rejetes", 0)))
-
-        r["fluxTotal"] = int(total or 0)
-        r["fluxLivresTotal"] = int(livres or 0)
-        r["fluxEnCoursTotal"] = int(en_cours or 0)
-        r["fluxBloquesTotal"] = int(bloques or 0)
-
-        for detail_key in [
-            "fluxTotalDetail",
-            "fluxLivresDetail",
-            "fluxEnCoursDetail",
-            "fluxBloquesDetail",
-        ]:
-            if not isinstance(r.get(detail_key), list):
-                r[detail_key] = []
+        r["fluxTotalDetail"] = make_detail(sit_total or total, label, semaine, "SIT") + make_detail(uat_total, label, semaine, "UAT")
+        r["fluxLivresDetail"] = make_detail(livres, label, semaine, "SIT")
+        r["fluxEnCoursDetail"] = make_detail(en_cours, label, semaine, "SIT")
+        r["fluxBloquesDetail"] = make_detail(bloques, label, semaine, "SIT")
 
         normalized.append(r)
 
     return normalized
 
 
-def normalize_payload_for_current(payload, courant, precedent, semaine_courante, semaine_precedente):
-    payload["sprintCourant"] = courant
-    payload["sprintPrecedent"] = precedent
-    payload["semaineCourante"] = semaine_courante
-    payload["semainePrecedente"] = semaine_precedente
-    payload["architectureDashboardFinal"] = True
-
-    for key in ["fluxPretsArrimage", "histoFlux", "anomaliesDetail", "ventilation"]:
-        rows = payload.get(key)
-        if not isinstance(rows, list):
-            continue
-
-        for item in rows:
-            if not isinstance(item, dict):
-                continue
-
-            item["sprint"] = courant
-            if semaine_courante and ("semaine" in item or key in ["histoFlux", "ventilation"]):
-                item["semaine"] = semaine_courante
-
-    priorites = payload.get("prioritesHebdo")
-    if isinstance(priorites, list):
-        for item in priorites:
-            if isinstance(item, dict):
-                item["sprint"] = courant
-                if semaine_courante:
-                    item["semaineSuivi"] = semaine_courante
-
-    rows = payload.get("comparaisonSprints")
-    if isinstance(rows, list):
-        for idx, row in enumerate(rows):
-            if not isinstance(row, dict):
-                continue
-
-            label = precedent if idx == 0 else courant
-            semaine = semaine_precedente if idx == 0 else semaine_courante
-
-            row["sprint"] = label
-            if semaine:
-                row["semaine"] = semaine
-                row["semaines"] = [semaine]
-
-            for detail_key in [
-                "fluxTotalDetail",
-                "fluxLivresDetail",
-                "fluxEnCoursDetail",
-                "fluxBloquesDetail",
-            ]:
-                details = row.get(detail_key)
-                if isinstance(details, list):
-                    for item in details:
-                        if isinstance(item, dict):
-                            item["sprint"] = label
-                            if semaine:
-                                item["semaine"] = semaine
-
-    return payload
-
-
 def main():
-    # Base obligatoire : le bon dashboard Sprint 21 riche.
-    base = extract_fallback_from_html(TEMPLATE_HTML)
+    for path in [SOURCE_DASHBOARD, COMPARAISON, SPRINT_COURANT, SPRINT_PRECEDENT]:
+        if not path.exists():
+            fail(f"Source Jira intermédiaire absente : {path}")
 
-    if not isinstance(base, dict):
-        base = extract_fallback_from_html(CURRENT_HTML)
-
-    if not isinstance(base, dict):
-        fail("fallbackData riche introuvable dans le template HTML")
-
-    required_sources = [
-        (SOURCE_DASHBOARD, "source dashboard JQL Arrimage"),
-        (COMPARAISON, "comparaison officielle Sprint N-1 / Sprint courant"),
-        (SPRINT_COURANT, "sprint courant officiel"),
-        (SPRINT_PRECEDENT, "sprint précédent officiel"),
-    ]
-
-    missing = [
-        f"{label} : {path}"
-        for path, label in required_sources
-        if not path.exists()
-    ]
-
-    if missing:
-        fail(
-            "Sources Jira intermédiaires absentes. "
-            "Le payload final ne doit pas être construit depuis le template seul.\n- "
-            + "\n- ".join(missing)
-        )
+    shell = extract_template_shell(TEMPLATE_HTML)
 
     source = read_json(SOURCE_DASHBOARD, {})
     comparison = read_json(COMPARAISON, [])
 
-    courant = pick_sprint_name(SPRINT_COURANT, "")
-    precedent = pick_sprint_name(SPRINT_PRECEDENT, "")
+    courant = pick_sprint(SPRINT_COURANT, "Scrum Sprint 23")
+    precedent = pick_sprint(SPRINT_PRECEDENT, "Scrum Sprint 22")
 
-    comparison_rows = normalize_comparison_rows(
-        comparison,
-        courant or "Scrum Sprint 23",
-        precedent or "Scrum Sprint 22",
-        "",
-        "",
-    )
-
-    if comparison_rows:
-        if not precedent:
-            precedent = comparison_rows[0].get("sprint") or "Scrum Sprint 22"
-        if not courant and len(comparison_rows) > 1:
-            courant = comparison_rows[1].get("sprint") or "Scrum Sprint 23"
-
-    courant = courant or "Scrum Sprint 23"
-    precedent = precedent or "Scrum Sprint 22"
-
-    semaine_courante = (
-        source.get("semaineCourante")
-        or source.get("semaine")
-        or source.get("constatSemaine")
-        or iso_week_now()
-    )
-    semaine_precedente = source.get("semainePrecedente") or ""
-
-    payload = copy.deepcopy(base)
-
-    total, prets, en_cours, bugs = get_source_metrics(source)
-
+    total, prets, en_cours, bugs = source_metrics(source)
     if total <= 0:
-        keys = ", ".join(sorted(source.keys())) if isinstance(source, dict) else type(source).__name__
-        fail(
-            "Métriques JQL Arrimage absentes ou invalides dans jira/dashboard_gil_data.json. "
-            f"Impossible de calculer la santé réelle. Clés disponibles : {keys}"
-        )
+        fail("Métriques JQL Arrimage invalides : total=0")
 
-    score = compute_score(total, prets, bugs)
+    score = score_sante(total, prets, bugs)
+    semaine_courante = clean_label(source.get("semaineCourante") or source.get("semaine") or source.get("constatSemaine"), iso_week_now())
+
+    payload = copy.deepcopy(shell)
+
+    payload["architectureDashboardFinal"] = True
+    payload["sprintCourant"] = courant
+    payload["sprintPrecedent"] = precedent
+    payload["semaineCourante"] = semaine_courante
 
     payload["santeFluxArrimage"] = {
         "total": total,
@@ -472,53 +368,28 @@ def main():
         "source": "JQL Arrimage",
     }
 
-    if comparison_rows:
-        # On garde les détails legacy du template si la comparaison officielle n'en fournit pas.
-        old_rows = payload.get("comparaisonSprints") if isinstance(payload.get("comparaisonSprints"), list) else []
+    flux_rows, histo, ventilation = build_flux_blocks(source, courant, semaine_courante)
 
-        for idx, row in enumerate(comparison_rows):
-            if idx < len(old_rows) and isinstance(old_rows[idx], dict):
-                for detail_key in [
-                    "fluxTotalDetail",
-                    "fluxLivresDetail",
-                    "fluxEnCoursDetail",
-                    "fluxBloquesDetail",
-                ]:
-                    if not row.get(detail_key):
-                        row[detail_key] = copy.deepcopy(old_rows[idx].get(detail_key) or [])
+    payload["fluxPretsArrimage"] = flux_rows
+    payload["histoFlux"] = histo
+    payload["ventilation"] = ventilation
 
-        payload["comparaisonSprints"] = comparison_rows
+    payload["comparaisonSprints"] = normalize_comparison(comparison, courant, precedent)
 
-    courant = clean_sprint_label(courant, "Scrum Sprint 23")
-    precedent = clean_sprint_label(precedent, "Scrum Sprint 22")
-
-    payload = normalize_payload_for_current(
-        payload,
-        courant,
-        precedent,
-        semaine_courante,
-        semaine_precedente,
-    )
-
-    required = ["fluxPretsArrimage", "histoFlux", "comparaisonSprints"]
-    empty = [
-        key for key in required
-        if not isinstance(payload.get(key), list) or len(payload.get(key)) == 0
-    ]
-
-    if empty:
-        fail("Payload final incomplet : blocs legacy vides : " + ", ".join(empty))
+    # On ne recycle pas les anciennes priorités Sprint 21 comme si elles étaient Sprint 23.
+    payload["prioritesHebdo"] = []
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
     print("[OK] Payload dashboard final produit :", OUT)
-    print("Sprint courant   :", payload.get("sprintCourant"))
-    print("Sprint précédent :", payload.get("sprintPrecedent"))
-    print("Semaine courante :", payload.get("semaineCourante"))
-    print("Score            :", payload.get("santeFluxArrimage", {}).get("score"))
+    print("Sprint courant   :", courant)
+    print("Sprint précédent :", precedent)
+    print("Score            :", score)
+    print("Santé arrimage   :", total, "total |", prets, "prêts |", en_cours, "en cours")
     print("Flux arrimage    :", len(payload.get("fluxPretsArrimage") or []))
     print("Histo flux       :", len(payload.get("histoFlux") or []))
+    print("Ventilation      :", len(payload.get("ventilation") or []))
     print("Comparaison      :", len(payload.get("comparaisonSprints") or []))
 
 
