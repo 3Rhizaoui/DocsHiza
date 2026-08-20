@@ -107,44 +107,93 @@ def get_source_metrics(source: dict):
     def count_list(value):
         return len(value) if isinstance(value, list) else 0
 
+    def first_list(*keys):
+        for key in keys:
+            value = source.get(key)
+            if isinstance(value, list):
+                return value
+        return []
+
+    rows = first_list("flux", "lignesDashboard", "lignes", "fluxPretsArrimage")
+
     sante = source.get("santeFluxArrimage")
     if isinstance(sante, dict):
         total = as_int(sante.get("total") or sante.get("flux") or sante.get("epics"))
         prets = as_int(sante.get("prets") or sante.get("pretTester") or sante.get("ready"))
         en_cours = as_int(sante.get("enCours") or sante.get("en_cours") or sante.get("inProgress"))
         bugs = as_int(sante.get("bugsBloquants") or sante.get("bloquants"))
-        return total, prets, en_cours, bugs
 
-    # Cas réel observé : source["flux"] peut être une liste.
-    total = as_int(source.get("epics"))
-    if total <= 0:
-        total = as_int(source.get("fluxTotal"))
-    if total <= 0:
-        total = as_int(source.get("total"))
-    if total <= 0:
-        total = count_list(source.get("flux"))
-    if total <= 0:
-        total = count_list(source.get("lignesDashboard"))
-    if total <= 0:
-        total = count_list(source.get("lignes"))
-    if total <= 0:
-        total = count_list(source.get("fluxPretsArrimage"))
+        if total or prets or en_cours or bugs:
+            return total, prets, en_cours, bugs
 
-    prets = as_int(source.get("prets"))
-    if prets <= 0:
-        prets = as_int(source.get("pretTester"))
-    if prets <= 0:
-        prets = as_int(source.get("fluxPrets"))
+    total = (
+        as_int(source.get("epics"))
+        or as_int(source.get("fluxTotal"))
+        or as_int(source.get("total"))
+        or count_list(source.get("flux"))
+        or count_list(source.get("lignesDashboard"))
+        or count_list(source.get("lignes"))
+        or count_list(source.get("fluxPretsArrimage"))
+    )
 
-    en_cours = as_int(source.get("enCours"))
-    if en_cours <= 0:
-        en_cours = as_int(source.get("encours"))
-    if en_cours <= 0:
-        en_cours = as_int(source.get("fluxEnCours"))
+    prets = (
+        as_int(source.get("prets"))
+        or count_list(source.get("prets"))
+        or as_int(source.get("pretTester"))
+        or count_list(source.get("pretTester"))
+        or as_int(source.get("fluxPrets"))
+        or count_list(source.get("fluxPrets"))
+    )
 
-    bugs = as_int(source.get("bugsBloquants"))
-    if bugs <= 0:
-        bugs = as_int(source.get("bloquants"))
+    en_cours = (
+        as_int(source.get("enCours"))
+        or count_list(source.get("enCours"))
+        or as_int(source.get("encours"))
+        or count_list(source.get("encours"))
+        or as_int(source.get("fluxEnCours"))
+        or count_list(source.get("fluxEnCours"))
+    )
+
+    bugs = (
+        as_int(source.get("bugsBloquants"))
+        or count_list(source.get("bugsBloquants"))
+        or as_int(source.get("bloquants"))
+        or count_list(source.get("bloquants"))
+    )
+
+    if rows:
+        if total <= 0:
+            total = len(rows)
+
+        if prets <= 0:
+            prets = sum(
+                1 for row in rows
+                if isinstance(row, dict)
+                and any(
+                    token in str(row.get("statut", "") + " " + row.get("statutJira", "")).lower()
+                    for token in ["prêt", "pret", "livré", "livre", "ready"]
+                )
+            )
+
+        if en_cours <= 0:
+            en_cours = sum(
+                1 for row in rows
+                if isinstance(row, dict)
+                and any(
+                    token in str(row.get("statut", "") + " " + row.get("statutJira", "")).lower()
+                    for token in ["en cours", "progress"]
+                )
+            )
+
+        if bugs <= 0:
+            bugs = sum(
+                1 for row in rows
+                if isinstance(row, dict)
+                and any(
+                    token in str(row.get("statut", "") + " " + row.get("statutJira", "")).lower()
+                    for token in ["bloqué", "bloque", "ko", "blocked"]
+                )
+            )
 
     return total, prets, en_cours, bugs
 
