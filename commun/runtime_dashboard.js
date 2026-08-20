@@ -10,28 +10,23 @@
       });
   }
 
-  function showRuntimeError(title, message) {
-    var old = document.getElementById("gilRuntimeError");
-    if (old) old.remove();
+  function hasUsefulLegacyBlocks(data) {
+    if (!data || typeof data !== "object") return false;
 
-    var block = document.createElement("div");
-    block.id = "gilRuntimeError";
-    block.style.margin = "18px 20px";
-    block.style.padding = "14px";
-    block.style.border = "2px solid #dc2626";
-    block.style.borderRadius = "10px";
-    block.style.background = "#fef2f2";
-    block.style.color = "#7f1d1d";
-    block.innerHTML =
-      "<div style='font-size:16px;font-weight:700;margin-bottom:6px;'>" + title + "</div>" +
-      "<div style='font-size:13px;'>" + message + "</div>";
+    var flux = Array.isArray(data.fluxPretsArrimage) ? data.fluxPretsArrimage.length : 0;
+    var histo = Array.isArray(data.histoFlux) ? data.histoFlux.length : 0;
+    var comp = Array.isArray(data.comparaisonSprints) ? data.comparaisonSprints.length : 0;
 
-    var anchor = document.querySelector("#reportTitle") || document.body.firstElementChild || document.body;
-    if (anchor && anchor.parentElement) {
-      anchor.parentElement.insertBefore(block, anchor.nextSibling);
-    } else {
-      document.body.insertBefore(block, document.body.firstChild);
-    }
+    return flux > 0 && histo > 0 && comp >= 2;
+  }
+
+  function hasFinalContract(data) {
+    return !!(
+      data &&
+      typeof data === "object" &&
+      data.architectureDashboardFinal &&
+      hasUsefulLegacyBlocks(data)
+    );
   }
 
   function patchTitles(data) {
@@ -67,6 +62,8 @@
   }
 
   function renderDashboard(data) {
+    if (!data || typeof data !== "object") return;
+
     window.currentData = data;
 
     if (typeof window.render === "function") {
@@ -75,10 +72,11 @@
 
     patchTitles(data);
 
-    console.log("[GIL] Dashboard alimenté par commun/dashboard_gil_data.json", {
+    console.log("[GIL] Dashboard rendu depuis payload final", {
       sprintCourant: data.sprintCourant,
       sprintPrecedent: data.sprintPrecedent,
-      santeFluxArrimage: data.santeFluxArrimage,
+      fluxPretsArrimage: Array.isArray(data.fluxPretsArrimage) ? data.fluxPretsArrimage.length : 0,
+      histoFlux: Array.isArray(data.histoFlux) ? data.histoFlux.length : 0,
       comparaisonSprints: Array.isArray(data.comparaisonSprints) ? data.comparaisonSprints.length : 0
     });
   }
@@ -86,21 +84,26 @@
   function loadAndRender() {
     fetchJson("dashboard_gil_data.json")
       .then(function (data) {
-        if (!data || !data.architectureDashboardFinal) {
-          showRuntimeError(
-            "Payload dashboard final absent",
-            "commun/dashboard_gil_data.json existe, mais il n'est pas le payload final attendu. Relance l'import Jira complet."
-          );
+        if (!hasFinalContract(data)) {
+          console.warn("[GIL] Payload final absent ou incomplet. Rendu HTML existant conservé.", {
+            architectureDashboardFinal: !!(data && data.architectureDashboardFinal),
+            fluxPretsArrimage: data && Array.isArray(data.fluxPretsArrimage) ? data.fluxPretsArrimage.length : "absent",
+            histoFlux: data && Array.isArray(data.histoFlux) ? data.histoFlux.length : "absent",
+            comparaisonSprints: data && Array.isArray(data.comparaisonSprints) ? data.comparaisonSprints.length : "absent"
+          });
+
+          /*
+            Important :
+            On ne fait PAS render(data) si le payload final est incomplet.
+            Sinon on écrase le dashboard publié avec des tableaux vides.
+          */
           return;
         }
 
         renderDashboard(data);
       })
       .catch(function (e) {
-        showRuntimeError(
-          "Chargement dashboard_gil_data.json impossible",
-          String(e && e.message ? e.message : e)
-        );
+        console.warn("[GIL] dashboard_gil_data.json non chargé. Rendu HTML existant conservé.", e);
       });
   }
 
@@ -146,8 +149,11 @@
   }
 
   function boot() {
-    setTimeout(loadAndRender, 0);
-    setTimeout(loadAndRender, 1000);
+    /*
+      Le HTML legacy rend déjà fallbackData.
+      Le runtime ne vient remplacer le rendu que si le payload final est complet.
+    */
+    setTimeout(loadAndRender, 500);
     installAutoReload();
   }
 
