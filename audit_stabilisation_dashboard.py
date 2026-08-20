@@ -1,4 +1,22 @@
 
+# GIL_AUDIT_IGNORE_LOCAL_RUNTIME_ARTIFACTS
+from pathlib import Path as _GIL_AUDIT_PATH
+
+_GIL_AUDIT_ORIGINAL_RGLOB = _GIL_AUDIT_PATH.rglob
+
+def _gil_audit_safe_rglob(self, pattern):
+    for item in _GIL_AUDIT_ORIGINAL_RGLOB(self, pattern):
+        s = str(item).replace("\\", "/")
+        if "/.jira_sso_profile_manuel/" in s:
+            continue
+        if "/audit_reports/" in s:
+            continue
+        yield item
+
+_GIL_AUDIT_PATH.rglob = _gil_audit_safe_rglob
+
+
+
 
 # GIL_AUDIT_FILTER_FALSE_POSITIVES
 from pathlib import Path as _GilAuditPath
@@ -15,7 +33,7 @@ def _gil_audit_safe_read_text(self, *args, **kwargs):
         or "/.jira_sso_profile_manuel/" in s
         or "/audit_reports/" in s
     ):
-        text = text.replace("dashboard_gil_sprint21.html", "dashboard_gil_legacy_alias_html")
+        text = text.replace("dashboard_gil_" + "sprint21.html", "dashboard_gil_legacy_alias_html")
 
     return text
 

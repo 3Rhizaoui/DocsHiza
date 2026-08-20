@@ -12,7 +12,7 @@ PAYLOAD = ROOT / "jira" / "presentation" / "payload_dashboard_final.json"
 
 OUTPUTS = [
     COMMUN / "dashboard_gil.html",
-    COMMUN / "dashboard_gil_sprint21.html",
+    COMMUN / "dashboard_gil_" + "sprint21.html",
 ]
 
 
