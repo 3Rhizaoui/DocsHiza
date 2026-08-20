@@ -405,6 +405,132 @@ def normalize_comparison(comparison, courant, precedent):
 
 
 
+def ensure_comparison_legacy_contract(rows):
+    """Force le contrat attendu par le template historique pour la comparaison sprint."""
+    fixed = []
+
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+
+        r = copy.deepcopy(row)
+
+        sprint = clean_label(r.get("sprint"), "")
+        semaine = clean_label(r.get("semaine"), "")
+        semaines = r.get("semaines") if isinstance(r.get("semaines"), list) else ([semaine] if semaine else [])
+
+        total = as_int(r.get("fluxTotal") or r.get("total") or r.get("flux"), 0)
+        livres = as_int(r.get("fluxLivresTotal") or r.get("livres"), 0)
+        en_cours = as_int(r.get("fluxEnCoursTotal") or r.get("enCours"), 0)
+        bloques = as_int(r.get("fluxBloquesTotal") or r.get("bloques"), 0)
+
+        sit_total = as_int(r.get("sitTotal"), 0)
+        uat_total = as_int(r.get("uatTotal"), 0)
+        sit_livres = as_int(r.get("sitLivres"), 0)
+        uat_livres = as_int(r.get("uatLivres"), 0)
+        sit_en_cours = as_int(r.get("sitEnCours"), 0)
+        uat_en_cours = as_int(r.get("uatEnCours"), 0)
+        sit_bloques = as_int(r.get("sitBloques"), 0)
+        uat_bloques = as_int(r.get("uatBloques"), 0)
+
+        if sit_total + uat_total == 0:
+            sit_total = total
+            uat_total = 0
+        if sit_livres + uat_livres == 0:
+            sit_livres = livres
+            uat_livres = 0
+        if sit_en_cours + uat_en_cours == 0:
+            sit_en_cours = en_cours
+            uat_en_cours = 0
+        if sit_bloques + uat_bloques == 0:
+            sit_bloques = bloques
+            uat_bloques = 0
+
+        def ensure_list(key, count, env, statut, categorie):
+            current = r.get(key)
+            if isinstance(current, list) and len(current) > 0:
+                for item in current:
+                    if isinstance(item, dict):
+                        item.setdefault("sprint", sprint)
+                        item.setdefault("semaine", semaine)
+                        item.setdefault("semaines", semaines)
+                        item.setdefault("environnement", env)
+                        item.setdefault("env", item.get("environnement", env))
+                        item.setdefault("domaine", "Non ventilé")
+                        item.setdefault("sousDomaine", "Non ventilé")
+                        item.setdefault("statut", statut)
+                        item.setdefault("statutJira", statut)
+                        item.setdefault("status", statut)
+                        item.setdefault("etat", statut)
+                return current
+
+            return make_detail(count, sprint, semaine, env, statut, categorie)
+
+        r["sprint"] = sprint
+        r["semaine"] = semaine
+        r["semaines"] = semaines
+
+        r["fluxTotal"] = total
+        r["fluxLivresTotal"] = livres
+        r["fluxEnCoursTotal"] = en_cours
+        r["fluxBloquesTotal"] = bloques
+
+        r["total"] = total
+        r["livres"] = livres
+        r["enCours"] = en_cours
+        r["bloques"] = bloques
+
+        r["sitTotal"] = sit_total
+        r["uatTotal"] = uat_total
+        r["sitLivres"] = sit_livres
+        r["uatLivres"] = uat_livres
+        r["sitEnCours"] = sit_en_cours
+        r["uatEnCours"] = uat_en_cours
+        r["sitBloques"] = sit_bloques
+        r["uatBloques"] = uat_bloques
+
+        r["fluxTotalDetail"] = (
+            ensure_list("fluxTotalDetail", sit_total, "SIT", "Total", "total")
+            + make_detail(uat_total, sprint, semaine, "UAT", "Total", "total")
+        )
+        r["fluxLivresDetail"] = (
+            ensure_list("fluxLivresDetail", sit_livres, "SIT", "Livré", "livre")
+            + make_detail(uat_livres, sprint, semaine, "UAT", "Livré", "livre")
+        )
+        r["fluxEnCoursDetail"] = (
+            ensure_list("fluxEnCoursDetail", sit_en_cours, "SIT", "En cours", "encours")
+            + make_detail(uat_en_cours, sprint, semaine, "UAT", "En cours", "encours")
+        )
+        r["fluxBloquesDetail"] = (
+            ensure_list("fluxBloquesDetail", sit_bloques, "SIT", "Bloqué", "bloque")
+            + make_detail(uat_bloques, sprint, semaine, "UAT", "Bloqué", "bloque")
+        )
+
+        # Alias possibles lus par l'ancien JS.
+        r["totalDetail"] = r["fluxTotalDetail"]
+        r["livresDetail"] = r["fluxLivresDetail"]
+        r["enCoursDetail"] = r["fluxEnCoursDetail"]
+        r["bloquesDetail"] = r["fluxBloquesDetail"]
+
+        r["SIT"] = {
+            "total": sit_total,
+            "livres": sit_livres,
+            "enCours": sit_en_cours,
+            "bloques": sit_bloques,
+        }
+        r["UAT"] = {
+            "total": uat_total,
+            "livres": uat_livres,
+            "enCours": uat_en_cours,
+            "bloques": uat_bloques,
+        }
+
+        fixed.append(r)
+
+    return fixed
+
+
+
 def main():
     for path in [SOURCE_DASHBOARD, COMPARAISON, SPRINT_COURANT, SPRINT_PRECEDENT]:
         if not path.exists():
@@ -448,7 +574,7 @@ def main():
     payload["histoFlux"] = histo
     payload["ventilation"] = ventilation
 
-    payload["comparaisonSprints"] = normalize_comparison(comparison, courant, precedent)
+    payload["comparaisonSprints"] = ensure_comparison_legacy_contract(normalize_comparison(comparison, courant, precedent))
 
     # Les champs legacy kpis/tendanceHebdo sont lus par le template historique
     # pour la jauge et le bandeau statut. Ils doivent être alignés sur la source Jira courante,
