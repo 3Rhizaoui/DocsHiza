@@ -19,3 +19,13 @@ audit_reports/
 node_modules/
 
 jira/.jira_sso_profile_manuel/
+# Données runtime/générées localement
+commun/dashboard_gil_data.json
+commun/sprint_courant.json
+commun/sprint_precedent.json
+commun/comparaison_sprints.json
+jira/sprints_dashboard.json
+jira/dashboard_gil_data.json
+jira/comparaison_sprints.json
+jira/sprints/
+jira/presentation/*.json

@@ -94,7 +94,7 @@ if errorlevel 1 goto erreur
 python "%PROJECT_DIR%\jira\construire_payload_dashboard_final.py"
 if errorlevel 1 goto erreur
 
-python "%PROJECT_DIR%\commun\preparer_dashboard_runtime.py" --after-import
+python "%PROJECT_DIR%\commun\injecter_payload_final_html.py"
 if errorlevel 1 goto erreur
 
 if errorlevel 1 goto erreur
