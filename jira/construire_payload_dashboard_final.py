@@ -89,6 +89,17 @@ def get_source_metrics(source: dict):
     if not isinstance(source, dict):
         return 0, 0, 0, 0
 
+    import unicodedata
+    import re as _re
+
+    def norm_key(value):
+        value = str(value or "")
+        value = unicodedata.normalize("NFD", value)
+        value = "".join(ch for ch in value if unicodedata.category(ch) != "Mn")
+        value = value.lower()
+        value = _re.sub(r"[^a-z0-9]", "", value)
+        return value
+
     def as_int(value, default=0):
         if isinstance(value, bool):
             return int(value)
@@ -102,10 +113,26 @@ def get_source_metrics(source: dict):
                 return int(float(value.replace(",", ".")))
             except Exception:
                 return default
+        if isinstance(value, list):
+            return len(value)
         return default
 
-    def count_list(value):
-        return len(value) if isinstance(value, list) else 0
+    def find_metric(obj, aliases):
+        aliases = {norm_key(a) for a in aliases}
+
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                if norm_key(key) in aliases:
+                    n = as_int(value, None)
+                    if n is not None:
+                        return n
+
+            for value in obj.values():
+                found = find_metric(value, aliases)
+                if found is not None:
+                    return found
+
+        return None
 
     def first_list(*keys):
         for key in keys:
@@ -114,88 +141,82 @@ def get_source_metrics(source: dict):
                 return value
         return []
 
-    rows = first_list("flux", "lignesDashboard", "lignes", "fluxPretsArrimage")
+    indicateurs = source.get("indicateurs") if isinstance(source.get("indicateurs"), dict) else {}
 
-    sante = source.get("santeFluxArrimage")
-    if isinstance(sante, dict):
-        total = as_int(sante.get("total") or sante.get("flux") or sante.get("epics"))
-        prets = as_int(sante.get("prets") or sante.get("pretTester") or sante.get("ready"))
-        en_cours = as_int(sante.get("enCours") or sante.get("en_cours") or sante.get("inProgress"))
-        bugs = as_int(sante.get("bugsBloquants") or sante.get("bloquants"))
+    total = find_metric(indicateurs, [
+        "epicsFlux",
+        "epics_flux",
+        "epics",
+        "flux",
+        "fluxTotal",
+        "totalFlux",
+        "total",
+        "lignesDashboard",
+        "lignes_dashboard",
+    ])
 
-        if total or prets or en_cours or bugs:
-            return total, prets, en_cours, bugs
+    prets = find_metric(indicateurs, [
+        "prets",
+        "prêts",
+        "pretTester",
+        "pret_tester",
+        "pretsTester",
+        "pretsArrimage",
+        "ready",
+    ])
 
-    total = (
-        as_int(source.get("epics"))
-        or as_int(source.get("fluxTotal"))
-        or as_int(source.get("total"))
-        or count_list(source.get("flux"))
-        or count_list(source.get("lignesDashboard"))
-        or count_list(source.get("lignes"))
-        or count_list(source.get("fluxPretsArrimage"))
-    )
+    en_cours = find_metric(indicateurs, [
+        "enCours",
+        "en_cours",
+        "encours",
+        "fluxEnCours",
+        "inProgress",
+    ])
 
-    prets = (
-        as_int(source.get("prets"))
-        or count_list(source.get("prets"))
-        or as_int(source.get("pretTester"))
-        or count_list(source.get("pretTester"))
-        or as_int(source.get("fluxPrets"))
-        or count_list(source.get("fluxPrets"))
-    )
+    bugs = find_metric(indicateurs, [
+        "bugsBloquants",
+        "bugs_bloquants",
+        "bloquants",
+        "anomaliesBloquantes",
+        "ko",
+    ])
 
-    en_cours = (
-        as_int(source.get("enCours"))
-        or count_list(source.get("enCours"))
-        or as_int(source.get("encours"))
-        or count_list(source.get("encours"))
-        or as_int(source.get("fluxEnCours"))
-        or count_list(source.get("fluxEnCours"))
-    )
+    rows = first_list("records", "epics", "flux", "lignesDashboard", "lignes", "fluxPretsArrimage")
 
-    bugs = (
-        as_int(source.get("bugsBloquants"))
-        or count_list(source.get("bugsBloquants"))
-        or as_int(source.get("bloquants"))
-        or count_list(source.get("bloquants"))
-    )
+    if total is None:
+        total = len(rows) if rows else 0
 
-    if rows:
-        if total <= 0:
-            total = len(rows)
+    if prets is None:
+        prets = 0
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            text = " ".join(str(row.get(k, "")) for k in ["statut", "statutJira", "status", "etat"])
+            text = text.lower()
+            if any(token in text for token in ["prêt", "pret", "livré", "livre", "ready"]):
+                prets += 1
 
-        if prets <= 0:
-            prets = sum(
-                1 for row in rows
-                if isinstance(row, dict)
-                and any(
-                    token in str(row.get("statut", "") + " " + row.get("statutJira", "")).lower()
-                    for token in ["prêt", "pret", "livré", "livre", "ready"]
-                )
-            )
+    if en_cours is None:
+        en_cours = 0
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            text = " ".join(str(row.get(k, "")) for k in ["statut", "statutJira", "status", "etat"])
+            text = text.lower()
+            if any(token in text for token in ["en cours", "progress"]):
+                en_cours += 1
 
-        if en_cours <= 0:
-            en_cours = sum(
-                1 for row in rows
-                if isinstance(row, dict)
-                and any(
-                    token in str(row.get("statut", "") + " " + row.get("statutJira", "")).lower()
-                    for token in ["en cours", "progress"]
-                )
-            )
+    if bugs is None:
+        bugs = 0
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            text = " ".join(str(row.get(k, "")) for k in ["statut", "statutJira", "status", "etat"])
+            text = text.lower()
+            if any(token in text for token in ["bloqué", "bloque", "blocked", "ko"]):
+                bugs += 1
 
-        if bugs <= 0:
-            bugs = sum(
-                1 for row in rows
-                if isinstance(row, dict)
-                and any(
-                    token in str(row.get("statut", "") + " " + row.get("statutJira", "")).lower()
-                    for token in ["bloqué", "bloque", "ko", "blocked"]
-                )
-            )
-
-    return total, prets, en_cours, bugs
+    return int(total or 0), int(prets or 0), int(en_cours or 0), int(bugs or 0)
 
 
 
