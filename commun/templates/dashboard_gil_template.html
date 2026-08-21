@@ -114,13 +114,30 @@
 
     }
 
-  </style>
+
+.arrimageStatusLayout{display:grid;grid-template-columns:360px 1fr;gap:20px;align-items:center}
+.arrimagePieCard{border:1px solid var(--line);background:#fbfdff;padding:12px;min-height:260px}
+.arrimagePieCard h3{margin:0 0 8px;font-size:14px;color:#153454}
+.arrimagePieWrap{display:grid;grid-template-columns:260px 1fr;gap:12px;align-items:center}
+.arrimagePieSvg{width:260px;height:185px;display:block}
+.arrimagePieBrace{display:grid;grid-template-columns:34px 1fr;gap:8px;align-items:center;color:#153454}
+.arrimagePieBrace b{font-size:86px;line-height:.75;font-family:Georgia,serif;color:#0f172a}
+.arrimagePieBrace span{display:block;font-size:12px;color:var(--muted);margin:5px 0}
+.arrimagePieBrace strong{display:block;font-size:24px;color:var(--blue)}
+.arrimagePieLegend{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;font-size:11px}
+.arrimagePieLegend span{border:1px solid #e2e8f0;background:white;padding:6px;border-radius:6px}
+.arrimagePieLegend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.arrimageBreakdown{margin-top:10px;border-top:1px solid #e2e8f0;padding-top:8px;font-size:12px;color:#334155;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.arrimageBreakdown b{display:block;color:#153454;margin-bottom:4px}
+@media(max-width:980px){.arrimageStatusLayout,.arrimagePieWrap,.arrimageBreakdown{grid-template-columns:1fr}.arrimagePieLegend{grid-template-columns:1fr 1fr}}
+
+</style>
 
 </head>
 
 <body>
 
-  <header class="top"><div><h1 id="reportTitle">Biweekly GIL - Reporting Sprint</h1><p>Niveau 1 : Statut du Sprint, comparaison avec le Sprint N-1, Suivi des anomalies et priorités. Cliquer pour ouvrir les niveaux de détail.</p></div><div class="actions">
+  <header class="top"><div><h1 id="reportTitle">Biweekly GIL - Reporting Sprint</h1><p>Statut général d’arrimage BCEF / GIL / ESTREEM : suivi des flux livrés, en cours, bloqués ou rejetés, des bugs Octane liés avec référence renseignée, de l’avancement par sprint et des sujets prioritaires. Cliquer sur chaque information pour accéder au détail par domaine et sous-domaine.</p></div><div class="actions">
 
 <button onclick="runLocalAction('excel')">Importer Excel</button>
 
@@ -128,13 +145,13 @@
 
 <button onclick="runLocalAction('jira')">Importer JIRA</button>
 
-<button onclick="runLocalAction('sync')">Synchroniser les 3</button>
 
-<button onclick="runLocalAction('archive')">Valider / Archiver Sprint</button>
+
+
 
 <button onclick="window.print()">Générer le rapport PDF</button>
 
-<button onclick="hardRefreshDashboard()">Rafraîchir</button>
+
 
 </div></header>
 
@@ -142,7 +159,7 @@
 
     <div class="hero">
 
-      <section><h2 id="gaugeTitle">Statut du Sprint</h2><div class="panelBody"><div id="healthGauge"></div></div></section>
+      <section><h2 id="gaugeTitle">Statut général d’arrimage BCEF / GIL / ESTREEM</h2><div class="panelBody"><div class="arrimageStatusLayout"><div id="healthGauge"></div><div id="arrimagePie3d"></div></div></div></section>
 
     </div>
 
@@ -256,11 +273,12 @@
 
       document.getElementById('reportTitle').textContent = 'Biweekly GIL - Reporting '+sprintLabel;
 
-      document.getElementById('gaugeTitle').textContent = 'Statut du '+sprintLabel;
+      document.getElementById('gaugeTitle').textContent = 'Statut général d’arrimage BCEF / GIL / ESTREEM';
 
       document.getElementById('generalTitle').textContent = 'Statut général du '+sprintLabel;
 
       document.getElementById('healthGauge').innerHTML = speedGauge(score, scoreLevel, data.sprintCourant||'Sprint');
+      const arrimagePieEl = document.getElementById('arrimagePie3d'); if(arrimagePieEl) arrimagePieEl.innerHTML = renderArrimagePie3d(data);
 
       document.getElementById('weeklyStory').innerHTML = '<strong>'+esc(data.sprintCourant || 'Sprint')+'</strong> — Semaines '+esc((data.semainesSprint||[]).join(' et '))+' — Statut globale : <span class="'+cls(scoreLevel)+'">'+esc(scoreLevel)+'</span><br><strong>Constat détaillé :</strong> '+esc(data.semaineCourante || cur.semaine || '')+' — '+esc(cur.faitMarquant || '')+'<br><span class="miniNote">Cliquer sur une ligne de semaine pour ouvrir la vue niveau 2 avec les chaînes et les détails.</span>';
 
@@ -504,6 +522,206 @@
 
     }
 
+
+    function normArrimage(v){
+      return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+    }
+
+    function arrimageClean(v){
+      const s = String(v||'').trim();
+      return s || 'À qualifier';
+    }
+
+    function arrimageCurrentFluxRows(data){
+      const week = data.semaineCourante || ((data.tendanceHebdo||{}).current||{}).semaine || '';
+      const sprint = data.sprintCourant || '';
+
+      let rows = (data.histoFlux || []).filter(x => {
+        const type = normArrimage(x.type);
+        if(type.includes('ANOMAL')) return false;
+
+        const w = x.semaine || x.week || '';
+        const sp = x.sprint || '';
+
+        const okWeek = !week || !w || w === week || (Array.isArray(x.semaines) && x.semaines.includes(week));
+        const okSprint = !sprint || !sp || sp === sprint;
+
+        return okWeek && okSprint;
+      });
+
+      if(!rows.length){
+        rows = (data.histoFlux || []).filter(x => !normArrimage(x.type).includes('ANOMAL'));
+      }
+
+      return rows;
+    }
+
+    function arrimageStatusBucket(x){
+      const s = normArrimage([
+        x.statut,
+        x.statutJira,
+        x.status,
+        x.etat,
+        x.evenement,
+        x.decision
+      ].join(' '));
+
+      if(s.includes('REJET') || s.includes('REJECT')) return 'Rejetés';
+      if(s.includes('BLOQ') || s.includes('BLOCK') || s.includes('KO') || s.includes('A TRAITER')) return 'Bloqués';
+      if(s.includes('PRET') || s.includes('LIVR') || s.includes('READY') || s.includes('DONE') || s.includes('VALID')) return 'Livrés';
+      if(s.includes('EN COURS') || s.includes('AFFINAGE') || s.includes('BACKLOG') || s.includes('OPEN') || s.includes('TODO')) return 'En cours';
+
+      return 'En cours';
+    }
+
+    function arrimagePct(n,total){
+      return total ? (n / total * 100).toFixed(1).replace('.', ',') + ' %' : '0 %';
+    }
+
+    function arrimageCountMap(items, getter){
+      const out = {};
+      items.forEach(x => {
+        const key = arrimageClean(getter(x));
+        out[key] = (out[key] || 0) + 1;
+      });
+      return out;
+    }
+
+    function arrimageMapLines(map, max){
+      return Object.keys(map || {})
+        .sort((a,b) => map[b] - map[a] || a.localeCompare(b))
+        .slice(0, max || 8)
+        .map(k => k + ' : ' + map[k]);
+    }
+
+    function arrimagePieData(data){
+      const rows = arrimageCurrentFluxRows(data);
+      const anomalies = (data.anomaliesArrimageDetail || []).filter(x => x && typeof x === 'object');
+
+      const defs = [
+        {label:'Livrés', color:'#15803d'},
+        {label:'En cours', color:'#f59e0b'},
+        {label:'Bloqués', color:'#b91c1c'},
+        {label:'Rejetés', color:'#db2777'}
+      ];
+
+      const total = rows.length;
+      const globalPairs = arrimageCountMap(rows, x => arrimageClean(x.domaine) + ' / ' + arrimageClean(x.sousDomaine));
+
+      const segments = defs.map(def => {
+        const items = rows.filter(x => arrimageStatusBucket(x) === def.label);
+        const pairs = new Set(items.map(x => arrimageClean(x.domaine) + '|||' + arrimageClean(x.sousDomaine)));
+
+        const bugs = anomalies.filter(a => {
+          const key = arrimageClean(a.domaine) + '|||' + arrimageClean(a.sousDomaine);
+          return pairs.size ? pairs.has(key) : false;
+        });
+
+        return {
+          label:def.label,
+          color:def.color,
+          count:items.length,
+          pct: total ? items.length / total : 0,
+          items:items,
+          bugs:bugs,
+          domaines:arrimageCountMap(items, x => x.domaine),
+          sousDomaines:arrimageCountMap(items, x => x.sousDomaine),
+          domainSousDomain:arrimageCountMap(items, x => arrimageClean(x.domaine) + ' / ' + arrimageClean(x.sousDomaine))
+        };
+      });
+
+      return {total:total, bugsOctane:anomalies.length, segments:segments, globalPairs:globalPairs};
+    }
+
+    function piePoint(cx,cy,r,angle){
+      const a = (angle - 90) * Math.PI / 180;
+      return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+    }
+
+    function pieArcPath(cx,cy,r,a0,a1){
+      const p0 = piePoint(cx,cy,r,a0);
+      const p1 = piePoint(cx,cy,r,a1);
+      const large = (a1 - a0) > 180 ? 1 : 0;
+      return 'M '+cx+' '+cy+' L '+p0[0]+' '+p0[1]+' A '+r+' '+r+' 0 '+large+' 1 '+p1[0]+' '+p1[1]+' Z';
+    }
+
+    function arrimagePieTip(seg,total){
+      const lines = [];
+      lines.push(seg.label + ' : ' + seg.count + ' / ' + total + ' — ' + arrimagePct(seg.count,total));
+      lines.push('');
+      lines.push('Domaines :');
+      lines.push(...(arrimageMapLines(seg.domaines, 6).length ? arrimageMapLines(seg.domaines, 6) : ['Aucun']));
+      lines.push('');
+      lines.push('Sous-domaines :');
+      lines.push(...(arrimageMapLines(seg.sousDomaines, 8).length ? arrimageMapLines(seg.sousDomaines, 8) : ['Aucun']));
+      lines.push('');
+      lines.push('Domaine / sous-domaine :');
+      lines.push(...(arrimageMapLines(seg.domainSousDomain, 8).length ? arrimageMapLines(seg.domainSousDomain, 8) : ['Aucun']));
+      lines.push('');
+      lines.push('Bugs Octane liés avec référence renseignée : ' + seg.bugs.length);
+      return lines.join('\n');
+    }
+
+    function renderArrimagePie3d(data){
+      const d = arrimagePieData(data);
+
+      if(!d.total){
+        return '<div class="arrimagePieCard"><h3>Répartition des flux d’arrimage</h3><div class="miniNote">Aucun flux d’arrimage disponible pour le périmètre courant.</div></div>';
+      }
+
+      const cx = 128, cy = 86, r = 70, depth = 17;
+      let angle = 0;
+      let side = '';
+      let top = '';
+
+      d.segments.forEach(seg => {
+        if(!seg.count) return;
+
+        const a0 = angle;
+        const a1 = angle + seg.pct * 360;
+        const full = Math.abs(a1 - a0) >= 359.99;
+        const tip = esc(arrimagePieTip(seg, d.total));
+        const sid = safeId(seg.label);
+
+        const attrs = ' data-tip="'+tip+'" onmouseenter="chartTip(event,this.dataset.tip)" onmousemove="moveChartTip(event)" onmouseleave="hideChartTip()" onclick="showDetail(\'arrimagePieSegment\',\''+sid+'\')" style="cursor:pointer"';
+
+        if(full){
+          side += '<circle cx="'+cx+'" cy="'+(cy+depth)+'" r="'+r+'" fill="'+seg.color+'" opacity=".45"'+attrs+'></circle>';
+          top += '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+seg.color+'" stroke="white" stroke-width="2"'+attrs+'></circle>';
+        } else {
+          side += '<path d="'+pieArcPath(cx,cy+depth,r,a0,a1)+'" fill="'+seg.color+'" opacity=".45"'+attrs+'></path>';
+          top += '<path d="'+pieArcPath(cx,cy,r,a0,a1)+'" fill="'+seg.color+'" stroke="white" stroke-width="2"'+attrs+'></path>';
+        }
+
+        angle = a1;
+      });
+
+      const legend = d.segments.map(seg =>
+        '<span><i style="background:'+seg.color+'"></i>'+esc(seg.label)+'<br><b>'+seg.count+'</b> — '+arrimagePct(seg.count,d.total)+'</span>'
+      ).join('');
+
+      const breakdown = arrimageMapLines(d.globalPairs, 8).map(x => esc(x)).join('<br>') || 'À qualifier';
+
+      return '<div class="arrimagePieCard">'+
+        '<h3>Répartition des flux d’arrimage</h3>'+
+        '<div class="arrimagePieWrap">'+
+          '<svg class="arrimagePieSvg" viewBox="0 0 260 190" role="img" aria-label="Camembert 3D des flux d’arrimage">'+
+            side + top +
+          '</svg>'+
+          '<div class="arrimagePieBrace"><b>{</b><div>'+
+            '<span>Total demandes / flux d’arrimage</span><strong>'+d.total+'</strong>'+
+            '<span>Bugs Octane liés<br>Reference IS NOT EMPTY</span><strong>'+d.bugsOctane+'</strong>'+
+          '</div></div>'+
+        '</div>'+
+        '<div class="arrimagePieLegend">'+legend+'</div>'+
+        '<div class="arrimageBreakdown">'+
+          '<div><b>Domaine / sous-domaine visibles</b>'+breakdown+'</div>'+
+          '<div><b>Lecture</b>Tranches = statut des flux.<br>Survol / clic = détail par domaine, sous-domaine et bugs Octane liés.</div>'+
+        '</div>'+
+      '</div>';
+    }
+
+
     function sprintBarChart(rows){
 
       const selected=rows||[];
@@ -647,6 +865,39 @@
     }
 
     function showDetail(kind,id){
+
+      if(kind === 'arrimagePieSegment'){
+        const pie = arrimagePieData(currentData);
+        const seg = (pie.segments || []).find(s => safeId(s.label) === id || s.label === id);
+        if(!seg) return;
+
+        document.getElementById('detailTitle').textContent = 'Détail arrimage — ' + seg.label;
+        document.getElementById('detailDecision').innerHTML =
+          '<b>'+seg.count+' flux concerné(s)</b> sur '+pie.total+
+          ' — Bugs Octane liés avec référence renseignée : <b>'+seg.bugs.length+'</b>';
+
+        document.getElementById('detailCharts').innerHTML = renderArrimagePie3d(currentData);
+        document.getElementById('detailTable').innerHTML =
+          sectionTable(
+            'Flux d’arrimage — '+seg.label,
+            seg.items,
+            ['flux','jiraKey','domaine','sousDomaine','environnement','statut','evenement','responsable','resume'],
+            null,
+            null
+          ) +
+          sectionTable(
+            'Bugs Octane liés — Reference IS NOT EMPTY',
+            seg.bugs,
+            ['reference','jiraKey','domaine','sousDomaine','statut','statutJira','severite','responsable','resume'],
+            null,
+            null
+          );
+
+        openDetail();
+        return;
+      }
+
+
 
       return navigateTo({kind,id}, true);
 
