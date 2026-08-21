@@ -141,13 +141,132 @@
 .arrimageConstatList{margin:8px 0 0;padding-left:20px;line-height:1.55}
 .arrimageConstatList li{margin:3px 0}
 
+
+    /* ========================================================
+       Présentation Arrimage - cible Scrum Reporting
+       ======================================================== */
+
+    #arrimageReady{
+      width:100%;
+      border-collapse:collapse;
+      table-layout:auto;
+      background:#fff;
+    }
+
+    #arrimageReady th{
+      background:#f7f9fc;
+      color:#102a43;
+      font-weight:700;
+      text-align:center;
+      border:1px solid #d7e0ea;
+      padding:9px 8px;
+      white-space:nowrap;
+    }
+
+    #arrimageReady td{
+      border:1px solid #d7e0ea;
+      padding:8px 10px;
+      vertical-align:middle;
+      color:#102a43;
+    }
+
+    #arrimageReady tbody tr:hover td{
+      background:#f8fbff;
+    }
+
+    .arrDomainRow td{
+      background:#eef4fb!important;
+      border-top:2px solid #9fb8d3!important;
+      font-weight:700;
+      color:#173b63!important;
+    }
+
+    .arrDomainCaret{
+      display:inline-block;
+      width:18px;
+      font-size:15px;
+      color:#0b3a6e;
+    }
+
+    .arrStatus{
+      font-weight:700;
+      white-space:nowrap;
+    }
+
+    .arrStatus.delivered{
+      color:#15803d;
+    }
+
+    .arrStatus.progress{
+      color:#f57c00;
+    }
+
+    .arrStatus.blocked{
+      color:#dc2626;
+    }
+
+    .arrStatus.rejected{
+      color:#64748b;
+    }
+
+    .envBadge{
+      display:inline-block;
+      min-width:38px;
+      text-align:center;
+      border-radius:12px;
+      padding:3px 9px;
+      font-size:11px;
+      font-weight:800;
+    }
+
+    .envBadge.sit{
+      background:#123f69;
+      color:#fff;
+    }
+
+    .envBadge.uat{
+      background:#dbeafe;
+      color:#123f69;
+      border:1px solid #93c5fd;
+    }
+
+    .bugMiniDetail{
+      display:inline-block;
+    }
+
+    .bugMiniDetail summary{
+      cursor:pointer;
+      color:#b91c1c;
+    }
+
+    .bugMiniDetail div{
+      margin-top:5px;
+      padding:6px 8px;
+      border:1px solid #fecaca;
+      background:#fff7f7;
+      white-space:nowrap;
+      font-size:11px;
+    }
+
+    #arrimageTitle{
+      background:linear-gradient(90deg,#082d58,#064b94);
+      color:#fff;
+      border-radius:7px 7px 0 0;
+    }
+
+    #arrimageContent{
+      border:1px solid #cbd5e1;
+      border-top:0;
+      background:#fff;
+    }
+
 </style>
 
 </head>
 
 <body>
 
-  <header class="top"><div><h1 id="reportTitle">Biweekly GIL - Reporting Sprint</h1><p>Statut général d’arrimage BCEF / GIL / ESTREEM : avancement par sprint et suivi des sujets prioritaires. Cliquer sur chaque information pour accéder au détail par domaine et sous-domaine.</p></div><div class="actions">
+  <header class="top"><div><h1 id="reportTitle">Biweekly GIL - Reporting Sprint</h1><p>Statut général d’arrimage BCEF / GIL / ESTREEM : avancement par sprint et suivi des sujets prioritaires.</p></div><div class="actions">
 
 <button onclick="runLocalAction('excel')">Importer Excel</button>
 
@@ -426,11 +545,40 @@
 
         ).join('');
 
-      const arr=(data.fluxPretsArrimage||[]),arrUnique=new Set(arr.map(r=>[r.sprint,r.environnement,r.domaine,r.sousDomaine,r.flux,r.pattern,r.version,r.statut].join('|||')));
+      const arr=(data.fluxPretsArrimage||[]);
+
+      /*
+       * Une ligne fonctionnelle = un flux + son environnement.
+       * MM7 SIT et MM7 UAT sont donc deux lignes différentes.
+       */
+      const arrUnique=new Set(
+        arr.map(r=>[
+          r.sprint,
+          r.environnement,
+          r.domaine,
+          r.sousDomaine,
+          r.flux,
+          r.jiraKey || r.reference || '',
+          r.pattern,
+          r.version,
+          r.statut
+        ].join('|||'))
+      );
 
       document.getElementById('arrimageTotal').textContent=arrUnique.size;
 
-      document.getElementById('arrimageReady').innerHTML='<tr><th>Sprint</th><th>Env.</th><th>Domaine / Sous-domaine</th><th>Référence flux</th><th>Pattern</th><th>Version</th><th>Statut</th></tr>'+arrimageGroupedRows(arr);
+      document.getElementById('arrimageReady').innerHTML=
+        '<tr>'+
+          '<th>Domaine</th>'+
+          '<th>Sous-domaine</th>'+
+          '<th>Flux (Nom)</th>'+
+          '<th>Référence flux</th>'+
+          '<th>Pattern</th>'+
+          '<th>Environnement</th>'+
+          '<th>Statut</th>'+
+          '<th>Bugs Octane liés</th>'+
+        '</tr>'+
+        arrimageGroupedRows(arr);
 
       const prios = (data.prioritesHebdo || []).filter(p=>!data.semaineCourante || p.semaineSuivi === data.semaineCourante);
 
@@ -444,31 +592,192 @@
 
     function arrimageGroupedRows(rows){
 
-      if(!rows.length)return '<tr><td colspan="7">Aucun flux déclaré prêt pour arrimage.</td></tr>';
+      if(!rows.length){
+        return '<tr><td colspan="8">Aucun flux déclaré pour l’arrimage.</td></tr>';
+      }
 
+      const anomalies=currentData.anomaliesDetail||[];
+
+      const statusBucket=r=>{
+        const s=String(
+          r.statutJira ||
+          r.statutSource ||
+          r.statut ||
+          ''
+        ).toLowerCase();
+
+        if(
+          s.includes('rejet') ||
+          s.includes('refus')
+        ) return 'Rejetés';
+
+        if(
+          s.includes('bloqu') ||
+          s==='ko' ||
+          s.includes('à traiter') ||
+          s.includes('a traiter')
+        ) return 'Bloqués';
+
+        if(
+          s.includes('en cours') ||
+          s.includes('progress')
+        ) return 'En cours';
+
+        return 'Livrés';
+      };
+
+      const statusClass=status=>{
+        if(status==='Livrés') return 'arrStatus delivered';
+        if(status==='En cours') return 'arrStatus progress';
+        if(status==='Bloqués') return 'arrStatus blocked';
+        return 'arrStatus rejected';
+      };
+
+      const statusDot=status=>{
+        if(status==='Livrés') return '●';
+        if(status==='En cours') return '●';
+        if(status==='Bloqués') return '●';
+        return '●';
+      };
+
+      const bugsForRow=r=>{
+        const domain=String(r.domaine||'').trim();
+        const sub=String(r.sousDomaine||'').trim();
+        const env=String(r.environnement||'').trim().toUpperCase();
+        const flux=String(r.flux||'').trim();
+
+        const related=anomalies.filter(a=>{
+          const sameDomain=!domain || String(a.domaine||'').trim()===domain;
+          const sameSub=!sub || String(a.sousDomaine||'').trim()===sub;
+          const sameEnv=!env || String(a.environnement||'').trim().toUpperCase()===env;
+
+          const aflux=String(a.flux||'').trim();
+
+          /*
+           * Si l'anomalie porte explicitement le flux,
+           * on impose l'égalité du flux.
+           * Sinon le rapprochement domaine/sous-domaine/env reste possible.
+           */
+          const sameFlux=!aflux || !flux || aflux===flux;
+
+          return sameDomain && sameSub && sameEnv && sameFlux;
+        });
+
+        const refs=[
+          ...new Set(
+            related
+              .map(a=>a.jiraKey||a.reference||'')
+              .filter(Boolean)
+          )
+        ];
+
+        return {
+          count: refs.length,
+          refs
+        };
+      };
+
+      /*
+       * Important :
+       * l'environnement fait partie de la clé.
+       * Donc le même flux SIT et UAT ne sera jamais fusionné.
+       */
       const grouped=new Map();
 
-      rows.forEach(r=>{const key=[r.sprint,r.environnement,r.domaine,r.sousDomaine,r.flux,r.pattern,r.version,r.statut].join('|||');if(!grouped.has(key))grouped.set(key,{...r});});
+      rows.forEach(r=>{
+        const key=[
+          r.sprint,
+          r.environnement,
+          r.domaine,
+          r.sousDomaine,
+          r.flux,
+          r.jiraKey || r.reference || '',
+          r.pattern,
+          r.version,
+          statusBucket(r)
+        ].join('|||');
 
-      const sorted=[...grouped.values()].sort((a,b)=>String(a.domaine).localeCompare(String(b.domaine),'fr')||String(a.sousDomaine).localeCompare(String(b.sousDomaine),'fr')||String(a.flux).localeCompare(String(b.flux),'fr')||String(a.environnement).localeCompare(String(b.environnement),'fr'));
+        if(!grouped.has(key)){
+          grouped.set(key,{...r});
+        }
+      });
 
-      let html='',lastDomain='',lastSub='';
+      const sorted=[...grouped.values()].sort((a,b)=>
+        String(a.domaine||'').localeCompare(String(b.domaine||''),'fr') ||
+        String(a.sousDomaine||'').localeCompare(String(b.sousDomaine||''),'fr') ||
+        String(a.flux||'').localeCompare(String(b.flux||''),'fr') ||
+        String(a.environnement||'').localeCompare(String(b.environnement||''),'fr')
+      );
+
+      let html='';
+      let lastDomain='';
 
       sorted.forEach(r=>{
 
-        if(r.domaine!==lastDomain){html+='<tr class="domainRow"><td colspan="7">Domaine : '+esc(r.domaine)+'</td></tr>';lastDomain=r.domaine;lastSub=''}
+        const domain=String(r.domaine||'Non renseigné');
+        const sub=String(r.sousDomaine||'Non renseigné');
+        const env=String(r.environnement||'').toUpperCase();
+        const flux=String(r.flux||r.nomFlux||r.reference||'Non renseigné');
 
-        if(r.sousDomaine!==lastSub){html+='<tr class="subdomainRow"><td colspan="7">Sous-domaine : '+esc(r.sousDomaine)+'</td></tr>';lastSub=r.sousDomaine}
+        /*
+         * Référence JIRA / AERL si disponible.
+         * On ne remplace jamais le nom fonctionnel du flux par cette référence.
+         */
+        const refFlux=
+          r.jiraKey ||
+          r.referenceFlux ||
+          r.reference ||
+          '';
 
-        const env=String(r.environnement||'').toUpperCase();const envBadges=env?'<span class="envBadge '+env.toLowerCase()+'">'+esc(env)+'</span>':'';
+        const pattern=
+          r.pattern ||
+          r.typeFlux ||
+          r.type ||
+          '';
 
-        html+='<tr><td>'+esc(r.sprint)+'</td><td>'+envBadges+'</td><td><b>'+esc(r.domaine)+'</b><br>'+esc(r.sousDomaine)+'</td><td>'+link(r.flux,'flux',r.flux)+'</td><td>'+esc(r.pattern)+'</td><td>'+esc(r.version)+'</td><td><span class="Vert">'+esc(r.statut)+'</span></td></tr>';
+        const status=statusBucket(r);
+        const bugs=bugsForRow(r);
 
+        if(domain!==lastDomain){
+          html+=
+            '<tr class="arrDomainRow">'+
+              '<td colspan="8">'+
+                '<span class="arrDomainCaret">⌄</span> '+
+                '<b>'+esc(domain)+'</b>'+
+              '</td>'+
+            '</tr>';
+          lastDomain=domain;
+        }
+
+        const envBadge=env
+          ? '<span class="envBadge '+env.toLowerCase()+'">'+esc(env)+'</span>'
+          : '';
+
+        const bugHtml=bugs.count
+          ? '<details class="bugMiniDetail" onclick="event.stopPropagation()">'+
+              '<summary><b>'+bugs.count+'</b></summary>'+
+              '<div>'+bugs.refs.map(x=>esc(x)).join('<br>')+'</div>'+
+            '</details>'
+          : '0';
+
+        html+=
+          '<tr>'+
+            '<td>'+esc(domain)+'</td>'+
+            '<td>'+esc(sub)+'</td>'+
+            '<td><b>'+link(flux,'flux',flux)+'</b></td>'+
+            '<td>'+esc(refFlux||'—')+'</td>'+
+            '<td>'+esc(pattern||'—')+'</td>'+
+            '<td>'+envBadge+'</td>'+
+            '<td><span class="'+statusClass(status)+'">'+
+              statusDot(status)+'&nbsp; '+esc(status)+
+            '</span></td>'+
+            '<td>'+bugHtml+'</td>'+
+          '</tr>';
       });
 
       return html;
-
     }
+
 
     function closeOtherMetricDetails(active){if(!active.open)return;document.querySelectorAll('details.metricAccordion[open]').forEach(d=>{if(d!==active)d.open=false})}
 
