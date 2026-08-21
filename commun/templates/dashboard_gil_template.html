@@ -296,9 +296,10 @@
 
       <section><h2 id="generalTitle">Statut général du Sprint</h2><div id="weeklyStory" class="decisionBox"></div></section>
 
+      <section><h2 id="arrimageTitle" class="collapsibleTitle collapsed" role="button" tabindex="0" aria-expanded="false" aria-controls="arrimageContent" onclick="toggleArrimageTable()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleArrimageTable()}">Flux prêts pour arrimage — BNPP / GIL / ESTREEM — Total : <span id="arrimageTotal">0</span></h2><div id="arrimageContent" class="tableWrap hidden"><table id="arrimageReady"></table></div></section>
+
       <section><h2>Comparaison Sprint N-1 / Sprint actuel</h2><div class="trendLayout"><div id="weeklyChart" class="chartBox"></div><table id="weeklyTrend"></table></div></section>
 
-      <section><h2 id="arrimageTitle" class="collapsibleTitle collapsed" role="button" tabindex="0" aria-expanded="false" aria-controls="arrimageContent" onclick="toggleArrimageTable()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleArrimageTable()}">Flux prêts pour arrimage — BNPP / GIL / ESTREEM — Total : <span id="arrimageTotal">0</span></h2><div id="arrimageContent" class="tableWrap hidden"><table id="arrimageReady"></table></div></section>
 
       <section><h2>Histogrammes des flux et anomalies</h2><div id="statusHistograms" class="histGrid"></div></section>
 
@@ -878,21 +879,37 @@
     }
 
     function arrimageStatusBucket(x){
-      const s = normArrimage([
+      const raw = [
         x.statut,
+        x.statutSource,
         x.statutJira,
         x.status,
-        x.etat,
-        x.evenement,
         x.decision
-      ].join(' '));
+      ].filter(Boolean).join(' ').toLowerCase();
 
-      if(s.includes('REJET') || s.includes('REJECT')) return 'Rejetés';
-      if(s.includes('BLOQ') || s.includes('BLOCK') || s.includes('KO') || s.includes('A TRAITER')) return 'Bloqués';
-      if(s.includes('PRET') || s.includes('LIVR') || s.includes('READY') || s.includes('DONE') || s.includes('VALID')) return 'Livrés';
-      if(s.includes('EN COURS') || s.includes('AFFINAGE') || s.includes('BACKLOG') || s.includes('OPEN') || s.includes('TODO')) return 'En cours';
+      if(
+        raw.includes('rejet')
+      ){
+        return 'Rejetés';
+      }
 
-      return 'En cours';
+      if(
+        raw.includes('bloqu') ||
+        raw.includes('ko') ||
+        raw.includes('à traiter') ||
+        raw.includes('a traiter')
+      ){
+        return 'Bloqués';
+      }
+
+      if(
+        raw.includes('en cours') ||
+        raw.includes('progress')
+      ){
+        return 'En cours';
+      }
+
+      return 'Livrés';
     }
 
     function arrimagePct(n,total){
