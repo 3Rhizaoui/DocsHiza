@@ -1,0 +1,63 @@
+[1mdiff --git a/commun/templates/dashboard_gil_template.html b/commun/templates/dashboard_gil_template.html[m
+[1mindex 1cd551e..5a8fc24 100644[m
+[1m--- a/commun/templates/dashboard_gil_template.html[m
+[1m+++ b/commun/templates/dashboard_gil_template.html[m
+[36m@@ -296,9 +296,10 @@[m
+ [m
+       <section><h2 id="generalTitle">Statut général du Sprint</h2><div id="weeklyStory" class="decisionBox"></div></section>[m
+ [m
+[32m+[m[32m      <section><h2 id="arrimageTitle" class="collapsibleTitle collapsed" role="button" tabindex="0" aria-expanded="false" aria-controls="arrimageContent" onclick="toggleArrimageTable()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleArrimageTable()}">Flux prêts pour arrimage — BNPP / GIL / ESTREEM — Total : <span id="arrimageTotal">0</span></h2><div id="arrimageContent" class="tableWrap hidden"><table id="arrimageReady"></table></div></section>[m
+[32m+[m
+       <section><h2>Comparaison Sprint N-1 / Sprint actuel</h2><div class="trendLayout"><div id="weeklyChart" class="chartBox"></div><table id="weeklyTrend"></table></div></section>[m
+ [m
+[31m-      <section><h2 id="arrimageTitle" class="collapsibleTitle collapsed" role="button" tabindex="0" aria-expanded="false" aria-controls="arrimageContent" onclick="toggleArrimageTable()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleArrimageTable()}">Flux prêts pour arrimage — BNPP / GIL / ESTREEM — Total : <span id="arrimageTotal">0</span></h2><div id="arrimageContent" class="tableWrap hidden"><table id="arrimageReady"></table></div></section>[m
+ [m
+       <section><h2>Histogrammes des flux et anomalies</h2><div id="statusHistograms" class="histGrid"></div></section>[m
+ [m
+[36m@@ -878,21 +879,37 @@[m
+     }[m
+ [m
+     function arrimageStatusBucket(x){[m
+[31m-      const s = normArrimage([[m
+[32m+[m[32m      const raw = [[m
+         x.statut,[m
+[32m+[m[32m        x.statutSource,[m
+         x.statutJira,[m
+         x.status,[m
+[31m-        x.etat,[m
+[31m-        x.evenement,[m
+         x.decision[m
+[31m-      ].join(' '));[m
+[32m+[m[32m      ].filter(Boolean).join(' ').toLowerCase();[m
+[32m+[m
+[32m+[m[32m      if([m
+[32m+[m[32m        raw.includes('rejet')[m
+[32m+[m[32m      ){[m
+[32m+[m[32m        return 'Rejetés';[m
+[32m+[m[32m      }[m
+[32m+[m
+[32m+[m[32m      if([m
+[32m+[m[32m        raw.includes('bloqu') ||[m
+[32m+[m[32m        raw.includes('ko') ||[m
+[32m+[m[32m        raw.includes('à traiter') ||[m
+[32m+[m[32m        raw.includes('a traiter')[m
+[32m+[m[32m      ){[m
+[32m+[m[32m        return 'Bloqués';[m
+[32m+[m[32m      }[m
+ [m
+[31m-      if(s.includes('REJET') || s.includes('REJECT')) return 'Rejetés';[m
+[31m-      if(s.includes('BLOQ') || s.includes('BLOCK') || s.includes('KO') || s.includes('A TRAITER')) return 'Bloqués';[m
+[31m-      if(s.includes('PRET') || s.includes('LIVR') || s.includes('READY') || s.includes('DONE') || s.includes('VALID')) return 'Livrés';[m
+[31m-      if(s.includes('EN COURS') || s.includes('AFFINAGE') || s.includes('BACKLOG') || s.includes('OPEN') || s.includes('TODO')) return 'En cours';[m
+[32m+[m[32m      if([m
+[32m+[m[32m        raw.includes('en cours') ||[m
+[32m+[m[32m        raw.includes('progress')[m
+[32m+[m[32m      ){[m
+[32m+[m[32m        return 'En cours';[m
+[32m+[m[32m      }[m
+ [m
+[31m-      return 'En cours';[m
+[32m+[m[32m      return 'Livrés';[m
+     }[m
+ [m
+     function arrimagePct(n,total){[m
