@@ -426,7 +426,7 @@
 
         ).join('');
 
-      const arr=(data.fluxPretsArrimage||[]),arrUnique=new Set(arr.map(r=>[r.sprint,r.domaine,r.sousDomaine,r.flux,r.pattern,r.version,r.statut].join('|||')));
+      const arr=(data.fluxPretsArrimage||[]),arrUnique=new Set(arr.map(r=>[r.sprint,r.environnement,r.domaine,r.sousDomaine,r.flux,r.pattern,r.version,r.statut].join('|||')));
 
       document.getElementById('arrimageTotal').textContent=arrUnique.size;
 
@@ -448,9 +448,9 @@
 
       const grouped=new Map();
 
-      rows.forEach(r=>{const key=[r.sprint,r.domaine,r.sousDomaine,r.flux,r.pattern,r.version,r.statut].join('|||');if(!grouped.has(key))grouped.set(key,{...r,environnements:[]});const env=String(r.environnement||'').toUpperCase();if(env&&!grouped.get(key).environnements.includes(env))grouped.get(key).environnements.push(env)});
+      rows.forEach(r=>{const key=[r.sprint,r.environnement,r.domaine,r.sousDomaine,r.flux,r.pattern,r.version,r.statut].join('|||');if(!grouped.has(key))grouped.set(key,{...r});});
 
-      const sorted=[...grouped.values()].sort((a,b)=>String(a.domaine).localeCompare(String(b.domaine),'fr')||String(a.sousDomaine).localeCompare(String(b.sousDomaine),'fr')||String(a.flux).localeCompare(String(b.flux),'fr'));
+      const sorted=[...grouped.values()].sort((a,b)=>String(a.domaine).localeCompare(String(b.domaine),'fr')||String(a.sousDomaine).localeCompare(String(b.sousDomaine),'fr')||String(a.flux).localeCompare(String(b.flux),'fr')||String(a.environnement).localeCompare(String(b.environnement),'fr'));
 
       let html='',lastDomain='',lastSub='';
 
@@ -460,7 +460,7 @@
 
         if(r.sousDomaine!==lastSub){html+='<tr class="subdomainRow"><td colspan="7">Sous-domaine : '+esc(r.sousDomaine)+'</td></tr>';lastSub=r.sousDomaine}
 
-        const envBadges=['SIT','UAT'].filter(env=>r.environnements.includes(env)).map(env=>'<span class="envBadge '+env.toLowerCase()+'">'+env+'</span>').join(' ');
+        const env=String(r.environnement||'').toUpperCase();const envBadges=env?'<span class="envBadge '+env.toLowerCase()+'">'+esc(env)+'</span>':'';
 
         html+='<tr><td>'+esc(r.sprint)+'</td><td>'+envBadges+'</td><td><b>'+esc(r.domaine)+'</b><br>'+esc(r.sousDomaine)+'</td><td>'+link(r.flux,'flux',r.flux)+'</td><td>'+esc(r.pattern)+'</td><td>'+esc(r.version)+'</td><td><span class="Vert">'+esc(r.statut)+'</span></td></tr>';
 
