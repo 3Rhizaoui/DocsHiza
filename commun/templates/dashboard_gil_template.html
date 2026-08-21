@@ -131,13 +131,23 @@
 .arrimageBreakdown b{display:block;color:#153454;margin-bottom:4px}
 @media(max-width:980px){.arrimageStatusLayout,.arrimagePieWrap,.arrimageBreakdown{grid-template-columns:1fr}.arrimagePieLegend{grid-template-columns:1fr 1fr}}
 
+
+.arrimageStatusCard{min-height:190px;max-height:260px;overflow:auto;line-height:1.35;cursor:pointer}
+.arrimageStatusCard:hover{box-shadow:0 0 0 2px rgba(31,95,153,.16)}
+.arrimageStatusCard hr{border:0;border-top:1px solid #e2e8f0;margin:8px 0}
+.arrimageFluxLine{font-size:11px;margin:4px 0;color:#17212b}
+.arrimageFluxLine b{color:#153454}
+.arrimageFluxEmpty{font-size:12px;text-align:center;color:var(--muted);padding:28px 4px}
+.arrimageConstatList{margin:8px 0 0;padding-left:20px;line-height:1.55}
+.arrimageConstatList li{margin:3px 0}
+
 </style>
 
 </head>
 
 <body>
 
-  <header class="top"><div><h1 id="reportTitle">Biweekly GIL - Reporting Sprint</h1><p>Statut général d’arrimage BCEF / GIL / ESTREEM : suivi des flux livrés, en cours, bloqués ou rejetés, des bugs Octane liés avec référence renseignée, de l’avancement par sprint et des sujets prioritaires. Cliquer sur chaque information pour accéder au détail par domaine et sous-domaine.</p></div><div class="actions">
+  <header class="top"><div><h1 id="reportTitle">Biweekly GIL - Reporting Sprint</h1><p>Statut général d’arrimage BCEF / GIL / ESTREEM : avancement par sprint et suivi des sujets prioritaires. Cliquer sur chaque information pour accéder au détail par domaine et sous-domaine.</p></div><div class="actions">
 
 <button onclick="runLocalAction('excel')">Importer Excel</button>
 
@@ -281,6 +291,8 @@
       const arrimagePieEl = document.getElementById('arrimagePie3d'); if(arrimagePieEl) arrimagePieEl.innerHTML = renderArrimagePie3d(data);
 
       document.getElementById('weeklyStory').innerHTML = '<strong>'+esc(data.sprintCourant || 'Sprint')+'</strong> — Semaines '+esc((data.semainesSprint||[]).join(' et '))+' — Statut globale : <span class="'+cls(scoreLevel)+'">'+esc(scoreLevel)+'</span><br><strong>Constat détaillé :</strong> '+esc(data.semaineCourante || cur.semaine || '')+' — '+esc(cur.faitMarquant || '')+'<br><span class="miniNote">Cliquer sur une ligne de semaine pour ouvrir la vue niveau 2 avec les chaînes et les détails.</span>';
+      document.getElementById('weeklyStory').innerHTML = arrimageGeneralConstat(data);
+      document.getElementById('weeklyStory').innerHTML = arrimageGeneralConstat(data);
 
       document.getElementById('weeklyChart').innerHTML = sprintBarChart(sprintComparison);
 
@@ -658,9 +670,36 @@
       lines.push('Domaine / sous-domaine :');
       lines.push(...(arrimageMapLines(seg.domainSousDomain, 8).length ? arrimageMapLines(seg.domainSousDomain, 8) : ['Aucun']));
       lines.push('');
-      lines.push('Bugs Octane liés avec référence renseignée : ' + seg.bugs.length);
+      lines.push('Bugs Octane liés : ' + seg.bugs.length);
       return lines.join('\n');
     }
+
+
+    function arrimageGeneralConstat(data){
+      const pie = arrimagePieData(data);
+      const sprint = data.sprintCourant || 'Sprint courant';
+      const score = healthScore(currentWeekRow(data));
+      const level = healthLevel(score);
+
+      const seg = label => (pie.segments || []).find(s => s.label === label) || {count:0, items:[]};
+      const livres = seg('Livrés');
+      const encours = seg('En cours');
+      const bloques = seg('Bloqués');
+      const rejetes = seg('Rejetés');
+
+      const domaines = arrimageMapLines(pie.globalPairs, 8).join(', ') || 'À qualifier';
+
+      return '<b>Constat du statut général d’arrimage — '+esc(sprint)+'</b>'+
+        '<ul class="arrimageConstatList">'+
+          '<li>Le statut global est <b class="'+cls(level)+'">'+esc(level)+'</b> avec un score de <b>'+score+' %</b>.</li>'+
+          '<li><b>'+livres.count+' flux livrés</b> sur '+pie.total+' demandes / flux d’arrimage, soit '+arrimagePct(livres.count, pie.total)+'.</li>'+
+          '<li><b>'+encours.count+' flux en cours</b>, soit '+arrimagePct(encours.count, pie.total)+'. Ces flux restent à suivre pour sécuriser leur passage en livré.</li>'+
+          '<li><b>'+bloques.count+' flux bloqués</b> et <b>'+rejetes.count+' flux rejetés</b>.</li>'+
+          '<li><b>Bugs Octane liés : '+pie.bugsOctane+'</b>.</li>'+
+          '<li>Ventilation principale par domaine / sous-domaine : '+esc(domaines)+'.</li>'+
+        '</ul>';
+    }
+
 
     function renderArrimagePie3d(data){
       const d = arrimagePieData(data);
@@ -696,9 +735,23 @@
         angle = a1;
       });
 
-      const legend = d.segments.map(seg =>
-        '<span><i style="background:'+seg.color+'"></i>'+esc(seg.label)+'<br><b>'+seg.count+'</b> — '+arrimagePct(seg.count,d.total)+'</span>'
-      ).join('');
+      const legend = d.segments.map(seg => {
+        const fluxLines = seg.items.map(x => {
+          const flux = arrimageClean(x.flux || x.jiraKey || x.reference || x.key || x.id);
+          const domaine = arrimageClean(x.domaine || x.domain);
+          const sousDomaine = arrimageClean(x.sousDomaine || x.subdomain);
+          return '<div class="arrimageFluxLine">• <b>'+esc(flux)+'</b> — '+esc(domaine)+' / '+esc(sousDomaine)+'</div>';
+        }).join('');
+
+        const empty = '<div class="arrimageFluxEmpty">Aucun flux '+esc(seg.label.toLowerCase())+'</div>';
+
+        return '<span class="arrimageStatusCard" onclick="showDetail(\'arrimagePieSegment\',\''+safeId(seg.label)+'\')">'+
+          '<i style="background:'+seg.color+'"></i>'+esc(seg.label)+'<br>'+
+          '<b>'+seg.count+'</b> — '+arrimagePct(seg.count,d.total)+
+          '<hr><b>Flux / Domaine / Sous-domaine</b>'+
+          (fluxLines || empty)+
+        '</span>';
+      }).join('');
 
       const breakdown = arrimageMapLines(d.globalPairs, 8).map(x => esc(x)).join('<br>') || 'À qualifier';
 
@@ -710,14 +763,11 @@
           '</svg>'+
           '<div class="arrimagePieBrace"><b>{</b><div>'+
             '<span>Total demandes / flux d’arrimage</span><strong>'+d.total+'</strong>'+
-            '<span>Bugs Octane liés<br>Reference IS NOT EMPTY</span><strong>'+d.bugsOctane+'</strong>'+
+            '<span>Bugs Octane liés</span><strong>'+d.bugsOctane+'</strong>'+
           '</div></div>'+
         '</div>'+
         '<div class="arrimagePieLegend">'+legend+'</div>'+
-        '<div class="arrimageBreakdown">'+
-          '<div><b>Domaine / sous-domaine visibles</b>'+breakdown+'</div>'+
-          '<div><b>Lecture</b>Tranches = statut des flux.<br>Survol / clic = détail par domaine, sous-domaine et bugs Octane liés.</div>'+
-        '</div>'+
+
       '</div>';
     }
 
@@ -874,7 +924,7 @@
         document.getElementById('detailTitle').textContent = 'Détail arrimage — ' + seg.label;
         document.getElementById('detailDecision').innerHTML =
           '<b>'+seg.count+' flux concerné(s)</b> sur '+pie.total+
-          ' — Bugs Octane liés avec référence renseignée : <b>'+seg.bugs.length+'</b>';
+          ' — Bugs Octane liés : <b>'+seg.bugs.length+'</b>';
 
         document.getElementById('detailCharts').innerHTML = renderArrimagePie3d(currentData);
         document.getElementById('detailTable').innerHTML =
@@ -886,7 +936,7 @@
             null
           ) +
           sectionTable(
-            'Bugs Octane liés — Reference IS NOT EMPTY',
+            'Bugs Octane liés',
             seg.bugs,
             ['reference','jiraKey','domaine','sousDomaine','statut','statutJira','severite','responsable','resume'],
             null,
