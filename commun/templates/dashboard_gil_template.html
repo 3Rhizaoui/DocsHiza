@@ -115,34 +115,285 @@
     }
 
 
-.arrimageStatusLayout{display:grid;grid-template-columns:360px 1fr;gap:20px;align-items:center}
-.arrimagePieCard{border:1px solid var(--line);background:#fbfdff;padding:12px;min-height:260px}
-.arrimagePieCard h3{margin:0 0 8px;font-size:14px;color:#153454}
-.arrimagePieWrap{display:grid;grid-template-columns:260px 1fr;gap:12px;align-items:center}
-.arrimagePieSvg{width:260px;height:185px;display:block}
-.arrimagePieBrace{display:grid;grid-template-columns:34px 1fr;gap:8px;align-items:center;color:#153454}
-.arrimagePieBrace b{font-size:86px;line-height:.75;font-family:Georgia,serif;color:#0f172a}
-.arrimagePieBrace span{display:block;font-size:12px;color:var(--muted);margin:5px 0}
-.arrimagePieBrace strong{display:block;font-size:24px;color:var(--blue)}
-.arrimagePieLegend{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;font-size:11px}
-.arrimagePieLegend span{border:1px solid #e2e8f0;background:white;padding:6px;border-radius:6px}
-.arrimagePieLegend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
-.arrimageBreakdown{margin-top:10px;border-top:1px solid #e2e8f0;padding-top:8px;font-size:12px;color:#334155;display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.arrimageBreakdown b{display:block;color:#153454;margin-bottom:4px}
-@media(max-width:980px){.arrimageStatusLayout,.arrimagePieWrap,.arrimageBreakdown{grid-template-columns:1fr}.arrimagePieLegend{grid-template-columns:1fr 1fr}}
 
+.arrimageStatusLayout{
+  display:grid;
+  grid-template-columns:300px minmax(410px,1.15fr) minmax(300px,.85fr);
+  gap:14px;
+  align-items:stretch;
+}
 
-.arrimageStatusCard{min-height:190px;max-height:260px;overflow:auto;line-height:1.35;cursor:pointer}
-.arrimageStatusCard:hover{box-shadow:0 0 0 2px rgba(31,95,153,.16)}
-.arrimageStatusCard hr{border:0;border-top:1px solid #e2e8f0;margin:8px 0}
-.arrimageFluxLine{font-size:11px;margin:4px 0;color:#17212b}
-.arrimageFluxLine b{color:#153454}
-.arrimageFluxEmpty{font-size:12px;text-align:center;color:var(--muted);padding:28px 4px}
-.arrimageConstatList{margin:8px 0 0;padding-left:20px;line-height:1.55}
-.arrimageConstatList li{margin:3px 0}
+.arrimageStatusLayout>#healthGauge{
+  min-height:240px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
 
+#arrimagePie3d{
+  display:contents;
+}
 
-    /* ========================================================
+.arrimagePieCard{
+  border:0;
+  background:#fff;
+  padding:10px 12px;
+  min-height:240px;
+}
+
+.arrimagePieMain{
+  grid-column:2;
+}
+
+.arrimagePieCard h3,
+.arrimageConstatCard h3{
+  margin:0 0 10px;
+  font-size:14px;
+  color:#153454;
+  font-weight:700;
+}
+
+.arrimagePieWrap{
+  display:grid;
+  grid-template-columns:minmax(220px,1fr) 150px;
+  gap:16px;
+  align-items:center;
+}
+
+.arrimagePieSvg{
+  width:240px;
+  height:190px;
+  display:block;
+  margin:auto;
+  filter:drop-shadow(0 5px 2px rgba(15,23,42,.22));
+}
+
+.arrimagePieLegendSimple{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  font-size:13px;
+}
+
+.arrimagePieLegendRow{
+  display:grid;
+  grid-template-columns:1fr 38px;
+  gap:10px;
+  align-items:center;
+  padding-bottom:7px;
+  border-bottom:1px solid #e5e7eb;
+}
+
+.arrimagePieLegendRow span{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.arrimagePieLegendRow i{
+  display:inline-block;
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  flex:0 0 10px;
+}
+
+.arrimagePieLegendRow b{
+  font-size:16px;
+  text-align:right;
+  color:#111827;
+}
+
+.arrimageConstatCard{
+  grid-column:3;
+  background:#fff;
+  border:1px solid #d8e0e9;
+  border-radius:8px;
+  padding:16px 18px;
+  min-height:210px;
+  box-shadow:0 1px 2px rgba(15,23,42,.04);
+}
+
+.arrimageConstatList{
+  margin:8px 0 0;
+  padding-left:18px;
+  line-height:1.65;
+  font-size:13px;
+  color:#16324f;
+}
+
+.arrimageConstatList li{
+  margin:4px 0;
+}
+
+.arrimageConstatList .arrOk{
+  color:#15803d;
+}
+
+.arrimageConstatList .arrProgress{
+  color:#ea7600;
+}
+
+.arrimageConstatList .arrBlocked{
+  color:#dc2626;
+}
+
+.arrimageConstatList .arrRejected{
+  color:#334155;
+}
+
+.arrimageCardsGrid{
+  grid-column:1/-1;
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  margin-top:0;
+}
+
+.arrimageStatusCard{
+  min-height:180px;
+  max-height:250px;
+  overflow:auto;
+  line-height:1.35;
+  cursor:pointer;
+  background:#fff;
+  border-radius:8px;
+  padding:12px 14px;
+  box-shadow:0 1px 2px rgba(15,23,42,.04);
+}
+
+.arrimageStatusCard.delivered{border:1px solid #86c99a}
+.arrimageStatusCard.progress{border:1px solid #f4b65f}
+.arrimageStatusCard.blocked{border:1px solid #ef8b8b}
+.arrimageStatusCard.rejected{border:1px solid #b7c0cc}
+
+.arrimageStatusCard:hover{
+  box-shadow:0 0 0 2px rgba(31,95,153,.12);
+}
+
+.arrimageStatusHead{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  font-size:14px;
+  font-weight:800;
+  padding-bottom:7px;
+  border-bottom:1px solid #e5e7eb;
+}
+
+.arrimageStatusHead i{
+  width:13px;
+  height:13px;
+  border-radius:50%;
+  display:inline-block;
+}
+
+.arrimageStatusCard.delivered .arrimageStatusHead{color:#15803d}
+.arrimageStatusCard.progress .arrimageStatusHead{color:#ea7600}
+.arrimageStatusCard.blocked .arrimageStatusHead{color:#dc2626}
+.arrimageStatusCard.rejected .arrimageStatusHead{color:#334155}
+
+.arrimageCardBody{
+  min-height:102px;
+  padding:8px 0;
+  color:#17324d;
+  font-size:12px;
+}
+
+.arrimageCardGroup{
+  margin:4px 0;
+}
+
+.arrimageCardFooter{
+  border-top:1px solid #e5e7eb;
+  padding-top:7px;
+  font-size:12px;
+  color:#153454;
+  font-weight:700;
+}
+
+.arrimageFluxEmpty{
+  font-size:12px;
+  text-align:left;
+  color:#64748b;
+  padding:12px 0;
+}
+
+.arrimageTableCaption{
+  caption-side:top;
+  text-align:left;
+  padding:10px 12px 8px;
+  border:1px solid #d7e0ea;
+  border-bottom:0;
+  background:#fff;
+}
+
+.arrimageTableCaptionTitle{
+  font-size:13px;
+  font-weight:800;
+  color:#17324d;
+}
+
+.arrimageTableCaptionSub{
+  margin-top:3px;
+  font-size:11px;
+  color:#526579;
+  display:flex;
+  align-items:center;
+  gap:18px;
+  flex-wrap:wrap;
+}
+
+.arrimageTableMetric{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+}
+
+.arrimageTableMetric i{
+  display:inline-block;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+}
+
+.arrimageHeaderNote{
+  margin-top:2px!important;
+  font-size:11px!important;
+  opacity:.95;
+}
+
+.weeklyStoryTargetHidden{
+  display:none!important;
+}
+
+@media(max-width:1100px){
+  .arrimageStatusLayout{
+    grid-template-columns:280px 1fr;
+  }
+  .arrimagePieMain{grid-column:2}
+  .arrimageConstatCard{grid-column:1/-1}
+  .arrimageCardsGrid{grid-template-columns:repeat(2,1fr)}
+}
+
+@media(max-width:760px){
+  .arrimageStatusLayout{
+    grid-template-columns:1fr;
+  }
+  .arrimagePieMain,
+  .arrimageConstatCard,
+  .arrimageCardsGrid{
+    grid-column:1;
+  }
+  .arrimageCardsGrid{
+    grid-template-columns:1fr;
+  }
+  .arrimagePieWrap{
+    grid-template-columns:1fr;
+  }
+}
+
+/* ========================================================
        Présentation Arrimage - cible Scrum Reporting
        ======================================================== */
 
@@ -266,7 +517,7 @@
 
 <body>
 
-  <header class="top"><div><h1 id="reportTitle">Biweekly GIL - Reporting Sprint</h1><p>Statut général d’arrimage BCEF / GIL / ESTREEM : avancement par sprint et suivi des sujets prioritaires.</p></div><div class="actions">
+  <header class="top"><div><h1 id="reportTitle">Weekly GIL – Reporting Sprint</h1><p>Statut général d’arrimage BCEF / GIL / ESTREEM : avancement par sprint et suivi des sujets prioritaires.</p><p class="arrimageHeaderNote">Indicateur centré sur les bugs Octane liés pour chaque information du domaine et sous-domaine.</p></div><div class="actions">
 
 <button onclick="runLocalAction('excel')">Importer Excel</button>
 
@@ -294,9 +545,9 @@
 
     <div class="stack">
 
-      <section><h2 id="generalTitle">Statut général du Sprint</h2><div id="weeklyStory" class="decisionBox"></div></section>
+      <section class="weeklyStoryTargetHidden"><h2 id="generalTitle">Statut général du Sprint</h2><div id="weeklyStory" class="decisionBox"></div></section>
 
-      <section><h2 id="arrimageTitle" class="collapsibleTitle collapsed" role="button" tabindex="0" aria-expanded="false" aria-controls="arrimageContent" onclick="toggleArrimageTable()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleArrimageTable()}">Flux prêts pour arrimage — BNPP / GIL / ESTREEM — Total : <span id="arrimageTotal">0</span></h2><div id="arrimageContent" class="tableWrap hidden"><table id="arrimageReady"></table></div></section>
+      <section><h2 id="arrimageTitle" class="collapsibleTitle" role="button" tabindex="0" aria-expanded="true" aria-controls="arrimageContent" onclick="toggleArrimageTable()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleArrimageTable()}">Flux prêts pour arrimage — BNPP / GIL / ESTREEM — Total : <span id="arrimageTotal">0</span></h2><div id="arrimageContent" class="tableWrap"><table id="arrimageReady"></table></div></section>
 
       <section><h2>Comparaison Sprint N-1 / Sprint actuel</h2><div class="trendLayout"><div id="weeklyChart" class="chartBox"></div><table id="weeklyTrend"></table></div></section>
 
@@ -401,7 +652,7 @@
 
       const sprintComparison = data.comparaisonSprints || [];
 
-      document.getElementById('reportTitle').textContent = 'Biweekly GIL - Reporting '+sprintLabel;
+      document.getElementById('reportTitle').textContent = 'Weekly GIL – Reporting '+sprintLabel;
 
       document.getElementById('gaugeTitle').textContent = 'Statut général d’arrimage BCEF / GIL / ESTREEM';
 
@@ -568,8 +819,25 @@
 
       document.getElementById('arrimageTotal').textContent=arrUnique.size;
 
+      const arrPie = arrimagePieData(data);
+      const arrSegCount = label => {
+        const seg = (arrPie.segments || []).find(x => x.label === label);
+        return seg ? seg.count : 0;
+      };
+
       document.getElementById('arrimageReady').innerHTML=
-        '<tr>'+
+        '<caption class="arrimageTableCaption">'+
+          '<div class="arrimageTableCaptionTitle">Détail de tous les flux (Bugs Octane liés)</div>'+
+          '<div class="arrimageTableCaptionSub">'+
+            '<span>Répartition par statut : Livrés / En cours / Bloqués / Rejetés</span>'+
+            '<span class="arrimageTableMetric"><i style="background:#15803d"></i>Livrés <b>'+arrSegCount('Livrés')+'</b></span>'+
+            '<span class="arrimageTableMetric"><i style="background:#f59e0b"></i>En cours <b>'+arrSegCount('En cours')+'</b></span>'+
+            '<span class="arrimageTableMetric"><i style="background:#dc2626"></i>Bloqués <b>'+arrSegCount('Bloqués')+'</b></span>'+
+            '<span class="arrimageTableMetric"><i style="background:#94a3b8"></i>Rejetés <b>'+arrSegCount('Rejetés')+'</b></span>'+
+            '<span class="arrimageTableMetric">Total <b>'+arrPie.total+'</b></span>'+
+          '</div>'+
+        '</caption>'+
+        '<thead><tr>'+
           '<th>Domaine</th>'+
           '<th>Sous-domaine</th>'+
           '<th>Flux (Nom)</th>'+
@@ -578,8 +846,8 @@
           '<th>Environnement</th>'+
           '<th>Statut</th>'+
           '<th>Bugs Octane liés</th>'+
-        '</tr>'+
-        arrimageGroupedRows(arr);
+        '</tr></thead>'+
+        '<tbody>'+arrimageGroupedRows(arr)+'</tbody>';
 
       const prios = (data.prioritesHebdo || []).filter(p=>!data.semaineCourante || p.semaineSuivi === data.semaineCourante);
 
@@ -940,7 +1208,7 @@
         {label:'Livrés', color:'#15803d'},
         {label:'En cours', color:'#f59e0b'},
         {label:'Bloqués', color:'#b91c1c'},
-        {label:'Rejetés', color:'#db2777'}
+        {label:'Rejetés', color:'#94a3b8'}
       ];
 
       const total = rows.length;
@@ -1001,40 +1269,61 @@
     }
 
 
+    function arrimageCardBreakdown(seg){
+      const map = {};
+
+      (seg.items || []).forEach(x => {
+        const domaine = arrimageClean(x.domaine || x.domain);
+        const sousDomaine = arrimageClean(x.sousDomaine || x.subdomain);
+        const key = domaine + ' / ' + sousDomaine;
+        map[key] = (map[key] || 0) + 1;
+      });
+
+      const keys = Object.keys(map)
+        .sort((a,b) => map[b] - map[a] || a.localeCompare(b));
+
+      if(!keys.length){
+        return '<div class="arrimageFluxEmpty">Aucun flux '+esc(seg.label.toLowerCase())+'.</div>';
+      }
+
+      return keys.map(k =>
+        '<div class="arrimageCardGroup">• '+esc(k)+' : <b>'+map[k]+'</b></div>'
+      ).join('');
+    }
+
     function arrimageGeneralConstat(data){
       const pie = arrimagePieData(data);
-      const sprint = data.sprintCourant || 'Sprint courant';
-      const score = healthScore(currentWeekRow(data));
-      const level = healthLevel(score);
 
-      const seg = label => (pie.segments || []).find(s => s.label === label) || {count:0, items:[]};
+      const seg = label =>
+        (pie.segments || []).find(s => s.label === label) || {count:0};
+
       const livres = seg('Livrés');
       const encours = seg('En cours');
       const bloques = seg('Bloqués');
       const rejetes = seg('Rejetés');
 
-      const domaines = arrimageMapLines(pie.globalPairs, 8).join(', ') || 'À qualifier';
-
-      return '<b>Constat du statut général d’arrimage — '+esc(sprint)+'</b>'+
+      return '<h3>Constat général</h3>'+
         '<ul class="arrimageConstatList">'+
-          '<li>Le statut global est <b class="'+cls(level)+'">'+esc(level)+'</b> avec un score de <b>'+score+' %</b>.</li>'+
-          '<li><b>'+livres.count+' flux livrés</b> sur '+pie.total+' demandes / flux d’arrimage, soit '+arrimagePct(livres.count, pie.total)+'.</li>'+
-          '<li><b>'+encours.count+' flux en cours</b>, soit '+arrimagePct(encours.count, pie.total)+'. Ces flux restent à suivre pour sécuriser leur passage en livré.</li>'+
-          '<li><b>'+bloques.count+' flux bloqués</b> et <b>'+rejetes.count+' flux rejetés</b>.</li>'+
-          '<li><b>Bugs Octane liés : '+pie.bugsOctane+'</b>.</li>'+
-          '<li>Ventilation principale par domaine / sous-domaine : '+esc(domaines)+'.</li>'+
+          '<li class="arrOk"><b>'+arrimagePct(livres.count,pie.total)+' des flux d’arrimage sont livrés.</b></li>'+
+          '<li class="arrProgress"><b>'+encours.count+' flux sont en cours de traitement.</b></li>'+
+          '<li class="arrBlocked"><b>'+bloques.count+' flux sont bloqués.</b></li>'+
+          '<li class="arrRejected"><b>'+rejetes.count+' flux sont rejetés.</b></li>'+
+          '<li>Total : <b>'+pie.total+'</b> flux (bugs Octane liés).</li>'+
         '</ul>';
     }
-
 
     function renderArrimagePie3d(data){
       const d = arrimagePieData(data);
 
       if(!d.total){
-        return '<div class="arrimagePieCard"><h3>Répartition des flux d’arrimage</h3><div class="miniNote">Aucun flux d’arrimage disponible pour le périmètre courant.</div></div>';
+        return '<div class="arrimagePieCard arrimagePieMain">'+
+          '<h3>Répartition des flux d’arrimage (Bugs Octane liés)</h3>'+
+          '<div class="miniNote">Aucun flux d’arrimage disponible pour le périmètre courant.</div>'+
+        '</div>'+
+        '<div class="arrimageConstatCard">'+arrimageGeneralConstat(data)+'</div>';
       }
 
-      const cx = 128, cy = 86, r = 70, depth = 17;
+      const cx = 116, cy = 88, r = 68, depth = 13;
       let angle = 0;
       let side = '';
       let top = '';
@@ -1048,55 +1337,64 @@
         const tip = esc(arrimagePieTip(seg, d.total));
         const sid = safeId(seg.label);
 
-        const attrs = ' data-tip="'+tip+'" onmouseenter="chartTip(event,this.dataset.tip)" onmousemove="moveChartTip(event)" onmouseleave="hideChartTip()" onclick="showDetail(\'arrimagePieSegment\',\''+sid+'\')" style="cursor:pointer"';
+        const attrs =
+          ' data-tip="'+tip+'"'+
+          ' onmouseenter="chartTip(event,this.dataset.tip)"'+
+          ' onmousemove="moveChartTip(event)"'+
+          ' onmouseleave="hideChartTip()"'+
+          ' onclick="showDetail(\'arrimagePieSegment\',\''+sid+'\')"'+
+          ' style="cursor:pointer"';
 
         if(full){
-          side += '<circle cx="'+cx+'" cy="'+(cy+depth)+'" r="'+r+'" fill="'+seg.color+'" opacity=".45"'+attrs+'></circle>';
+          side += '<circle cx="'+cx+'" cy="'+(cy+depth)+'" r="'+r+'" fill="'+seg.color+'" opacity=".42"'+attrs+'></circle>';
           top += '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+seg.color+'" stroke="white" stroke-width="2"'+attrs+'></circle>';
-        } else {
-          side += '<path d="'+pieArcPath(cx,cy+depth,r,a0,a1)+'" fill="'+seg.color+'" opacity=".45"'+attrs+'></path>';
+        }else{
+          side += '<path d="'+pieArcPath(cx,cy+depth,r,a0,a1)+'" fill="'+seg.color+'" opacity=".42"'+attrs+'></path>';
           top += '<path d="'+pieArcPath(cx,cy,r,a0,a1)+'" fill="'+seg.color+'" stroke="white" stroke-width="2"'+attrs+'></path>';
         }
 
         angle = a1;
       });
 
-      const legend = d.segments.map(seg => {
-        const fluxLines = seg.items.map(x => {
-          const flux = arrimageClean(x.flux || x.jiraKey || x.reference || x.key || x.id);
-          const domaine = arrimageClean(x.domaine || x.domain);
-          const sousDomaine = arrimageClean(x.sousDomaine || x.subdomain);
-          return '<div class="arrimageFluxLine">• <b>'+esc(flux)+'</b> — '+esc(domaine)+' / '+esc(sousDomaine)+'</div>';
-        }).join('');
+      const legend = d.segments.map(seg =>
+        '<div class="arrimagePieLegendRow">'+
+          '<span><i style="background:'+seg.color+'"></i>'+esc(seg.label)+'</span>'+
+          '<b>'+seg.count+'</b>'+
+        '</div>'
+      ).join('');
 
-        const empty = '<div class="arrimageFluxEmpty">Aucun flux '+esc(seg.label.toLowerCase())+'</div>';
+      const classMap = {
+        'Livrés':'delivered',
+        'En cours':'progress',
+        'Bloqués':'blocked',
+        'Rejetés':'rejected'
+      };
 
-        return '<span class="arrimageStatusCard" onclick="showDetail(\'arrimagePieSegment\',\''+safeId(seg.label)+'\')">'+
-          '<i style="background:'+seg.color+'"></i>'+esc(seg.label)+'<br>'+
-          '<b>'+seg.count+'</b> — '+arrimagePct(seg.count,d.total)+
-          '<hr><b>Flux / Domaine / Sous-domaine</b>'+
-          (fluxLines || empty)+
-        '</span>';
-      }).join('');
+      const cards = d.segments.map(seg =>
+        '<div class="arrimageStatusCard '+classMap[seg.label]+'"'+
+          ' onclick="showDetail(\'arrimagePieSegment\',\''+safeId(seg.label)+'\')">'+
+          '<div class="arrimageStatusHead">'+
+            '<i style="background:'+seg.color+'"></i>'+
+            '<span>'+esc(seg.label)+' — '+seg.count+' ('+arrimagePct(seg.count,d.total)+')</span>'+
+          '</div>'+
+          '<div class="arrimageCardBody">'+arrimageCardBreakdown(seg)+'</div>'+
+          '<div class="arrimageCardFooter">Bugs Octane liés : '+seg.bugs.length+'</div>'+
+        '</div>'
+      ).join('');
 
-      const breakdown = arrimageMapLines(d.globalPairs, 8).map(x => esc(x)).join('<br>') || 'À qualifier';
-
-      return '<div class="arrimagePieCard">'+
-        '<h3>Répartition des flux d’arrimage</h3>'+
-        '<div class="arrimagePieWrap">'+
-          '<svg class="arrimagePieSvg" viewBox="0 0 260 190" role="img" aria-label="Camembert 3D des flux d’arrimage">'+
-            side + top +
-          '</svg>'+
-          '<div class="arrimagePieBrace"><b>{</b><div>'+
-            '<span>Total demandes / flux d’arrimage</span><strong>'+d.total+'</strong>'+
-            '<span>Bugs Octane liés</span><strong>'+d.bugsOctane+'</strong>'+
-          '</div></div>'+
+      return ''+
+        '<div class="arrimagePieCard arrimagePieMain">'+
+          '<h3>Répartition des flux d’arrimage (Bugs Octane liés)</h3>'+
+          '<div class="arrimagePieWrap">'+
+            '<svg class="arrimagePieSvg" viewBox="0 0 240 195" role="img" aria-label="Répartition des flux d’arrimage">'+
+              side+top+
+            '</svg>'+
+            '<div class="arrimagePieLegendSimple">'+legend+'</div>'+
+          '</div>'+
         '</div>'+
-        '<div class="arrimagePieLegend">'+legend+'</div>'+
-
-      '</div>';
+        '<div class="arrimageConstatCard">'+arrimageGeneralConstat(data)+'</div>'+
+        '<div class="arrimageCardsGrid">'+cards+'</div>';
     }
-
 
     function sprintBarChart(rows){
 
