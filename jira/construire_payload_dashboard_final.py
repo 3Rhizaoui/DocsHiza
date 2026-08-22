@@ -213,6 +213,106 @@ def normalize_flux_row(row, sprint, semaine):
     }
 
 
+def normalize_arrimage_anomaly(row, sprint, semaine):
+    if not isinstance(row, dict):
+        return None
+
+    key = clean_label(
+        row_value(row, "jiraKey", "key", "cle", "clé", "reference"),
+        ""
+    )
+
+    flux = clean_label(
+        row_value(row, "flux", "referenceFlux", "reference_flux"),
+        ""
+    )
+
+    return {
+        "sprint": clean_label(row_value(row, "sprint"), sprint),
+        "semaine": clean_label(row_value(row, "semaine"), semaine),
+        "reference": key,
+        "jiraKey": key,
+        "cle": key,
+        "flux": flux,
+        "referenceFlux": flux,
+        "domaine": clean_label(
+            row_value(row, "domaine", "domain"),
+            "À qualifier"
+        ),
+        "sousDomaine": clean_label(
+            row_value(row, "sousDomaine", "sous_domaine", "subdomain"),
+            "À qualifier"
+        ),
+        "environnement": clean_label(
+            row_value(row, "environnement", "env", "environment"),
+            "Non renseigné"
+        ),
+        "statut": clean_label(
+            row_value(row, "statut", "status"),
+            "À qualifier"
+        ),
+        "statutJira": clean_label(
+            row_value(row, "statut", "status"),
+            "À qualifier"
+        ),
+        "etat": clean_label(
+            row_value(row, "etat", "etatAnomalie"),
+            ""
+        ),
+        "resolution": clean_label(
+            row_value(row, "resolution"),
+            ""
+        ),
+        "resume": clean_label(
+            row_value(row, "resume", "summary", "titre"),
+            ""
+        ),
+        "description": clean_label(
+            row_value(row, "description"),
+            ""
+        ),
+        "severite": clean_label(
+            row_value(row, "severite", "severity"),
+            "Non renseignée"
+        ),
+        "responsable": clean_label(
+            row_value(row, "responsable", "assignee"),
+            "Non renseigné"
+        ),
+        "epicParent": clean_label(
+            row_value(row, "epic_parent", "epicParent"),
+            ""
+        ),
+        "url": clean_label(
+            row_value(row, "url", "url_source"),
+            ""
+        ),
+        "type": "Anomalie arrimage",
+        "source": "JIRA SSO - requête anomalies avec référence",
+    }
+
+
+def build_arrimage_anomalies(source, sprint, semaine):
+    rows = source.get("anomalies") or []
+
+    if not isinstance(rows, list):
+        return []
+
+    result = []
+
+    for row in rows:
+        item = normalize_arrimage_anomaly(
+            row,
+            sprint,
+            semaine,
+        )
+
+        if item is not None:
+            result.append(item)
+
+    return result
+
+
 def build_flux_blocks(source, sprint, semaine):
     rows = [normalize_flux_row(row, sprint, semaine) for row in source_rows(source)]
 
@@ -622,6 +722,21 @@ def main():
     payload["fluxPretsArrimage"] = flux_rows
     payload["histoFlux"] = histo
     payload["ventilation"] = ventilation
+
+    # Anomalies d'arrimage provenant directement de la deuxième JQL Jira.
+    # Elles doivent survivre jusqu'au HTML sous cette clé dédiée.
+    anomalies_arrimage = build_arrimage_anomalies(
+        source,
+        courant,
+        semaine_courante,
+    )
+
+    payload["anomaliesArrimageDetail"] = anomalies_arrimage
+
+    print(
+        "[JIRA][ARRIMAGE] anomalies injectées dans payload =",
+        len(anomalies_arrimage),
+    )
 
     payload["comparaisonSprints"] = ensure_comparison_legacy_contract(normalize_comparison(comparison, courant, precedent))
 
