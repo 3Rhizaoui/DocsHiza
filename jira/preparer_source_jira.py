@@ -1223,6 +1223,83 @@ def main():
         len(anomaly_issues)
     )
 
+    #
+    # Jira n'expose pas toujours le libellé exact du champ
+    # "Reference" dans expand=names ou /rest/api/2/field.
+    #
+    # La JQL utilisée ici impose Reference IS NOT EMPTY.
+    # Si aucun champ nommé exactement "Reference" n'est connu,
+    # on identifie dynamiquement le custom field numérique commun
+    # à tous les résultats de cette requête.
+    #
+    anomaly_names = dict(names or {})
+
+    has_named_reference = any(
+        folded(text(label)) == "reference"
+        for label in anomaly_names.values()
+    )
+
+    reference_field_id = None
+
+    if not has_named_reference and anomaly_issues:
+        candidate_counts = {}
+
+        for anomaly_issue in anomaly_issues:
+            anomaly_fields = (
+                anomaly_issue.get("fields")
+                or {}
+            )
+
+            issue_candidates = set()
+
+            for field_id, field_value in anomaly_fields.items():
+                if not str(field_id).startswith(
+                    "customfield_"
+                ):
+                    continue
+
+                raw = text(field_value).strip()
+
+                if (
+                    raw.isdigit()
+                    and 4 <= len(raw) <= 12
+                ):
+                    issue_candidates.add(
+                        field_id
+                    )
+
+            for field_id in issue_candidates:
+                candidate_counts[field_id] = (
+                    candidate_counts.get(
+                        field_id,
+                        0
+                    ) + 1
+                )
+
+        common_candidates = [
+            field_id
+            for field_id, count
+            in candidate_counts.items()
+            if count == len(anomaly_issues)
+        ]
+
+        if len(common_candidates) == 1:
+            reference_field_id = (
+                common_candidates[0]
+            )
+
+            anomaly_names[
+                reference_field_id
+            ] = "Reference"
+
+    print(
+        "[JIRA][ANOMALIES] reference_field_id=",
+        reference_field_id
+        or "champ nommé Reference"
+        if has_named_reference
+        else "NON DETECTE"
+    )
+
     for issue in sorted(
         anomaly_issues,
         key=lambda x:
@@ -1256,7 +1333,7 @@ def main():
         reference = (
             extract_reference(
                 fields,
-                names
+                anomaly_names
             )
         )
 
