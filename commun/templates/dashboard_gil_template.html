@@ -797,7 +797,7 @@
 
         ).join('');
 
-      const arr=(data.fluxPretsArrimage||[]);
+      const arr=arrimageCurrentFluxRows(data);
 
       /*
        * Une ligne fonctionnelle = un flux + son environnement.
@@ -820,10 +820,13 @@
       document.getElementById('arrimageTotal').textContent=arrUnique.size;
 
       const arrPie = arrimagePieData(data);
+
       const arrSegCount = label => {
         const seg = (arrPie.segments || []).find(x => x.label === label);
         return seg ? seg.count : 0;
       };
+
+      document.getElementById('arrimageTotal').textContent = String(arrPie.total);
 
       document.getElementById('arrimageReady').innerHTML=
         '<caption class="arrimageTableCaption">'+
@@ -858,6 +861,54 @@
     function metricDetails(total,items,risk){const list=(items||[]).map(x=>risk?(x.flux+' — '+x.domaine+' / '+x.sousDomaine+' — '+x.reference+' — '+x.environnement):(x.reference+' — '+x.flux+' — '+x.statut+' — '+x.environnement+' — '+x.partenaire));const unique=[...new Set(list)];return '<details onclick="event.stopPropagation()"><summary><b>'+esc(total||0)+'</b></summary><div class="metricDetailList">'+(unique.length?unique.map(x=>'<div>'+esc(x)+'</div>').join(''):'<div>Aucun élément</div>')+'</div></details>'}
 
     function toggleArrimageTable(){const content=document.getElementById('arrimageContent');const title=document.getElementById('arrimageTitle');const closing=!content.classList.contains('hidden');content.classList.toggle('hidden',closing);title.classList.toggle('collapsed',closing);title.setAttribute('aria-expanded',String(!closing));}
+
+    function toggleArrimageDomain(domainId){
+      const rows = [
+        ...document.querySelectorAll(
+          '[data-arr-domain="'+domainId+'"]'
+        )
+      ];
+
+      const closing = rows.some(
+        row => getComputedStyle(row).display !== 'none'
+      );
+
+      rows.forEach(row => {
+        row.style.display = closing ? 'none' : 'table-row';
+      });
+
+      const caret = document.getElementById(
+        'caret-arr-domain-' + domainId
+      );
+
+      if(caret){
+        caret.textContent = closing ? '▶' : '▼';
+      }
+    }
+
+    function toggleArrimageSubdomain(subId){
+      const rows = [
+        ...document.querySelectorAll(
+          '[data-arr-subdomain="'+subId+'"]'
+        )
+      ];
+
+      const closing = rows.some(
+        row => getComputedStyle(row).display !== 'none'
+      );
+
+      rows.forEach(row => {
+        row.style.display = closing ? 'none' : 'table-row';
+      });
+
+      const caret = document.getElementById(
+        'caret-arr-sub-' + subId
+      );
+
+      if(caret){
+        caret.textContent = closing ? '▶' : '▼';
+      }
+    }
 
     function arrimageGroupedRows(rows){
 
@@ -980,6 +1031,7 @@
 
       let html='';
       let lastDomain='';
+      let lastSub='';
 
       sorted.forEach(r=>{
 
@@ -987,6 +1039,13 @@
         const sub=String(r.sousDomaine||'Non renseigné');
         const env=String(r.environnement||'').toUpperCase();
         const flux=String(r.flux||r.nomFlux||r.reference||'Non renseigné');
+
+        /*
+         * Identifiants dynamiques utilisés uniquement pour
+         * ouvrir / fermer les groupes dans le tableau.
+         */
+        const domainId=safeId('arr-domain-'+domain);
+        const subId=safeId('arr-sub-'+domain+'|||'+sub);
 
         /*
          * Référence JIRA / AERL si disponible.
@@ -1009,13 +1068,32 @@
 
         if(domain!==lastDomain){
           html+=
-            '<tr class="arrDomainRow">'+
+            '<tr class="arrDomainRow" '+
+              'onclick="toggleArrimageDomain(\''+domainId+'\')" '+
+              'style="cursor:pointer">'+
               '<td colspan="8">'+
-                '<span class="arrDomainCaret">⌄</span> '+
+                '<span class="arrDomainCaret" id="caret-arr-domain-'+domainId+'">▼</span> '+
                 '<b>'+esc(domain)+'</b>'+
               '</td>'+
             '</tr>';
+
           lastDomain=domain;
+          lastSub='';
+        }
+
+        if(sub!==lastSub){
+          html+=
+            '<tr class="subdomainRow" '+
+              'data-arr-domain="'+domainId+'" '+
+              'onclick="event.stopPropagation();toggleArrimageSubdomain(\''+subId+'\')" '+
+              'style="cursor:pointer">'+
+              '<td colspan="8">'+
+                '<span id="caret-arr-sub-'+subId+'">▼</span> '+
+                '<b>Sous-domaine : '+esc(sub)+'</b>'+
+              '</td>'+
+            '</tr>';
+
+          lastSub=sub;
         }
 
         const envBadge=env
@@ -1030,7 +1108,9 @@
           : '0';
 
         html+=
-          '<tr>'+
+          '<tr class="detailRow" '+
+            'data-arr-domain="'+domainId+'" '+
+            'data-arr-subdomain="'+subId+'">'+
             '<td>'+esc(domain)+'</td>'+
             '<td>'+esc(sub)+'</td>'+
             '<td><b>'+link(flux,'flux',flux)+'</b></td>'+
