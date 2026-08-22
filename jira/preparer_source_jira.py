@@ -1240,14 +1240,57 @@ def main():
     #
     anomaly_names = dict(names or {})
 
-    has_named_reference = any(
-        folded(text(label)) == "reference"
-        for label in anomaly_names.values()
-    )
+    #
+    # Plusieurs custom fields Jira peuvent porter le même libellé
+    # "Reference / Référence".
+    #
+    # On sélectionne donc le champ réellement renseigné dans les
+    # résultats de la JQL, au lieu de prendre arbitrairement le
+    # premier champ portant ce nom.
+    #
+    named_reference_fields = [
+        field_id
+        for field_id, label in anomaly_names.items()
+        if folded(text(label)) == "reference"
+    ]
 
     reference_field_id = None
 
-    if not has_named_reference and anomaly_issues:
+    populated_reference_counts = {}
+
+    for field_id in named_reference_fields:
+        populated_reference_counts[field_id] = sum(
+            1
+            for anomaly_issue in anomaly_issues
+            if text(
+                (
+                    anomaly_issue.get("fields")
+                    or {}
+                ).get(field_id)
+            ).strip()
+        )
+
+    if populated_reference_counts:
+        best_count = max(
+            populated_reference_counts.values()
+        )
+
+        best_fields = [
+            field_id
+            for field_id, count
+            in populated_reference_counts.items()
+            if count == best_count
+            and count > 0
+        ]
+
+        if len(best_fields) == 1:
+            reference_field_id = best_fields[0]
+
+    #
+    # Fallback si Jira ne fournit aucun champ nommé Reference :
+    # recherche du custom field numérique commun aux anomalies.
+    #
+    if reference_field_id is None and anomaly_issues:
         candidate_counts = {}
 
         for anomaly_issue in anomaly_issues:
@@ -1270,16 +1313,12 @@ def main():
                     raw.isdigit()
                     and 4 <= len(raw) <= 12
                 ):
-                    issue_candidates.add(
-                        field_id
-                    )
+                    issue_candidates.add(field_id)
 
             for field_id in issue_candidates:
                 candidate_counts[field_id] = (
-                    candidate_counts.get(
-                        field_id,
-                        0
-                    ) + 1
+                    candidate_counts.get(field_id, 0)
+                    + 1
                 )
 
         common_candidates = [
@@ -1290,20 +1329,30 @@ def main():
         ]
 
         if len(common_candidates) == 1:
-            reference_field_id = (
-                common_candidates[0]
-            )
+            reference_field_id = common_candidates[0]
 
-            anomaly_names[
-                reference_field_id
-            ] = "Reference"
+    #
+    # extract_reference() cherche par libellé.
+    # On masque donc les autres champs homonymes et on ne garde
+    # comme "Reference" que celui réellement sélectionné.
+    #
+    if reference_field_id:
+        for field_id in named_reference_fields:
+            if field_id != reference_field_id:
+                anomaly_names.pop(field_id, None)
+
+        anomaly_names[
+            reference_field_id
+        ] = "Reference"
+
+    print(
+        "[JIRA][ANOMALIES] reference_candidates=",
+        populated_reference_counts
+    )
 
     print(
         "[JIRA][ANOMALIES] reference_field_id=",
-        reference_field_id
-        or "champ nommé Reference"
-        if has_named_reference
-        else "NON DETECTE"
+        reference_field_id or "NON DETECTE"
     )
 
     for issue in sorted(
