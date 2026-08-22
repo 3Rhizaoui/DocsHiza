@@ -115,13 +115,78 @@ def is_anomaly(row: dict) -> bool:
     return "anomal" in typ or typ == "bug"
 
 
+def arrimage_business_status(row: dict) -> tuple[str, str]:
+    """
+    Retourne :
+      - statut métier dashboard
+      - statut Jira source
+
+    Le statut Jira réel est prioritaire sur les statuts
+    déjà normalisés comme "Livré" / "Prêt".
+    """
+    jira_status = first(
+        row,
+        "statut_jira",
+        "statutJira",
+        "status_jira",
+        "jira_status",
+    )
+
+    raw = (
+        jira_status
+        or first(row, "status", "statut", "etatFlux", "etat", "state")
+        or ""
+    )
+
+    low = raw.lower()
+
+    if (
+        "annul" in low
+        or "cancel" in low
+        or "rejet" in low
+    ):
+        return "Rejeté", jira_status or raw
+
+    if (
+        "bloqu" in low
+        or "blocked" in low
+        or low == "ko"
+    ):
+        return "Bloqué", jira_status or raw
+
+    if (
+        "backlog" in low
+        or "affinage" in low
+        or "en cours" in low
+        or "progress" in low
+        or "analyse" in low
+        or "investigation" in low
+    ):
+        return "En cours", jira_status or raw
+
+    if (
+        "termin" in low
+        or low == "done"
+        or "closed" in low
+        or "livr" in low
+        or "résolu" in low
+        or "resolu" in low
+    ):
+        return "Livré", jira_status or raw
+
+    return (
+        "Livré" if is_ready(row) else "En cours",
+        jira_status or raw,
+    )
+
+
 def row_to_flux(row: dict) -> dict:
     domaine = first(row, "domaine", "domain", "chaine", "chaîne") or "Non renseigné"
     sous = first(row, "sousDomaine", "sous_domaine", "subDomain", "subdomain") or "Non renseigné"
     ref = first(row, "referenceFlux", "reference", "ref", "key", "cle", "clé") or first(row, "summary", "titre")
     version = first(row, "version", "fixVersion", "fixVersions")
     pattern = first(row, "pattern", "modele", "modèle") or "Réel"
-    statut = first(row, "statut", "etatFlux", "status") or ("Prêt pour arrimage" if is_ready(row) else "En cours")
+    statut, statut_jira = arrimage_business_status(row)
 
     return {
         "sprint": first(row, "sprint") or "Sprint 21",
@@ -135,6 +200,93 @@ def row_to_flux(row: dict) -> dict:
         "version": version,
         "statut": statut,
         "etatFlux": statut,
+        "statutJira": statut_jira,
+        "statutSource": statut_jira,
+    }
+
+
+def row_to_arrimage_anomaly(row: dict) -> dict:
+    """
+    Conserve les informations Jira utiles aux anomalies d'arrimage / Octane.
+    Ces anomalies restent séparées du statut métier des flux.
+    """
+    key = first(
+        row,
+        "key",
+        "cle",
+        "clé",
+        "reference",
+    )
+
+    reference = first(
+        row,
+        "referenceFlux",
+        "reference_flux",
+        "ref_flux",
+        "reference",
+        "ref",
+    )
+
+    status = first(
+        row,
+        "statut_jira",
+        "statutJira",
+        "status",
+        "statut",
+        "etatAnomalie",
+        "etat",
+    )
+
+    resolution = first(
+        row,
+        "resolution",
+        "resolution_name",
+        "resolutionName",
+    )
+
+    domaine = first(
+        row,
+        "domaine",
+        "domain",
+        "chaine",
+        "chaîne",
+    ) or "Non renseigné"
+
+    sous_domaine = first(
+        row,
+        "sousDomaine",
+        "sous_domaine",
+        "subDomain",
+        "subdomain",
+    ) or "Non renseigné"
+
+    return {
+        "key": key,
+        "cle": key,
+        "reference": reference,
+        "referenceFlux": reference,
+        "flux": first(row, "flux") or reference,
+        "resume": first(row, "resume", "summary", "titre"),
+        "description": first(row, "description"),
+        "type": first(row, "type", "issuetype", "issueType") or "Bug",
+
+        "statut": status,
+        "statutJira": status,
+        "statutSource": status,
+        "etat": first(row, "etat", "etatAnomalie"),
+
+        "resolution": resolution,
+
+        "domaine": domaine,
+        "sousDomaine": sous_domaine,
+
+        "sprint": first(row, "sprint"),
+        "environnement": first(
+            row,
+            "environnement",
+            "env",
+            "environment",
+        ),
     }
 
 
@@ -282,6 +434,10 @@ def build_payload(rows: list[dict]) -> dict:
         },
         "prioritesHebdo": [],
         "anomalies": [row_to_flux(r) for r in anomaly_rows],
+        "anomaliesArrimageDetail": [
+            row_to_arrimage_anomaly(r)
+            for r in anomaly_rows
+        ],
         "records": rows,
     }
 

@@ -1192,7 +1192,7 @@
         return 'Livrés';
       }
 
-      return 'En cours';
+      return 'Livrés';
     }
 
     function arrimagePct(n,total){
@@ -1255,7 +1255,9 @@
         const raw = [
           a.statut,
           a.statutJira,
+          a.statutSource,
           a.status,
+          a.etat,
           a.resolution
         ].filter(Boolean).join(' ').toLowerCase();
 
@@ -1272,7 +1274,9 @@
         const raw = [
           a.statut,
           a.statutJira,
+          a.statutSource,
           a.status,
+          a.etat,
           a.resolution
         ].filter(Boolean).join(' ').toLowerCase();
 
