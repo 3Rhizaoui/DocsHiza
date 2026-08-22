@@ -1229,6 +1229,64 @@
       ).filter(x => x && typeof x === 'object');
     }
 
+    function arrimageOctaneStatusBucket(a){
+      const raw = [
+        a && a.statut,
+        a && a.statutJira,
+        a && a.statutSource,
+        a && a.status,
+        a && a.etat,
+        a && a.resolution
+      ].filter(Boolean).join(' ').toLowerCase();
+
+      /*
+       * Population Bugs Octane uniquement.
+       * Cette classification ne modifie jamais le statut des flux.
+       */
+
+      if(
+        raw.includes('annul') ||
+        raw.includes('cancel') ||
+        raw.includes('rejet') ||
+        raw.includes('refus')
+      ){
+        return 'Rejetés';
+      }
+
+      if(
+        raw.includes('bloqu') ||
+        raw.includes('blocked')
+      ){
+        return 'Bloqués';
+      }
+
+      if(
+        raw.includes('termin') ||
+        raw.includes('done') ||
+        raw.includes('closed') ||
+        raw.includes('résolu') ||
+        raw.includes('resolu')
+      ){
+        return 'Livrés';
+      }
+
+      if(
+        raw.includes('en cours') ||
+        raw.includes('progress') ||
+        raw.includes('traitement') ||
+        raw.includes('analyse') ||
+        raw.includes('investigation')
+      ){
+        return 'En cours';
+      }
+
+      /*
+       * Statut Octane non reconnu :
+       * on ne le considère jamais comme livré par défaut.
+       */
+      return 'En cours';
+    }
+
     function arrimagePieData(data){
       const rows = arrimageCurrentFluxRows(data);
       const anomalies = arrimageOctaneAnomalies(data);
@@ -1245,12 +1303,13 @@
 
       const segments = defs.map(def => {
         const items = rows.filter(x => arrimageStatusBucket(x) === def.label);
-        const pairs = new Set(items.map(x => arrimageClean(x.domaine) + '|||' + arrimageClean(x.sousDomaine)));
-
-        const bugs = anomalies.filter(a => {
-          const key = arrimageClean(a.domaine) + '|||' + arrimageClean(a.sousDomaine);
-          return pairs.size ? pairs.has(key) : false;
-        });
+        /*
+         * Ventilation simple des Bugs Octane selon leur propre statut.
+         * Elle est indépendante du classement des 19 flux.
+         */
+        const bugs = anomalies.filter(
+          a => arrimageOctaneStatusBucket(a) === def.label
+        );
 
         return {
           label:def.label,
