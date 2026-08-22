@@ -373,15 +373,6 @@ def extract_reference(
         "Référence"
     )
 
-    # Jira Group n'expose pas toujours le libellé du champ
-    # "Reference" dans expand=names ou /rest/api/2/field.
-    # Le champ utilisé par les anomalies Octane est
-    # customfield_23820.
-    if not text(value).strip():
-        value = fields.get(
-            "customfield_23820"
-        )
-
     return text(value).strip()
 
 
