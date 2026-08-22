@@ -1359,10 +1359,13 @@ def main():
             or {}
         )
 
-        # La JQL dédiée a déjà sélectionné uniquement les Bugs
-        # avec Reference non vide.
-        # Ne pas re-filtrer ici sur le libellé issuetype Jira,
-        # qui peut être localisé ou différent selon l'instance.
+        # On conserve le type Jira réel pour les données de sortie,
+        # sans re-filtrer la population déjà sélectionnée par la JQL.
+        issue_type = text(
+            fields.get(
+                "issuetype"
+            )
+        )
 
         key = (
             issue.get("key")
