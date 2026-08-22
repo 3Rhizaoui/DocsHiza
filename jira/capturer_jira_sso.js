@@ -405,6 +405,37 @@ async function executeJql(cdp, baseUrl, jql) {
       let issues = [];
       let names = {};
 
+      // Le endpoint search?expand=names ne retourne pas toujours
+      // tous les champs personnalisés visibles dans Jira.
+      // On complète donc le mapping avec /rest/api/2/field,
+      // notamment pour retrouver le champ "Reference".
+      try {
+        const fieldsResponse = await fetch(
+          ${JSON.stringify(baseUrl)} + '/rest/api/2/field',
+          {
+            credentials: 'include',
+            headers: {
+              'Accept': 'application/json'
+            }
+          }
+        );
+
+        if (fieldsResponse.ok) {
+          const jiraFields = await fieldsResponse.json();
+
+          for (const field of (jiraFields || [])) {
+            if (field && field.id && field.name) {
+              names[field.id] = field.name;
+            }
+          }
+        }
+      } catch (fieldError) {
+        console.warn(
+          '[JIRA_FIELDS] Impossible de charger /rest/api/2/field :',
+          String(fieldError && fieldError.message || fieldError)
+        );
+      }
+
       while (total === null || startAt < total) {
         const payload = {
           jql,
