@@ -332,6 +332,11 @@ def main():
 
     # 3) Isole les anomalies d'arrimage : Octane/référence non vide ET sprint courant seulement.
     old_anomalies = data.get("anomaliesArrimageDetail") or data.get("anomaliesDetail") or []
+
+    print(
+        "[TRACE][NORMALISER][INPUT]",
+        "old_anomalies=", len(old_anomalies)
+    )
     anomalies_arrimage = []
     for x in old_anomalies:
         if not isinstance(x, dict):
@@ -353,6 +358,11 @@ def main():
     data["anomaliesDetail"] = anomalies_sprint
     data["anomaliesSprintDetail"] = anomalies_sprint
     data["anomaliesArrimageDetail"] = anomalies_arrimage
+
+    print(
+        "[TRACE][NORMALISER][RESULT]",
+        "anomaliesArrimageDetail=", len(anomalies_arrimage)
+    )
 
     # 5) Réinjecte les anomalies d'arrimage dans la ventilation flux/anomalies.
     ventilation = data.get("ventilation") or []

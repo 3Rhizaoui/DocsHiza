@@ -315,6 +315,10 @@ def generate():
     print("Flux arrimage     :", len(data.get("fluxPretsArrimage") or []))
     print("Histo flux        :", len(data.get("histoFlux") or []))
     print("Anomalies détail  :", len(data.get("anomaliesDetail") or []))
+    print(
+        "[TRACE][INJECT_HTML]",
+        "anomaliesArrimageDetail=", len(data.get("anomaliesArrimageDetail") or [])
+    )
     print("Priorités hebdo   :", len(data.get("prioritesHebdo") or []))
 
 

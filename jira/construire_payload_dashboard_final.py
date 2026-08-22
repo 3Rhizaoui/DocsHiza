@@ -688,6 +688,12 @@ def main():
     shell = extract_template_shell(TEMPLATE_HTML)
 
     source = read_json(SOURCE_DASHBOARD, {})
+
+    print(
+        "[TRACE][BUILD_PAYLOAD][SOURCE]",
+        "anomalies=", len(source.get("anomalies") or []),
+        "records=", len(source.get("records") or [])
+    )
     comparison = read_json(COMPARAISON, [])
 
     courant = pick_sprint(SPRINT_COURANT, "Scrum Sprint 23")
@@ -732,6 +738,11 @@ def main():
     )
 
     payload["anomaliesArrimageDetail"] = anomalies_arrimage
+
+    print(
+        "[TRACE][BUILD_PAYLOAD][RESULT]",
+        "anomaliesArrimageDetail=", len(payload.get("anomaliesArrimageDetail") or [])
+    )
 
     print(
         "[JIRA][ARRIMAGE] anomalies injectées dans payload =",

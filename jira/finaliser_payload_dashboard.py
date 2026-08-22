@@ -312,6 +312,11 @@ def patch_comparison(data: dict) -> None:
 
 
 def build_sprint_anomalies(data: dict) -> None:
+    print(
+        "[TRACE][FINALISER][INPUT]",
+        "anomaliesArrimageDetail=", len(data.get("anomaliesArrimageDetail") or []),
+        "anomaliesDetail=", len(data.get("anomaliesDetail") or [])
+    )
     sprint_current = clean(data.get("sprintCourant"))
     rows = data.get("comparaisonSprints")
     if not isinstance(rows, list):

@@ -1223,6 +1223,12 @@ def main():
         len(anomaly_issues)
     )
 
+    print(
+        "[TRACE][PREPARER][BEFORE_LOOP]",
+        "anomaly_issues=", len(anomaly_issues),
+        "names=", len(names or {})
+    )
+
     #
     # Jira n'expose pas toujours le libellé exact du champ
     # "Reference" dans expand=names ou /rest/api/2/field.
@@ -1343,6 +1349,10 @@ def main():
         # Sécurité supplémentaire ici.
         #
         if not reference:
+            print(
+                "[TRACE][PREPARER][DROP_NO_REFERENCE]",
+                key
+            )
             continue
 
         parent = parent_key(
