@@ -435,8 +435,8 @@ def build_payload(rows: list[dict]) -> dict:
         "prioritesHebdo": [],
         "anomalies": [row_to_flux(r) for r in anomaly_rows],
         "anomaliesArrimageDetail": [
-            row_to_arrimage_anomaly(r)
-            for r in anomaly_rows
+            row_to_arrimage_anomaly(row)
+            for row in anomaly_rows
         ],
         "records": rows,
     }
@@ -1509,6 +1509,7 @@ def remove_auto_reload_after_actions(html: str) -> str:
         flags=re.S,
     )
     return html
+
 
 
 def main() -> None:
