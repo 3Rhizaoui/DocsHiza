@@ -1359,17 +1359,10 @@ def main():
             or {}
         )
 
-        issue_type = text(
-            fields.get(
-                "issuetype"
-            )
-        )
-
-        if (
-            folded(issue_type)
-            not in bug_types
-        ):
-            continue
+        # La JQL dédiée a déjà sélectionné uniquement les Bugs
+        # avec Reference non vide.
+        # Ne pas re-filtrer ici sur le libellé issuetype Jira,
+        # qui peut être localisé ou différent selon l'instance.
 
         key = (
             issue.get("key")
