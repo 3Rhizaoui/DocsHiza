@@ -1288,6 +1288,20 @@ console.log('Connectez-vous avec le SSO, puis attendez que la page JIRA soit com
     }
   }
 
+  const mergedNames = {};
+
+  for (const search of searches) {
+    Object.assign(
+      mergedNames,
+      search.names || {}
+    );
+  }
+
+  Object.assign(
+    mergedNames,
+    childNames || {}
+  );
+
   const uniqueKeys = new Set();
 
   for (const search of searches) {
@@ -1329,7 +1343,7 @@ console.log('Connectez-vous avec le SSO, puis attendez que la page JIRA soit com
       epicDetails,
 
     names:
-      childNames,
+      mergedNames,
 
     erreurs_source: [
       ...errors,
