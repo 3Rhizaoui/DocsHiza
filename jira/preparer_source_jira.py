@@ -606,11 +606,81 @@ def main():
         (
             search
             for search in searches
-            if "anomal" in folded(
+            if folded(
                 search.get("name")
-            )
+            ) == "anomalies_resolues"
         ),
         None
+    )
+
+    if anomaly_search is None:
+        anomaly_search = next(
+            (
+                search
+                for search in searches
+                if "anomal" in folded(
+                    search.get("name")
+                )
+                or "bug" in folded(
+                    search.get("name")
+                )
+                or "octane" in folded(
+                    search.get("name")
+                )
+            ),
+            None
+        )
+
+    if anomaly_search is None:
+        #
+        # Fallback robuste :
+        # chercher directement une requête contenant des Bugs/Bogues.
+        #
+        anomaly_search = next(
+            (
+                search
+                for search in searches
+                if any(
+                    folded(
+                        text(
+                            (
+                                issue.get("fields")
+                                or {}
+                            ).get("issuetype")
+                        )
+                    )
+                    in bug_types
+                    for issue
+                    in search.get(
+                        "issues",
+                        []
+                    )
+                )
+            ),
+            None
+        )
+
+    print(
+        "[JIRA][ANOMALIES] searches=",
+        [
+            (
+                search.get("name"),
+                len(search.get("issues", []))
+            )
+            for search in searches
+        ]
+    )
+
+    print(
+        "[JIRA][ANOMALIES] selection=",
+        (anomaly_search or {}).get("name"),
+        " issues=",
+        len(
+            (anomaly_search or {}).get(
+                "issues",
+                []
+            )
+        )
     )
 
     if epic_search is None:
@@ -1137,6 +1207,11 @@ def main():
             "issues",
             []
         )
+    )
+
+    print(
+        "[JIRA][ANOMALIES] anomaly_issues=",
+        len(anomaly_issues)
     )
 
     for issue in sorted(
