@@ -1156,6 +1156,8 @@
       ].filter(Boolean).join(' ').toLowerCase();
 
       if(
+        raw.includes('annul') ||
+        raw.includes('cancel') ||
         raw.includes('rejet')
       ){
         return 'Rejetés';
@@ -1163,21 +1165,34 @@
 
       if(
         raw.includes('bloqu') ||
-        raw.includes('ko') ||
-        raw.includes('à traiter') ||
-        raw.includes('a traiter')
+        raw.includes('blocked') ||
+        raw.includes('ko')
       ){
         return 'Bloqués';
       }
 
       if(
+        raw.includes('backlog') ||
+        raw.includes('affinage') ||
         raw.includes('en cours') ||
-        raw.includes('progress')
+        raw.includes('progress') ||
+        raw.includes('in progress')
       ){
         return 'En cours';
       }
 
-      return 'Livrés';
+      if(
+        raw.includes('termin') ||
+        raw.includes('done') ||
+        raw.includes('closed') ||
+        raw.includes('livr') ||
+        raw.includes('résolu') ||
+        raw.includes('resolu')
+      ){
+        return 'Livrés';
+      }
+
+      return 'En cours';
     }
 
     function arrimagePct(n,total){
@@ -1236,7 +1251,45 @@
         };
       });
 
-      return {total:total, bugsOctane:anomalies.length, segments:segments, globalPairs:globalPairs};
+      const bugsOctaneTermines = anomalies.filter(a => {
+        const raw = [
+          a.statut,
+          a.statutJira,
+          a.status,
+          a.resolution
+        ].filter(Boolean).join(' ').toLowerCase();
+
+        return (
+          raw.includes('termin') ||
+          raw.includes('done') ||
+          raw.includes('closed') ||
+          raw.includes('résolu') ||
+          raw.includes('resolu')
+        );
+      }).length;
+
+      const bugsOctaneAnnules = anomalies.filter(a => {
+        const raw = [
+          a.statut,
+          a.statutJira,
+          a.status,
+          a.resolution
+        ].filter(Boolean).join(' ').toLowerCase();
+
+        return (
+          raw.includes('annul') ||
+          raw.includes('cancel')
+        );
+      }).length;
+
+      return {
+        total: total,
+        bugsOctane: anomalies.length,
+        bugsOctaneTermines: bugsOctaneTermines,
+        bugsOctaneAnnules: bugsOctaneAnnules,
+        segments: segments,
+        globalPairs: globalPairs
+      };
     }
 
     function piePoint(cx,cy,r,angle){
@@ -1308,7 +1361,8 @@
           '<li class="arrProgress"><b>'+encours.count+' flux sont en cours de traitement.</b></li>'+
           '<li class="arrBlocked"><b>'+bloques.count+' flux sont bloqués.</b></li>'+
           '<li class="arrRejected"><b>'+rejetes.count+' flux sont rejetés.</b></li>'+
-          '<li>Total : <b>'+pie.total+'</b> flux (bugs Octane liés).</li>'+
+          '<li>Total : <b>'+pie.total+'</b> flux.</li>'+
+          '<li>Bugs Octane liés : <b>'+pie.bugsOctane+'</b> — terminés : <b>'+pie.bugsOctaneTermines+'</b> — annulés : <b>'+pie.bugsOctaneAnnules+'</b>.</li>'+
         '</ul>';
     }
 
