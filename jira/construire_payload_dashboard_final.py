@@ -150,6 +150,292 @@ def is_blocked(row):
     return any(token in text for token in ["bloqué", "bloque", "blocked", "ko"])
 
 
+def is_generic_arrimage_value(value):
+    raw = clean_label(value, "").strip().lower()
+    return (
+        not raw
+        or raw in {
+            "à qualifier",
+            "a qualifier",
+            "non renseigné",
+            "non renseigne",
+            "non ventilé",
+            "non ventile",
+            "réel",
+            "reel",
+        }
+    )
+
+
+def extract_arrimage_flux_metadata(row):
+    """
+    Enrichissement dynamique d'un Epic d'arrimage à partir des données
+    Jira déjà présentes : summary/resume, description et champs normalisés.
+    Aucun ticket, sprint ou customfield n'est codé en dur.
+    """
+    summary = clean_label(
+        row_value(row, "resume", "summary", "commentaire"),
+        ""
+    )
+    description = clean_label(
+        row_value(row, "description"),
+        ""
+    )
+
+    corpus = " ".join([summary, description])
+    upper = corpus.upper()
+
+    domaine = clean_label(
+        row_value(row, "domaine", "domain"),
+        ""
+    )
+
+    sous = clean_label(
+        row_value(row, "sousDomaine", "sous_domaine", "subdomain"),
+        ""
+    )
+
+    # Nomenclature fonctionnelle convenue.
+    if is_generic_arrimage_value(domaine):
+        if re.search(r"(^|[^A-Z])ACQ([^A-Z]|$)", upper) or "ACQUISITION" in upper:
+            domaine = "Acquisition"
+        elif (
+            re.search(r"(^|[^A-Z])ISS([^A-Z]|$)", upper)
+            or "ISSUING" in upper
+            or "ÉMISSION" in upper
+            or "EMISSION" in upper
+        ):
+            domaine = "Issuing"
+        elif (
+            re.search(r"(^|[^A-Z])DISP([^A-Z]|$)", upper)
+            or "CONTESTATION" in upper
+            or "LITIGATION" in upper
+        ):
+            domaine = "Contestation"
+
+    # Sous-domaine : priorité au titre quand il suit ACQ/ISS/DISP.
+    if is_generic_arrimage_value(sous):
+        m = re.search(
+            r"\b(?:ACQ|ISS|DISP)\b\s*[-_/]\s*"
+            r"([A-ZÀ-Ü][A-ZÀ-Ü0-9 &'’-]{2,}?)"
+            r"(?=\s*[_/-]\s*[A-Z]{2,}\d|\s+MM\d|\s+CMS\d|\s+OA\d|\s+VERSION|\s+V\d|$)",
+            summary.upper()
+        )
+        if m:
+            sous = re.sub(r"\s+", " ", m.group(1)).strip().title()
+
+    current_flux = clean_label(
+        row_value(row, "flux", "nomFlux", "nom", "name"),
+        ""
+    )
+
+    jira_key = clean_label(
+        row_value(row, "jiraKey", "jira_key", "key", "cle"),
+        ""
+    )
+
+    flux = current_flux
+
+    # Si le flux courant est vide ou correspond seulement à la clé Jira,
+    # on tente d'extraire le vrai nom fonctionnel.
+    if (
+        is_generic_arrimage_value(flux)
+        or not flux
+        or flux == jira_key
+        or re.fullmatch(r"[A-Z_]+-\d+", flux or "", re.I)
+    ):
+        candidates = []
+
+        # CMS14_003, OA5_001, MM7, MM4-1, etc.
+        token_pattern = (
+            r"\b(?:CMS\d+[_-]\d+|OA\d+[_-]\d+|MM\d+(?:-\d+)?|"
+            r"ACQ-[A-Z0-9_-]+|PC\d+[_-]\d+|TC\d+[_-]\d+)\b"
+        )
+
+        candidates.extend(
+            re.findall(token_pattern, summary, flags=re.I)
+        )
+
+        if not candidates:
+            candidates.extend(
+                re.findall(token_pattern, description, flags=re.I)
+            )
+
+        if candidates:
+            # Préserve plusieurs flux cités dans le même Epic,
+            # sans transformer l'Epic en plusieurs lignes.
+            seen = []
+            for value in candidates:
+                value = value.strip()
+                if value.lower() not in [x.lower() for x in seen]:
+                    seen.append(value)
+
+            flux = " / ".join(seen)
+
+    pattern = clean_label(
+        row_value(row, "pattern", "typeFlux", "type"),
+        ""
+    )
+
+    # Ne pas conserver le AVRO historique forcé si le texte Jira
+    # contient une information technique plus précise.
+    detected_pattern = ""
+
+    if "EVENT KAFKA" in upper or "KAFKA" in upper:
+        detected_pattern = "Event Kafka"
+    elif "API CALL" in upper:
+        detected_pattern = "API"
+    elif "PATTERN" in upper and "API" in upper:
+        detected_pattern = "API"
+    elif "AVRO" in upper:
+        detected_pattern = "AVRO"
+    elif "FICHIER" in upper or " FILE " in (" " + upper + " "):
+        detected_pattern = "FILE"
+    elif "EVENT" in upper:
+        detected_pattern = "EVENT"
+
+    if detected_pattern:
+        pattern = detected_pattern
+
+    version = clean_label(
+        row_value(row, "version", "versionLivree", "versions"),
+        ""
+    )
+
+    if not version:
+        m = re.search(
+            r"\b(?:VERSION\s*|V)(\d+(?:\.\d+){0,3})\b",
+            corpus,
+            flags=re.I
+        )
+        if m:
+            version = m.group(1)
+
+    date_maj = clean_label(
+        row_value(row, "date", "updated", "dateMaj"),
+        ""
+    )
+
+    date_cible = ""
+
+    # Exemples couverts :
+    # Date souhaitée de livraison : OCTOBRE 2026
+    # Date souhaitée de livraison des schémas : 19/06/2026
+    target_match = re.search(
+        r"date\s+souhait[ée]e(?:\s+de\s+livraison(?:\s+des\s+\w+)?)?"
+        r"\s*[:\-]\s*([^\n\r|]{4,40})",
+        description,
+        flags=re.I
+    )
+
+    if target_match:
+        date_cible = target_match.group(1).strip()
+
+    # Dates explicitement associées aux environnements dans
+    # le titre / la description Jira.
+    #
+    # Exemples reconnus :
+    #   SIT : 18/06/2026
+    #   UAT - OCTOBRE 2026
+    #   PROD prévue le 2026-11-15
+    #
+    # Si aucune date propre à l'environnement n'est trouvée,
+    # la valeur reste vide. Le HTML affichera "À définir".
+    env_dates = {
+        "SIT": "",
+        "UAT": "",
+        "PROD": "",
+    }
+
+    date_expr = (
+        r"(?:"
+        r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}"
+        r"|\d{4}-\d{2}-\d{2}"
+        r"|(?:JANVIER|FÉVRIER|FEVRIER|MARS|AVRIL|MAI|JUIN|"
+        r"JUILLET|AOÛT|AOUT|SEPTEMBRE|OCTOBRE|NOVEMBRE|DÉCEMBRE|DECEMBRE)"
+        r"\s+\d{4}"
+        r")"
+    )
+
+    for env_name in ("SIT", "UAT", "PROD"):
+        match = re.search(
+            rf"\b{env_name}\b[^\n\r]{{0,100}}?({date_expr})",
+            corpus,
+            flags=re.I
+        )
+
+        if not match:
+            match = re.search(
+                rf"({date_expr})[^\n\r]{{0,100}}?\b{env_name}\b",
+                corpus,
+                flags=re.I
+            )
+
+        if match:
+            env_dates[env_name] = match.group(1).strip()
+
+    # Si Jira a déjà identifié l'environnement de la ligne
+    # et qu'une date cible a été trouvée sans qualification plus fine,
+    # elle complète uniquement cet environnement.
+    current_env = clean_label(
+        row_value(row, "environnement", "env", "environment"),
+        ""
+    ).upper()
+
+    if (
+        current_env in env_dates
+        and not env_dates[current_env]
+        and date_cible
+    ):
+        env_dates[current_env] = date_cible
+
+    return {
+        "domaine": domaine or "Non renseigné",
+        "sousDomaine": sous or "Non renseigné",
+        "flux": flux or jira_key or "À qualifier",
+        "pattern": pattern or "À qualifier",
+        "version": version,
+        "dateMaj": date_maj,
+        "dateCible": date_cible,
+        "datesEnvironnements": env_dates,
+    }
+
+
+def source_flux_rows(source):
+    """
+    Population du bloc 1 : uniquement les demandes / flux d'arrimage.
+    Les anomalies Octane restent dans anomaliesArrimageDetail.
+    """
+    records = source.get("records")
+
+    if isinstance(records, list) and records:
+        result = []
+
+        for row in records:
+            if not isinstance(row, dict):
+                continue
+
+            kind = clean_label(
+                row_value(row, "type", "nature"),
+                ""
+            ).lower()
+
+            if "anomal" in kind:
+                continue
+
+            result.append(row)
+
+        if result:
+            return result
+
+    epics = source.get("epics")
+
+    if isinstance(epics, list) and epics:
+        return epics
+
+    return source_rows(source)
+
+
 def source_rows(source):
     for key in ["records", "epics", "flux", "lignesDashboard", "lignes"]:
         rows = source.get(key)
@@ -185,10 +471,13 @@ def score_sante(total, prets, bugs):
 
 def normalize_flux_row(row, sprint, semaine):
     env = clean_label(row_value(row, "environnement", "env", "environment"), "Non renseigné")
-    domaine = clean_label(row_value(row, "domaine", "domain"), "Non renseigné")
-    sous = clean_label(row_value(row, "sousDomaine", "sous_domaine", "subdomain"), "Non renseigné")
-    flux = clean_label(row_value(row, "flux", "reference", "key", "jiraKey", "nom", "name"), "À qualifier")
     statut = clean_label(row_value(row, "statut", "statutJira", "status", "etat"), "À qualifier")
+
+    enriched = extract_arrimage_flux_metadata(row)
+
+    domaine = enriched["domaine"]
+    sous = enriched["sousDomaine"]
+    flux = enriched["flux"]
 
     return {
         "sprint": sprint,
@@ -198,8 +487,11 @@ def normalize_flux_row(row, sprint, semaine):
         "sousDomaine": sous,
         "flux": flux,
         "jiraKey": clean_label(row_value(row, "jiraKey", "key"), ""),
-        "pattern": clean_label(row_value(row, "pattern", "type"), "Réel"),
-        "version": clean_label(row_value(row, "version", "versionLivree"), ""),
+        "pattern": enriched["pattern"],
+        "version": enriched["version"],
+        "dateMaj": enriched["dateMaj"],
+        "dateCible": enriched["dateCible"],
+        "datesEnvironnements": enriched["datesEnvironnements"],
         "statut": statut,
         "statutJira": statut,
         "resume": clean_label(row_value(row, "resume", "summary"), ""),
@@ -314,7 +606,10 @@ def build_arrimage_anomalies(source, sprint, semaine):
 
 
 def build_flux_blocks(source, sprint, semaine):
-    rows = [normalize_flux_row(row, sprint, semaine) for row in source_rows(source)]
+    rows = [
+        normalize_flux_row(row, sprint, semaine)
+        for row in source_flux_rows(source)
+    ]
 
     histo = []
     for row in rows:

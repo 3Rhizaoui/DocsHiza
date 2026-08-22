@@ -511,6 +511,27 @@
       background:#fff;
     }
 
+
+    /* ARRIMAGE_ENV_DATES */
+    .arrEnvDateRow{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin:3px 0;
+      white-space:nowrap;
+    }
+
+    .arrEnvDate{
+      font-size:12px;
+      color:#475569;
+    }
+
+    .envBadge.prod{
+      background:#7c3aed;
+      color:#fff;
+      border-color:#6d28d9;
+    }
+
 </style>
 
 </head>
@@ -830,7 +851,7 @@
 
       document.getElementById('arrimageReady').innerHTML=
         '<caption class="arrimageTableCaption">'+
-          '<div class="arrimageTableCaptionTitle">Détail de tous les flux (Bugs Octane liés)</div>'+
+          '<div class="arrimageTableCaptionTitle">Détail de tous les flux</div>'+
           '<div class="arrimageTableCaptionSub">'+
             '<span>Répartition par statut : Livrés / En cours / Bloqués / Rejetés</span>'+
             '<span class="arrimageTableMetric"><i style="background:#15803d"></i>Livrés <b>'+arrSegCount('Livrés')+'</b></span>'+
@@ -841,14 +862,13 @@
           '</div>'+
         '</caption>'+
         '<thead><tr>'+
-          '<th>Domaine</th>'+
-          '<th>Sous-domaine</th>'+
-          '<th>Flux (Nom)</th>'+
+          '<th>Domaine / Sous-domaine</th>'+
+          '<th>Flux</th>'+
           '<th>Référence flux</th>'+
           '<th>Pattern</th>'+
-          '<th>Environnement</th>'+
+          '<th>Version</th>'+
+          '<th>Environnement / Date</th>'+
           '<th>Statut</th>'+
-          '<th>Bugs Octane liés</th>'+
         '</tr></thead>'+
         '<tbody>'+arrimageGroupedRows(arr)+'</tbody>';
 
@@ -913,7 +933,7 @@
     function arrimageGroupedRows(rows){
 
       if(!rows.length){
-        return '<tr><td colspan="8">Aucun flux déclaré pour l’arrimage.</td></tr>';
+        return '<tr><td colspan="7">Aucun flux déclaré pour l’arrimage.</td></tr>';
       }
 
       const anomalies=arrimageOctaneAnomalies(currentData);
@@ -1005,9 +1025,13 @@
       const grouped=new Map();
 
       rows.forEach(r=>{
+        /*
+         * Une seule ligne fonctionnelle par demande / flux.
+         * SIT, UAT et PROD sont regroupés verticalement dans
+         * la même cellule "Environnement / Date".
+         */
         const key=[
           r.sprint,
-          r.environnement,
           r.domaine,
           r.sousDomaine,
           r.flux,
@@ -1018,15 +1042,46 @@
         ].join('|||');
 
         if(!grouped.has(key)){
-          grouped.set(key,{...r});
+          grouped.set(key,{
+            ...r,
+            envDates:{
+              SIT:'',
+              UAT:'',
+              PROD:''
+            }
+          });
+        }
+
+        const groupedRow=grouped.get(key);
+
+        const suppliedDates=
+          r.datesEnvironnements &&
+          typeof r.datesEnvironnements === 'object'
+            ? r.datesEnvironnements
+            : {};
+
+        ['SIT','UAT','PROD'].forEach(envName=>{
+          if(suppliedDates[envName]){
+            groupedRow.envDates[envName]=suppliedDates[envName];
+          }
+        });
+
+        const rowEnv=String(r.environnement||'').toUpperCase();
+
+        if(
+          ['SIT','UAT','PROD'].includes(rowEnv) &&
+          !groupedRow.envDates[rowEnv]
+        ){
+          groupedRow.envDates[rowEnv]=
+            r.dateCible ||
+            '';
         }
       });
 
       const sorted=[...grouped.values()].sort((a,b)=>
         String(a.domaine||'').localeCompare(String(b.domaine||''),'fr') ||
         String(a.sousDomaine||'').localeCompare(String(b.sousDomaine||''),'fr') ||
-        String(a.flux||'').localeCompare(String(b.flux||''),'fr') ||
-        String(a.environnement||'').localeCompare(String(b.environnement||''),'fr')
+        String(a.flux||'').localeCompare(String(b.flux||''),'fr')
       );
 
       let html='';
@@ -1037,8 +1092,12 @@
 
         const domain=String(r.domaine||'Non renseigné');
         const sub=String(r.sousDomaine||'Non renseigné');
-        const env=String(r.environnement||'').toUpperCase();
         const flux=String(r.flux||r.nomFlux||r.reference||'Non renseigné');
+
+        const envDates=
+          r.envDates && typeof r.envDates === 'object'
+            ? r.envDates
+            : {SIT:'',UAT:'',PROD:''};
 
         /*
          * Identifiants dynamiques utilisés uniquement pour
@@ -1064,14 +1123,14 @@
           '';
 
         const status=statusBucket(r);
-        const bugs=bugsForRow(r);
+
 
         if(domain!==lastDomain){
           html+=
             '<tr class="arrDomainRow" '+
               'onclick="toggleArrimageDomain(\''+domainId+'\')" '+
               'style="cursor:pointer">'+
-              '<td colspan="8">'+
+              '<td colspan="7">'+
                 '<span class="arrDomainCaret" id="caret-arr-domain-'+domainId+'">▼</span> '+
                 '<b>'+esc(domain)+'</b>'+
               '</td>'+
@@ -1087,7 +1146,7 @@
               'data-arr-domain="'+domainId+'" '+
               'onclick="event.stopPropagation();toggleArrimageSubdomain(\''+subId+'\')" '+
               'style="cursor:pointer">'+
-              '<td colspan="8">'+
+              '<td colspan="7">'+
                 '<span id="caret-arr-sub-'+subId+'">▼</span> '+
                 '<b>Sous-domaine : '+esc(sub)+'</b>'+
               '</td>'+
@@ -1096,31 +1155,30 @@
           lastSub=sub;
         }
 
-        const envBadge=env
-          ? '<span class="envBadge '+env.toLowerCase()+'">'+esc(env)+'</span>'
-          : '';
+        const envDateHtml=['SIT','UAT','PROD'].map(envName=>{
+          const date=envDates[envName] || 'À définir';
 
-        const bugHtml=bugs.count
-          ? '<details class="bugMiniDetail" onclick="event.stopPropagation()">'+
-              '<summary><b>'+bugs.count+'</b></summary>'+
-              '<div>'+bugs.refs.map(x=>esc(x)).join('<br>')+'</div>'+
-            '</details>'
-          : '0';
+          return '<div class="arrEnvDateRow">'+
+            '<span class="envBadge '+envName.toLowerCase()+'">'+
+              envName+
+            '</span>'+
+            '<span class="arrEnvDate">'+esc(date)+'</span>'+
+          '</div>';
+        }).join('');
 
         html+=
           '<tr class="detailRow" '+
             'data-arr-domain="'+domainId+'" '+
             'data-arr-subdomain="'+subId+'">'+
-            '<td>'+esc(domain)+'</td>'+
-            '<td>'+esc(sub)+'</td>'+
+            '<td>'+esc(domain)+' / '+esc(sub)+'</td>'+
             '<td><b>'+link(flux,'flux',flux)+'</b></td>'+
             '<td>'+esc(refFlux||'—')+'</td>'+
             '<td>'+esc(pattern||'—')+'</td>'+
-            '<td>'+envBadge+'</td>'+
+            '<td>'+esc(r.version||'—')+'</td>'+
+            '<td>'+envDateHtml+'</td>'+
             '<td><span class="'+statusClass(status)+'">'+
               statusDot(status)+'&nbsp; '+esc(status)+
             '</span></td>'+
-            '<td>'+bugHtml+'</td>'+
           '</tr>';
       });
 
