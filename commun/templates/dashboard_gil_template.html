@@ -516,9 +516,10 @@
     .arrEnvDateRow{
       display:flex;
       align-items:center;
-      gap:8px;
+      gap:6px;
       margin:3px 0;
-      white-space:nowrap;
+      white-space:normal;
+      min-width:0;
     }
 
     .arrEnvDate{
@@ -532,13 +533,63 @@
       border-color:#6d28d9;
     }
 
+
+    /* ARRIMAGE_TABLE_FIXED_WIDTH */
+    #arrimageReady{
+      width:100%;
+      max-width:100%;
+      table-layout:fixed;
+    }
+
+    #arrimageReady th,
+    #arrimageReady td{
+      min-width:0;
+      overflow-wrap:anywhere;
+      word-break:normal;
+    }
+
+    #arrimageReady th:nth-child(1),
+    #arrimageReady td:nth-child(1){
+      width:18%;
+    }
+
+    #arrimageReady th:nth-child(2),
+    #arrimageReady td:nth-child(2){
+      width:16%;
+    }
+
+    #arrimageReady th:nth-child(3),
+    #arrimageReady td:nth-child(3){
+      width:14%;
+    }
+
+    #arrimageReady th:nth-child(4),
+    #arrimageReady td:nth-child(4){
+      width:10%;
+    }
+
+    #arrimageReady th:nth-child(5),
+    #arrimageReady td:nth-child(5){
+      width:8%;
+    }
+
+    #arrimageReady th:nth-child(6),
+    #arrimageReady td:nth-child(6){
+      width:22%;
+    }
+
+    #arrimageReady th:nth-child(7),
+    #arrimageReady td:nth-child(7){
+      width:12%;
+    }
+
 </style>
 
 </head>
 
 <body>
 
-  <header class="top"><div><h1 id="reportTitle">Weekly GIL – Reporting Sprint</h1><p>Statut général d’arrimage BCEF / GIL / ESTREEM : avancement par sprint et suivi des sujets prioritaires.</p><p class="arrimageHeaderNote">Indicateur centré sur les bugs Octane liés pour chaque information du domaine et sous-domaine.</p></div><div class="actions">
+  <header class="top"><div><h1 id="reportTitle">Weekly GIL – Reporting Sprint</h1><p>Statut général d’arrimage BCEF / GIL / ESTREEM : avancement par sprint et suivi des sujets prioritaires.</p><p class="arrimageHeaderNote">Suivi dynamique des demandes d’arrimage par domaine, sous-domaine, flux et environnement.</p></div><div class="actions">
 
 <button onclick="runLocalAction('excel')">Importer Excel</button>
 
@@ -864,7 +915,7 @@
         '<thead><tr>'+
           '<th>Domaine / Sous-domaine</th>'+
           '<th>Flux</th>'+
-          '<th>Référence flux</th>'+
+          '<th>Référence Jira</th>'+
           '<th>Pattern</th>'+
           '<th>Version</th>'+
           '<th>Environnement / Date</th>'+
@@ -938,33 +989,7 @@
 
       const anomalies=arrimageOctaneAnomalies(currentData);
 
-      const statusBucket=r=>{
-        const s=String(
-          r.statutJira ||
-          r.statutSource ||
-          r.statut ||
-          ''
-        ).toLowerCase();
-
-        if(
-          s.includes('rejet') ||
-          s.includes('refus')
-        ) return 'Rejetés';
-
-        if(
-          s.includes('bloqu') ||
-          s==='ko' ||
-          s.includes('à traiter') ||
-          s.includes('a traiter')
-        ) return 'Bloqués';
-
-        if(
-          s.includes('en cours') ||
-          s.includes('progress')
-        ) return 'En cours';
-
-        return 'Livrés';
-      };
+      const statusBucket=r=>arrimageStatusBucket(r);
 
       const statusClass=status=>{
         if(status==='Livrés') return 'arrStatus delivered';
@@ -1112,6 +1137,8 @@
          */
         const refFlux=
           r.jiraKey ||
+          r.epicKey ||
+          r.cle ||
           r.referenceFlux ||
           r.reference ||
           '';

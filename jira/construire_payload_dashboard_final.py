@@ -357,22 +357,43 @@ def extract_arrimage_flux_metadata(row):
         r")"
     )
 
-    for env_name in ("SIT", "UAT", "PROD"):
-        match = re.search(
-            rf"\b{env_name}\b[^\n\r]{{0,100}}?({date_expr})",
-            corpus,
-            flags=re.I
-        )
+    env_aliases = {
+        "SIT": ("SIT",),
+        "UAT": ("UAT", "QUA"),
+        "PROD": ("PROD", "PRODUCTION"),
+    }
 
-        if not match:
+    for env_name, aliases in env_aliases.items():
+        found_date = ""
+
+        for alias in aliases:
+            # Cas principal :
+            # SIT : 22/06/26
+            # QUA : 15/07/26
+            # PROD - 2026-10-01
             match = re.search(
-                rf"({date_expr})[^\n\r]{{0,100}}?\b{env_name}\b",
+                rf"\b{alias}\b"
+                rf"\s*(?:[:=\-]|prévu(?:e)?\s*(?:le)?|disponible\s*(?:le)?)?"
+                rf"\s*({date_expr})",
                 corpus,
                 flags=re.I
             )
 
-        if match:
-            env_dates[env_name] = match.group(1).strip()
+            # Tolérance lorsque du texte se trouve entre
+            # l'environnement et la date.
+            if not match:
+                match = re.search(
+                    rf"\b{alias}\b[^\n\r]{{0,80}}?({date_expr})",
+                    corpus,
+                    flags=re.I
+                )
+
+            if match:
+                found_date = match.group(1).strip()
+                break
+
+        if found_date:
+            env_dates[env_name] = found_date
 
     # Si Jira a déjà identifié l'environnement de la ligne
     # et qu'une date cible a été trouvée sans qualification plus fine,
@@ -381,6 +402,9 @@ def extract_arrimage_flux_metadata(row):
         row_value(row, "environnement", "env", "environment"),
         ""
     ).upper()
+
+    if current_env == "QUA":
+        current_env = "UAT"
 
     if (
         current_env in env_dates
@@ -486,7 +510,18 @@ def normalize_flux_row(row, sprint, semaine):
         "domaine": domaine,
         "sousDomaine": sous,
         "flux": flux,
-        "jiraKey": clean_label(row_value(row, "jiraKey", "key"), ""),
+        "jiraKey": clean_label(
+            row_value(
+                row,
+                "jiraKey",
+                "jira_key",
+                "epicKey",
+                "epic_key",
+                "key",
+                "cle"
+            ),
+            ""
+        ),
         "pattern": enriched["pattern"],
         "version": enriched["version"],
         "dateMaj": enriched["dateMaj"],
