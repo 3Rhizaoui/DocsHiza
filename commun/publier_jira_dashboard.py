@@ -111,8 +111,40 @@ def is_ready(row: dict) -> bool:
 
 
 def is_anomaly(row: dict) -> bool:
-    typ = first(row, "type", "issuetype", "issueType").lower()
-    return "anomal" in typ or typ == "bug"
+    raw_type = str(
+        first(
+            row,
+            "type",
+            "issuetype",
+            "issueType",
+            "typeTicket",
+        ) or ""
+    ).strip().lower()
+
+    # Les anomalies venant de preparer_source_jira.py
+    # sont explicitement publiées avec type = "Anomalie".
+    if any(token in raw_type for token in (
+        "anomalie",
+        "anomaly",
+        "bug",
+        "bogue",
+        "defect",
+        "défaut",
+        "defaut",
+    )):
+        return True
+
+    # Sécurité supplémentaire : certains flux Jira peuvent perdre
+    # le libellé de type mais conserver un état d'anomalie.
+    raw_state = str(
+        first(
+            row,
+            "etatAnomalie",
+            "etat_anomalie",
+        ) or ""
+    ).strip().lower()
+
+    return bool(raw_state)
 
 
 def arrimage_business_status(row: dict) -> tuple[str, str]:
