@@ -330,27 +330,33 @@ def main():
             y["severite"] = "Mineure"
         anomalies_sprint.append(y)
 
-    # 3) Isole les anomalies d'arrimage : Octane/référence non vide ET sprint courant seulement.
-    old_anomalies = data.get("anomaliesArrimageDetail") or data.get("anomaliesDetail") or []
+    # 3) Anomalies d'arrimage / Octane.
+    #
+    # Population indépendante du sprint :
+    # - issue de la JQL Bugs avec Reference non vide ;
+    # - pas de filtre sur le sprint courant ;
+    # - une anomalie Octane peut également appartenir à un sprint.
+    #
+    # La clé dédiée anomaliesArrimageDetail reste la source de vérité.
+    old_anomalies = data.get("anomaliesArrimageDetail") or []
 
     print(
         "[TRACE][NORMALISER][INPUT]",
         "old_anomalies=", len(old_anomalies)
     )
+
     anomalies_arrimage = []
+
     for x in old_anomalies:
         if not isinstance(x, dict):
             continue
-        if not same_current_sprint(x, sprint_current):
-            continue
-        if not has_octane_or_external_reference(x):
-            continue
+
         y = normalize_item(
             x,
-            sprint=sprint_current,
             forced_type="Anomalie arrimage",
         )
-        y["source"] = "Arrimage - Octane/référence renseignée"
+
+        y["source"] = "Arrimage - Bug Octane / référence renseignée"
         anomalies_arrimage.append(y)
 
     # 4) Remplace anomaliesDetail par les anomalies du sprint courant.
@@ -428,7 +434,7 @@ def main():
         "sprintCourant": sprint_current,
         "anomaliesSprint": len(anomalies_sprint),
         "anomaliesArrimage": len(anomalies_arrimage),
-        "regleAnomaliesArrimage": "Octane/référence non vide et sprint courant",
+        "regleAnomaliesArrimage": "Bug Octane / Reference non vide, indépendant du sprint",
         "regleAnomaliesSprint": "fluxBloquesDetail + fluxEnCoursDetail du sprint courant, hors legacy Sprint 20/21",
     }
 

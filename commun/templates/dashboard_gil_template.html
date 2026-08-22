@@ -865,7 +865,7 @@
         return '<tr><td colspan="8">Aucun flux déclaré pour l’arrimage.</td></tr>';
       }
 
-      const anomalies=currentData.anomaliesDetail||[];
+      const anomalies=arrimageOctaneAnomalies(currentData);
 
       const statusBucket=r=>{
         const s=String(
@@ -1215,9 +1215,23 @@
         .map(k => k + ' : ' + map[k]);
     }
 
+    function arrimageOctaneAnomalies(data){
+      /*
+       * Bloc 1 uniquement :
+       * population dédiée des anomalies Octane / Reference non vide.
+       *
+       * Aucun filtre de sprint ici.
+       * Aucun impact sur anomaliesDetail / anomaliesSprintDetail.
+       */
+      return (data && Array.isArray(data.anomaliesArrimageDetail)
+        ? data.anomaliesArrimageDetail
+        : []
+      ).filter(x => x && typeof x === 'object');
+    }
+
     function arrimagePieData(data){
       const rows = arrimageCurrentFluxRows(data);
-      const anomalies = (data.anomaliesArrimageDetail || []).filter(x => x && typeof x === 'object');
+      const anomalies = arrimageOctaneAnomalies(data);
 
       const defs = [
         {label:'Livrés', color:'#15803d'},
