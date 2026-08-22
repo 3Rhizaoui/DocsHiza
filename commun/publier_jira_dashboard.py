@@ -298,6 +298,13 @@ def build_payload(rows: list[dict]) -> dict:
     flux_rows = [r for r in rows if not is_anomaly(r)]
     anomaly_rows = [r for r in rows if is_anomaly(r)]
 
+    print(
+        "[JIRA][ARRIMAGE] flux=",
+        len(flux_rows),
+        " anomalies_octane=",
+        len(anomaly_rows),
+    )
+
     total = len(flux_rows)
     ready = sum(1 for r in flux_rows if is_ready(r))
     not_ready = max(0, total - ready)
