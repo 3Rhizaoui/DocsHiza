@@ -2614,6 +2614,278 @@
 
 /* GIL_PRINT_LAYOUT_V1_END */
 
+
+
+/* GIL_PRINT_LAYOUT_V2_START */
+
+@media print {
+
+  /* ==========================================================
+     CORRECTION 1
+     3 BLOCS DU HAUT STRICTEMENT SUR LA MEME LIGNE
+     ========================================================== */
+
+  .arrimageStatusLayout{
+    display:grid !important;
+
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr)) !important;
+
+    grid-template-rows:
+      175px auto !important;
+
+    column-gap:6px !important;
+    row-gap:5px !important;
+
+    align-items:stretch !important;
+
+    width:100% !important;
+    max-width:100% !important;
+  }
+
+
+  /*
+   * #arrimagePie3d reste en display:contents.
+   * On fixe donc explicitement chaque enfant dans sa cellule.
+   */
+
+  #arrimagePie3d{
+    display:contents !important;
+  }
+
+
+  /* 1 - Santé du Sprint */
+
+  .arrimageStatusLayout > #healthGauge{
+    grid-column:1 !important;
+    grid-row:1 !important;
+
+    width:100% !important;
+
+    height:175px !important;
+    min-height:175px !important;
+    max-height:175px !important;
+
+    margin:0 !important;
+
+    align-self:stretch !important;
+  }
+
+
+  /* 2 - Répartition */
+
+  .arrimagePieMain{
+    grid-column:2 !important;
+    grid-row:1 !important;
+
+    width:100% !important;
+
+    height:175px !important;
+    min-height:175px !important;
+    max-height:175px !important;
+
+    margin:0 !important;
+
+    align-self:stretch !important;
+  }
+
+
+  /* 3 - Constat général */
+
+  .arrimageConstatCard{
+    grid-column:3 !important;
+    grid-row:1 !important;
+
+    width:100% !important;
+
+    height:175px !important;
+    min-height:175px !important;
+    max-height:175px !important;
+
+    margin:0 !important;
+
+    align-self:stretch !important;
+
+    display:flex !important;
+    flex-direction:column !important;
+    justify-content:flex-start !important;
+    align-items:flex-start !important;
+
+    text-align:left !important;
+  }
+
+
+  /*
+   * Très important :
+   * neutralise l'ancien responsive :
+   * .arrimageConstatCard { grid-column:1/-1 }
+   */
+
+  .arrimageConstatCard{
+    grid-column:3 !important;
+  }
+
+
+  /* Les 4 cartes restent SOUS les 3 blocs */
+
+  .arrimageCardsGrid{
+    grid-column:1 / -1 !important;
+    grid-row:2 !important;
+
+    display:grid !important;
+
+    grid-template-columns:
+      repeat(4, minmax(0, 1fr)) !important;
+
+    gap:5px !important;
+
+    width:100% !important;
+
+    margin:0 !important;
+  }
+
+
+  /* ==========================================================
+     CORRECTION 2
+     COMPARAISON SPRINT :
+     GRAPHIQUE AVANT TABLEAU, COMME EN HTML
+     ========================================================== */
+
+  .trendLayout{
+    display:grid !important;
+
+    /*
+     * Même organisation que le HTML :
+     * une seule colonne.
+     */
+    grid-template-columns:
+      minmax(0, 1fr) !important;
+
+    gap:5px !important;
+
+    width:100% !important;
+
+    margin:0 !important;
+
+    align-items:start !important;
+  }
+
+
+  /* Graphique EN PREMIER */
+
+  .trendLayout > #weeklyChart,
+  #weeklyChart.chartBox{
+    order:1 !important;
+
+    width:min(100%, 560px) !important;
+    max-width:560px !important;
+    min-width:0 !important;
+
+    margin:0 auto 4px !important;
+
+    padding:6px !important;
+
+    break-inside:avoid !important;
+    page-break-inside:avoid !important;
+  }
+
+
+  /*
+   * On supprime les dimensions réduites ajoutées dans PRINT V1.
+   * Le graphique reprend des proportions proches du HTML.
+   */
+
+  #weeklyChart svg{
+    display:block !important;
+
+    width:100% !important;
+    max-width:100% !important;
+
+    height:220px !important;
+    max-height:220px !important;
+
+    margin:0 auto !important;
+  }
+
+  #weeklyChart canvas{
+    display:block !important;
+
+    width:100% !important;
+    max-width:100% !important;
+
+    height:220px !important;
+    max-height:220px !important;
+
+    margin:0 auto !important;
+  }
+
+  #weeklyChart .barChart,
+  #weeklyChart .lineChart{
+    width:100% !important;
+    max-width:100% !important;
+
+    height:220px !important;
+
+    margin:0 auto !important;
+  }
+
+
+  /* Tableau EN SECOND */
+
+  .trendLayout > #weeklyTrend{
+    order:2 !important;
+
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+
+    margin:0 !important;
+
+    table-layout:fixed !important;
+
+    break-inside:auto !important;
+    page-break-inside:auto !important;
+  }
+
+
+  /*
+   * Le graphique reste avec le début du tableau autant que possible,
+   * mais le tableau peut continuer sur la page suivante.
+   */
+
+  section:has(>#weeklyChart),
+  section:has(#weeklyChart){
+    break-inside:auto !important;
+    page-break-inside:auto !important;
+  }
+
+  #weeklyChart{
+    break-after:avoid !important;
+    page-break-after:avoid !important;
+  }
+
+  #weeklyTrend thead{
+    display:table-header-group !important;
+  }
+
+
+  /* ==========================================================
+     ESPACEMENT
+     Pas de vide entre graphique et tableau
+     ========================================================== */
+
+  section:has(#weeklyChart) h2{
+    margin-bottom:0 !important;
+  }
+
+  section:has(#weeklyChart) .trendLayout{
+    padding:4px !important;
+  }
+
+}
+
+/* GIL_PRINT_LAYOUT_V2_END */
+
 </style>
 
 </head>
