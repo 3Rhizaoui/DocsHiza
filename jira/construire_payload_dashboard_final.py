@@ -657,18 +657,44 @@ def build_flux_blocks(source, sprint, semaine):
         histo.append({
             "sprint": sprint,
             "semaine": semaine,
+
+            # Identité fonctionnelle du flux
             "flux": row["flux"],
+            "jiraKey": row.get("jiraKey", ""),
+            "referenceJira": row.get("jiraKey", ""),
+
+            # Classification fonctionnelle
             "domaine": row["domaine"],
             "sousDomaine": row["sousDomaine"],
             "environnement": row["environnement"],
+
+            # Métadonnées enrichies conservées jusqu'au HTML
             "type": row["pattern"],
-            "statut": "PRÊT" if is_ready(row) else "EN COURS" if is_in_progress(row) else statut,
+            "pattern": row["pattern"],
+            "version": row["version"],
             "versionLivree": row["version"],
+            "dateMaj": row.get("dateMaj", ""),
+            "dateCible": row.get("dateCible", ""),
+            "datesEnvironnements": row.get(
+                "datesEnvironnements",
+                {"SIT": "", "UAT": "", "PROD": ""}
+            ),
+
+            # On conserve exactement la logique de statut déjà validée
+            "statut": "PRÊT" if is_ready(row) else "EN COURS" if is_in_progress(row) else statut,
+            "statutJira": row.get("statutJira", row.get("statut", "")),
+
+            # Informations Jira utiles pour le détail
+            "resume": row.get("resume", ""),
+            "description": row.get("description", ""),
+            "url": row.get("url", ""),
+
             "bugsBloquants": 1 if is_blocked(row) else 0,
             "testsOk": 1 if is_ready(row) else 0,
             "evenement": "Livré" if is_ready(row) else "En cours" if is_in_progress(row) else "À qualifier",
             "action": "",
             "responsable": row["responsable"],
+            "source": row.get("source", "JIRA — source dynamique"),
         })
 
     ventilation_map = {}
