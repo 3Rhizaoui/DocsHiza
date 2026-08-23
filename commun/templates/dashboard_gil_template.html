@@ -591,6 +591,260 @@
       width:12%;
     }
 
+
+    /* ARRIMAGE_TABLE_FIT_BLOCK */
+    #arrimageReady{
+      width:100% !important;
+      max-width:100% !important;
+      min-width:0 !important;
+      table-layout:fixed !important;
+      box-sizing:border-box !important;
+    }
+
+    #arrimageReady th,
+    #arrimageReady td{
+      min-width:0 !important;
+      max-width:none !important;
+      box-sizing:border-box !important;
+      overflow-wrap:anywhere !important;
+      word-break:normal !important;
+      white-space:normal !important;
+    }
+
+    /*
+     * Les 7 colonnes utilisent exactement 100 % de la largeur.
+     * Aucun élargissement horizontal du bloc Arrimage.
+     */
+    #arrimageReady th:nth-child(1),
+    #arrimageReady td:nth-child(1){width:18% !important;}
+
+    #arrimageReady th:nth-child(2),
+    #arrimageReady td:nth-child(2){width:17% !important;}
+
+    #arrimageReady th:nth-child(3),
+    #arrimageReady td:nth-child(3){width:14% !important;}
+
+    #arrimageReady th:nth-child(4),
+    #arrimageReady td:nth-child(4){width:10% !important;}
+
+    #arrimageReady th:nth-child(5),
+    #arrimageReady td:nth-child(5){width:8% !important;}
+
+    #arrimageReady th:nth-child(6),
+    #arrimageReady td:nth-child(6){width:21% !important;}
+
+    #arrimageReady th:nth-child(7),
+    #arrimageReady td:nth-child(7){width:12% !important;}
+
+    /*
+     * Le conteneur direct du tableau ne doit jamais créer
+     * une barre de défilement horizontale.
+     */
+    #arrimageReady{
+      margin-left:0 !important;
+      margin-right:0 !important;
+    }
+
+    #arrimageReady *{
+      box-sizing:border-box;
+    }
+
+    .arrEnvDateRow{
+      min-width:0 !important;
+      max-width:100% !important;
+      white-space:normal !important;
+    }
+
+
+    /* GLOBAL_REPORT_FIT_BLOCK
+     * Tous les blocs du rapport restent strictement
+     * dans la largeur du conteneur principal.
+     * Aucun scroll horizontal du dashboard.
+     */
+
+    html,
+    body{
+      width:100%;
+      max-width:100%;
+      overflow-x:hidden !important;
+    }
+
+    main{
+      width:100%;
+      max-width:1460px;
+      min-width:0 !important;
+      margin-left:auto;
+      margin-right:auto;
+      overflow-x:hidden !important;
+    }
+
+    #dashboardView,
+    #detailView,
+    .hero,
+    .stack,
+    .panel,
+    section,
+    .panelBody,
+    .trendLayout,
+    .histGrid,
+    .histBox,
+    .graphPanel,
+    .chartBox,
+    .tableWrap,
+    .grid2,
+    .cards,
+    .familyGrid,
+    .miniBars,
+    .demandRows,
+    .arrimageStatusLayout,
+    .arrimagePieWrap,
+    .arrimageStatusCards{
+      width:100%;
+      max-width:100%;
+      min-width:0 !important;
+      box-sizing:border-box;
+    }
+
+    /*
+     * Très important pour les enfants d'une grille/flex :
+     * ils doivent pouvoir rétrécir au lieu d'élargir le rapport.
+     */
+    .hero > *,
+    .stack > *,
+    .grid2 > *,
+    .cards > *,
+    .familyGrid > *,
+    .miniBars > *,
+    .trendLayout > *,
+    .histGrid > *,
+    .arrimageStatusLayout > *,
+    .arrimagePieWrap > *{
+      min-width:0 !important;
+      max-width:100%;
+    }
+
+    /*
+     * Tous les tableaux utilisent uniquement la largeur disponible.
+     */
+    table{
+      width:100% !important;
+      max-width:100% !important;
+      min-width:0 !important;
+      table-layout:fixed !important;
+      box-sizing:border-box !important;
+    }
+
+    th,
+    td{
+      min-width:0 !important;
+      max-width:none !important;
+      white-space:normal !important;
+      overflow-wrap:anywhere !important;
+      word-break:normal !important;
+      box-sizing:border-box !important;
+    }
+
+    /*
+     * Aucun wrapper de tableau ne crée de scrollbar horizontale.
+     */
+    .tableWrap{
+      overflow-x:hidden !important;
+      overflow-y:visible;
+    }
+
+    /*
+     * Graphiques / SVG / canvas / images :
+     * jamais plus larges que leur bloc.
+     */
+    svg,
+    canvas,
+    img,
+    .lineChart,
+    .barChart,
+    .speedGauge,
+    .arrimagePieSvg{
+      max-width:100% !important;
+      box-sizing:border-box !important;
+    }
+
+    /*
+     * Histogrammes :
+     * suppression du scroll horizontal interne.
+     */
+    .verticalChart{
+      width:100% !important;
+      max-width:100% !important;
+      min-width:0 !important;
+      overflow-x:hidden !important;
+    }
+
+    .verticalGroup{
+      min-width:0 !important;
+      max-width:none !important;
+      flex:1 1 0 !important;
+    }
+
+    /*
+     * Anciennes contraintes susceptibles d'agrandir une cellule.
+     */
+    .fluxRefs,
+    .metricDetailList{
+      min-width:0 !important;
+      max-width:100% !important;
+      width:100% !important;
+    }
+
+    .envMetrics,
+    .envMetrics details{
+      min-width:0 !important;
+      max-width:100% !important;
+      white-space:normal !important;
+    }
+
+    /*
+     * Bloc Arrimage :
+     * sa grille doit également se contracter dans le rapport.
+     */
+    .arrimageStatusLayout{
+      grid-template-columns:
+        minmax(0,300px)
+        minmax(0,1.15fr)
+        minmax(0,.85fr) !important;
+    }
+
+    .arrimagePieWrap{
+      grid-template-columns:minmax(0,1fr) minmax(0,150px) !important;
+    }
+
+    /*
+     * La barre de titre, les sections et leurs contenus
+     * partagent exactement la même largeur utile.
+     */
+    .hero,
+    .stack{
+      margin-left:0 !important;
+      margin-right:0 !important;
+    }
+
+    section,
+    .panel,
+    .graphPanel{
+      overflow-x:hidden !important;
+    }
+
+    @media(max-width:1100px){
+      .arrimageStatusLayout{
+        grid-template-columns:minmax(0,280px) minmax(0,1fr) !important;
+      }
+    }
+
+    @media(max-width:760px){
+      .arrimageStatusLayout,
+      .arrimagePieWrap{
+        grid-template-columns:1fr !important;
+      }
+    }
+
 </style>
 
 </head>

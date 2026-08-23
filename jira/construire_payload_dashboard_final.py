@@ -508,6 +508,21 @@ def normalize_flux_row(row, sprint, semaine):
     sous = enriched["sousDomaine"]
     flux = enriched["flux"]
 
+    # Si aucun vrai nom fonctionnel n'a pu être extrait du titre,
+    # de la description ou des autres métadonnées Jira, on ne
+    # présente jamais la clé Jira comme nom de flux.
+    #
+    # Exemple :
+    #   Flux          = Général
+    #   Référence Jira = AERL_GIL-765
+    flux_text = str(flux or "").strip()
+    if (
+        not flux_text
+        or flux_text.upper().startswith("AERL_GIL-")
+        or flux_text.upper().startswith("AERL-GIL-")
+    ):
+        flux = "Général"
+
     return {
         "sprint": sprint,
         "semaine": semaine,
