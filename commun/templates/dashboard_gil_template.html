@@ -64,33 +64,33 @@
 
       .barChart,.lineChart{height:150px!important}.lineLegend{font-size:8px!important;gap:7px!important}.miniNote{font-size:8px!important}
 
-      section:has(#weeklyChart),section:has(#weeklyStory),section:has(#statusHistograms),.hero>section{break-inside:avoid-page!important;page-break-inside:avoid!important}
+      section:has(#weeklyChart),section:has(#weeklyStory),section:has(#arrimageOctaneHistograms),.hero>section{break-inside:avoid-page!important;page-break-inside:avoid!important}
 
-      section:has(#statusHistograms){break-before:auto!important;page-break-before:auto!important}
+      section:has(#arrimageOctaneHistograms){break-before:auto!important;page-break-before:auto!important}
 
-      #statusHistograms{padding:5px!important;gap:7px!important}
+      #arrimageOctaneHistograms{padding:5px!important;gap:7px!important}
 
-      #statusHistograms .histBox{padding:6px!important;margin:0!important;break-inside:avoid-page!important;page-break-inside:avoid!important}
+      #arrimageOctaneHistograms .histBox{padding:6px!important;margin:0!important;break-inside:avoid-page!important;page-break-inside:avoid!important}
 
-      #statusHistograms .histBox h3{font-size:11px!important;margin-bottom:2px!important}
+      #arrimageOctaneHistograms .histBox h3{font-size:11px!important;margin-bottom:2px!important}
 
-      #statusHistograms .histSubtitle{font-size:8px!important;margin-bottom:3px!important}
+      #arrimageOctaneHistograms .histSubtitle{font-size:8px!important;margin-bottom:3px!important}
 
-      #statusHistograms .verticalChart{min-height:180px!important;height:180px!important;padding:8px 4px 0!important;gap:4px!important;overflow:visible!important}
+      #arrimageOctaneHistograms .verticalChart{min-height:180px!important;height:180px!important;padding:8px 4px 0!important;gap:4px!important;overflow:visible!important}
 
-      #statusHistograms .verticalGroup{grid-template-rows:112px 38px 18px!important;min-width:68px!important;max-width:none!important}
+      #arrimageOctaneHistograms .verticalGroup{grid-template-rows:112px 38px 18px!important;min-width:68px!important;max-width:none!important}
 
-      #statusHistograms .verticalBars{gap:3px!important}#statusHistograms .stackedVBar{width:25px!important}
+      #arrimageOctaneHistograms .verticalBars{gap:3px!important}#arrimageOctaneHistograms .stackedVBar{width:25px!important}
 
-      #statusHistograms .stackedVBar>strong{font-size:8px!important;top:-13px!important}
+      #arrimageOctaneHistograms .stackedVBar>strong{font-size:8px!important;top:-13px!important}
 
-      #statusHistograms .verticalLabel{font-size:7px!important;padding-top:3px!important}
+      #arrimageOctaneHistograms .verticalLabel{font-size:7px!important;padding-top:3px!important}
 
-      #statusHistograms .verticalLegend{font-size:8px!important;margin-top:4px!important;gap:9px!important}
+      #arrimageOctaneHistograms .verticalLegend{font-size:8px!important;margin-top:4px!important;gap:9px!important}
 
-      #statusHistograms .chartTotals{font-size:8px!important;margin:4px 0 2px!important;padding:4px!important;gap:18px!important}
+      #arrimageOctaneHistograms .chartTotals{font-size:8px!important;margin:4px 0 2px!important;padding:4px!important;gap:18px!important}
 
-      #statusHistograms .miniNote{font-size:7px!important;margin:3px 0 0!important}
+      #arrimageOctaneHistograms .miniNote{font-size:7px!important;margin:3px 0 0!important}
 
       table{table-layout:fixed!important}th,td{font-size:8px!important;padding:3px 4px!important;line-height:1.2!important}
 
@@ -846,6 +846,126 @@
     }
 
 
+
+    /* ARRIMAGE_OCTANE_HISTOGRAMS
+     * Deux histogrammes dédiés aux anomalies Octane :
+     * Acquisition et Issuing.
+     */
+    #arrimageAnomaliesSection{
+      width:100%;
+      max-width:100%;
+      min-width:0;
+      box-sizing:border-box;
+    }
+
+    #arrimageOctaneHistograms.arrimageOctaneHistGrid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+      width:100%;
+      max-width:100%;
+      min-width:0;
+      box-sizing:border-box;
+    }
+
+    #arrimageOctaneHistograms .arrimageOctaneDomainBox{
+      width:100%;
+      max-width:100%;
+      min-width:0;
+      box-sizing:border-box;
+      overflow:hidden;
+    }
+
+    #arrimageOctaneHistograms .arrimageOctaneChart{
+      width:100%;
+      max-width:100%;
+      min-width:0;
+      min-height:230px;
+      height:230px;
+      overflow:hidden !important;
+      display:flex;
+      align-items:stretch;
+      justify-content:space-around;
+      gap:4px;
+      padding:10px 4px 0;
+      box-sizing:border-box;
+    }
+
+    #arrimageOctaneHistograms .arrimageOctaneGroup{
+      flex:1 1 0;
+      min-width:0 !important;
+      max-width:none !important;
+      grid-template-rows:160px 44px 1px;
+    }
+
+    #arrimageOctaneHistograms .arrimageOctaneGroup .verticalBars{
+      gap:3px;
+    }
+
+    #arrimageOctaneHistograms .arrimageOctaneBar{
+      width:20px;
+      min-width:14px;
+      max-width:24px;
+    }
+
+    #arrimageOctaneHistograms .arrimageOctaneBar i{
+      display:block;
+      width:100%;
+      min-height:0;
+    }
+
+    #arrimageOctaneHistograms .arrimageOctaneLegend{
+      display:flex;
+      flex-wrap:wrap;
+      gap:5px 10px;
+      font-size:10px;
+      line-height:1.2;
+    }
+
+    #arrimageOctaneHistograms .arrimageOctaneTotals{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px 18px;
+      text-align:left;
+    }
+
+    #arrimageOctaneHistograms .arrimageOctaneRefs{
+      display:block;
+      text-align:left;
+      font-size:10px;
+      line-height:1.45;
+      overflow-wrap:anywhere;
+    }
+
+    .arrimageOctaneGlobalSummary,
+    .arrimageOctaneUnqualified{
+      grid-column:1 / -1;
+      width:100%;
+      max-width:100%;
+      box-sizing:border-box;
+      padding:7px 10px;
+      border:1px solid #d8e0e9;
+      background:#f8fafc;
+      font-size:11px;
+      line-height:1.4;
+    }
+
+    .arrimageOctaneEmpty{
+      min-height:230px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#64748b;
+      font-size:12px;
+    }
+
+    @media (max-width:900px){
+      #arrimageOctaneHistograms.arrimageOctaneHistGrid{
+        grid-template-columns:1fr;
+      }
+    }
+
+
     /* ARRIMAGE_TABLE_COMPACT_ROWS
      * Aligne la densite visuelle du tableau Arrimage
      * sur les autres tableaux du rapport.
@@ -972,10 +1092,12 @@
 
       <section><h2 id="arrimageTitle" class="collapsibleTitle" role="button" tabindex="0" aria-expanded="true" aria-controls="arrimageContent" onclick="toggleArrimageTable()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleArrimageTable()}">Flux prêts pour arrimage — BNPP / GIL / ESTREEM — Total : <span id="arrimageTotal">0</span></h2><div id="arrimageContent" class="tableWrap"><table id="arrimageReady"></table></div></section>
 
+      <section id="arrimageAnomaliesSection">
+        <h2>Anomalies d’arrimage par domaine et sous-domaine</h2>
+        <div id="arrimageOctaneHistograms" class="histGrid arrimageOctaneHistGrid"></div>
+      </section>
+
       <section><h2>Comparaison Sprint N-1 / Sprint actuel</h2><div class="trendLayout"><div id="weeklyChart" class="chartBox"></div><table id="weeklyTrend"></table></div></section>
-
-
-      <section><h2>Histogrammes des flux et anomalies</h2><div id="statusHistograms" class="histGrid"></div></section>
 
       <section><h2>SIT/UAT par semaine, domaine et sous-domaine</h2><table id="environmentBreakdown"></table></section>
 
@@ -1090,7 +1212,7 @@
 
       document.getElementById('weeklyChart').innerHTML = sprintBarChart(sprintComparison);
 
-      document.getElementById('statusHistograms').innerHTML = fluxVerticalHistogram(data) + anomalyVerticalHistogram(data);
+      document.getElementById('arrimageOctaneHistograms').innerHTML = arrimageOctaneHistograms(data);
 
       document.getElementById('environmentBreakdown').innerHTML = groupedEnvironmentBreakdown(data);
 
@@ -2107,6 +2229,460 @@
 
       return '<svg class="barChart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Comparaison des flux par Sprint, barres empilées SIT et UAT">'+grid+bars+'</svg><div class="lineLegend">'+legend+'</div><div class="miniNote" style="text-align:center"><b>Lecture :</b> la valeur SIT est affichée dans la partie foncée et la valeur UAT dans la partie claire. Survol : domaine, sous-domaine, environnement, flux, statut et partenaire. Les anomalies sont suivies séparément dans leur histogramme dédié.</div>';
 
+    }
+
+
+    function arrimageOctaneHistograms(data){
+      /*
+       * Bloc Arrimage uniquement.
+       *
+       * Source :
+       *   anomaliesArrimageDetail
+       *
+       * Aucun recours à anomaliesDetail :
+       * les anomalies de Sprint restent une population séparée.
+       */
+      const anomalies = arrimageOctaneAnomalies(data);
+
+      const clean = value => {
+        const v = String(value ?? '').trim();
+        return v || 'À qualifier';
+      };
+
+      const domainBucket = anomaly => {
+        const raw = [
+          anomaly && anomaly.domaine,
+          anomaly && anomaly.domain,
+          anomaly && anomaly.resume,
+          anomaly && anomaly.summary,
+          anomaly && anomaly.description
+        ].filter(Boolean).join(' ').toLowerCase();
+
+        if(
+          raw.includes('acquisition') ||
+          /\bacq\b/.test(raw)
+        ){
+          return 'Acquisition';
+        }
+
+        if(
+          raw.includes('issuing') ||
+          raw.includes('emission') ||
+          raw.includes('émission') ||
+          /\biss\b/.test(raw)
+        ){
+          return 'Issuing';
+        }
+
+        return 'À qualifier';
+      };
+
+      const subdomainValue = anomaly => clean(
+        anomaly && (
+          anomaly.sousDomaine ||
+          anomaly.subdomain ||
+          anomaly.sous_domaine
+        )
+      );
+
+      const environmentBucket = anomaly => {
+        const raw = String(
+          anomaly && (
+            anomaly.environnement ||
+            anomaly.environment ||
+            anomaly.env ||
+            anomaly.environnementValidation ||
+            anomaly.environnementRattachement ||
+            ''
+          )
+        ).trim().toUpperCase();
+
+        if(raw.includes('SIT')) return 'SIT';
+
+        if(
+          raw.includes('UAT') ||
+          raw.includes('QUA')
+        ){
+          return 'UAT';
+        }
+
+        if(
+          raw.includes('PROD') ||
+          raw.includes('PRODUCTION')
+        ){
+          return 'PROD';
+        }
+
+        return 'Non ventilé';
+      };
+
+      const statusDefinitions = [
+        {
+          key:'Livrés',
+          label:'Terminées',
+          sit:'#15803d',
+          uat:'#4ade80',
+          prod:'#22c55e',
+          other:'#86efac'
+        },
+        {
+          key:'En cours',
+          label:'En cours',
+          sit:'#d97706',
+          uat:'#fbbf24',
+          prod:'#f59e0b',
+          other:'#fde68a'
+        },
+        {
+          key:'Bloqués',
+          label:'Bloquées',
+          sit:'#b91c1c',
+          uat:'#f87171',
+          prod:'#ef4444',
+          other:'#fecaca'
+        },
+        {
+          key:'Rejetés',
+          label:'Annulées / rejetées',
+          sit:'#475569',
+          uat:'#94a3b8',
+          prod:'#64748b',
+          other:'#cbd5e1'
+        }
+      ];
+
+      const domains = ['Acquisition','Issuing'];
+
+      const anomalyRef = anomaly =>
+        clean(
+          anomaly && (
+            anomaly.jiraKey ||
+            anomaly.reference ||
+            anomaly.key
+          )
+        );
+
+      const anomalyOctaneRef = anomaly =>
+        clean(
+          anomaly && (
+            anomaly.referenceOctane ||
+            anomaly.octaneReference ||
+            anomaly.reference ||
+            anomaly.jiraKey
+          )
+        );
+
+      const renderDomain = domain => {
+        const domainItems = anomalies.filter(
+          anomaly => domainBucket(anomaly) === domain
+        );
+
+        const subdomains = [
+          ...new Set(
+            domainItems.map(subdomainValue)
+          )
+        ].sort((a,b) => a.localeCompare(b,'fr'));
+
+        if(!subdomains.length){
+          return (
+            '<div class="histBox arrimageOctaneDomainBox">'+
+              '<h3>'+esc(domain)+'</h3>'+
+              '<p class="histSubtitle">'+
+                'Aucune anomalie Octane rattachée à ce domaine.'+
+              '</p>'+
+              '<div class="arrimageOctaneEmpty">'+
+                'Aucune donnée à afficher'+
+              '</div>'+
+            '</div>'
+          );
+        }
+
+        const groups = subdomains.map(subdomain => ({
+          subdomain,
+          items: domainItems.filter(
+            anomaly => subdomainValue(anomaly) === subdomain
+          )
+        }));
+
+        const count = (items,status,environment) =>
+          items.filter(anomaly =>
+            arrimageOctaneStatusBucket(anomaly) === status &&
+            environmentBucket(anomaly) === environment
+          ).length;
+
+        const max = Math.max(
+          1,
+          ...groups.flatMap(group =>
+            statusDefinitions.map(def =>
+              count(group.items,def.key,'SIT') +
+              count(group.items,def.key,'UAT') +
+              count(group.items,def.key,'PROD') +
+              count(group.items,def.key,'Non ventilé')
+            )
+          )
+        );
+
+        const tooltip = (
+          items,
+          domainName,
+          subdomain,
+          statusLabel,
+          environment,
+          total
+        ) => {
+          const lines = items.map(anomaly => {
+            const jira = anomalyRef(anomaly);
+            const octane = anomalyOctaneRef(anomaly);
+            const flux = clean(
+              anomaly && (
+                anomaly.flux ||
+                anomaly.flow ||
+                anomaly.resume
+              )
+            );
+
+            const status = clean(
+              anomaly && (
+                anomaly.statutJira ||
+                anomaly.statut ||
+                anomaly.status
+              )
+            );
+
+            return (
+              jira+
+              ' — Octane '+octane+
+              ' — flux '+flux+
+              ' — '+status
+            );
+          });
+
+          return (
+            domainName+
+            ' / '+subdomain+
+            ' — '+statusLabel+
+            ' — '+environment+
+            ' : '+items.length+
+            '\n'+
+            (lines.length ? lines.join('\n') : 'Aucune anomalie')+
+            '\nTotal tous environnements : '+total
+          );
+        };
+
+        const body = groups.map(group => {
+          const bars = statusDefinitions.map(def => {
+            const sitItems = group.items.filter(anomaly =>
+              arrimageOctaneStatusBucket(anomaly) === def.key &&
+              environmentBucket(anomaly) === 'SIT'
+            );
+
+            const uatItems = group.items.filter(anomaly =>
+              arrimageOctaneStatusBucket(anomaly) === def.key &&
+              environmentBucket(anomaly) === 'UAT'
+            );
+
+            const prodItems = group.items.filter(anomaly =>
+              arrimageOctaneStatusBucket(anomaly) === def.key &&
+              environmentBucket(anomaly) === 'PROD'
+            );
+
+            const otherItems = group.items.filter(anomaly =>
+              arrimageOctaneStatusBucket(anomaly) === def.key &&
+              environmentBucket(anomaly) === 'Non ventilé'
+            );
+
+            const sit = sitItems.length;
+            const uat = uatItems.length;
+            const prod = prodItems.length;
+            const other = otherItems.length;
+            const total = sit + uat + prod + other;
+
+            const attrs = (items,environment) =>
+              ' data-tip="'+
+              esc(
+                tooltip(
+                  items,
+                  domain,
+                  group.subdomain,
+                  def.label,
+                  environment,
+                  total
+                )
+              )+
+              '" onmouseenter="chartTip(event,this.dataset.tip)"'+
+              ' onmousemove="moveChartTip(event)"'+
+              ' onmouseleave="hideChartTip()"';
+
+            const totalHeight = total
+              ? (total / max * 100)
+              : 0;
+
+            const sitHeight = total
+              ? (sit / total * 100)
+              : 0;
+
+            const uatHeight = total
+              ? (uat / total * 100)
+              : 0;
+
+            const prodHeight = total
+              ? (prod / total * 100)
+              : 0;
+
+            const otherHeight = total
+              ? (other / total * 100)
+              : 0;
+
+            return (
+              '<div class="stackedVBar arrimageOctaneBar"'+
+                ' style="height:'+totalHeight+'%">'+
+                '<strong>'+total+'</strong>'+
+                '<i style="height:'+sitHeight+'%;background:'+def.sit+'"'+
+                  attrs(sitItems,'SIT')+'></i>'+
+                '<i style="height:'+uatHeight+'%;background:'+def.uat+'"'+
+                  attrs(uatItems,'UAT')+'></i>'+
+                '<i style="height:'+prodHeight+'%;background:'+def.prod+'"'+
+                  attrs(prodItems,'PROD')+'></i>'+
+                '<i style="height:'+otherHeight+'%;background:'+def.other+'"'+
+                  attrs(otherItems,'Non ventilé')+'></i>'+
+              '</div>'
+            );
+          }).join('');
+
+          return (
+            '<div class="verticalGroup arrimageOctaneGroup">'+
+              '<div class="verticalBars">'+bars+'</div>'+
+              '<div class="verticalLabel">'+
+                '<b>'+esc(group.subdomain)+'</b>'+
+              '</div>'+
+            '</div>'
+          );
+        }).join('');
+
+        const domainTotals = statusDefinitions.map(def => ({
+          definition:def,
+          total:domainItems.filter(
+            anomaly =>
+              arrimageOctaneStatusBucket(anomaly) === def.key
+          ).length
+        }));
+
+        const statusSummary = domainTotals.map(item =>
+          '<span>'+
+            '<i style="background:'+item.definition.sit+'"></i>'+
+            esc(item.definition.label)+' : <b>'+item.total+'</b>'+
+          '</span>'
+        ).join('');
+
+        const environmentTotals = ['SIT','UAT','PROD','Non ventilé']
+          .map(environment => {
+            const total = domainItems.filter(
+              anomaly => environmentBucket(anomaly) === environment
+            ).length;
+
+            return '<span><b>'+esc(environment)+' :</b> '+total+'</span>';
+          })
+          .join('');
+
+        const referenceList = groups.map(group => {
+          const rows = group.items.map(anomaly => {
+            const bucket = arrimageOctaneStatusBucket(anomaly);
+
+            return (
+              anomalyRef(anomaly)+
+              ' — '+bucket+
+              ' — '+environmentBucket(anomaly)
+            );
+          });
+
+          return (
+            '<div>'+
+              '<b>'+esc(group.subdomain)+'</b>'+
+              ' · '+rows.map(esc).join(' · ')+
+            '</div>'
+          );
+        }).join('');
+
+        return (
+          '<div class="histBox arrimageOctaneDomainBox">'+
+            '<h3>'+esc(domain)+
+              ' — '+domainItems.length+' anomalie(s)</h3>'+
+            '<p class="histSubtitle">'+
+              'Quatre barres par sous-domaine : terminées, en cours, bloquées et annulées/rejetées. '+
+              'Chaque barre est ventilée par environnement SIT / UAT / PROD / Non ventilé.'+
+            '</p>'+
+            '<div class="verticalChart arrimageOctaneChart">'+
+              body+
+            '</div>'+
+            '<div class="verticalLegend arrimageOctaneLegend">'+
+              '<span><i style="background:#15803d"></i>Terminées SIT</span>'+
+              '<span><i style="background:#4ade80"></i>Terminées UAT</span>'+
+              '<span><i style="background:#22c55e"></i>Terminées PROD</span>'+
+              '<span><i style="background:#d97706"></i>En cours SIT</span>'+
+              '<span><i style="background:#fbbf24"></i>En cours UAT</span>'+
+              '<span><i style="background:#f59e0b"></i>En cours PROD</span>'+
+              '<span><i style="background:#b91c1c"></i>Bloquées SIT</span>'+
+              '<span><i style="background:#f87171"></i>Bloquées UAT</span>'+
+              '<span><i style="background:#ef4444"></i>Bloquées PROD</span>'+
+              '<span><i style="background:#475569"></i>Annulées / rejetées SIT</span>'+
+              '<span><i style="background:#94a3b8"></i>Annulées / rejetées UAT</span>'+
+              '<span><i style="background:#64748b"></i>Annulées / rejetées PROD</span>'+
+              '<span><i style="background:#cbd5e1"></i>Non ventilé</span>'+
+            '</div>'+
+            '<div class="chartTotals arrimageOctaneTotals">'+
+              statusSummary+
+            '</div>'+
+            '<div class="chartTotals arrimageOctaneTotals">'+
+              environmentTotals+
+            '</div>'+
+            '<div class="chartTotals arrimageOctaneRefs">'+
+              '<b>Anomalies Octane / Jira :</b>'+
+              referenceList+
+            '</div>'+
+          '</div>'
+        );
+      };
+
+      const qualified = anomalies.filter(
+        anomaly =>
+          domainBucket(anomaly) === 'Acquisition' ||
+          domainBucket(anomaly) === 'Issuing'
+      );
+
+      const unqualified = anomalies.filter(
+        anomaly => domainBucket(anomaly) === 'À qualifier'
+      );
+
+      let footer = '';
+
+      if(unqualified.length){
+        footer =
+          '<div class="arrimageOctaneUnqualified">'+
+            '<b>À qualifier :</b> '+
+            unqualified.map(anomaly =>
+              esc(
+                anomalyRef(anomaly)+
+                ' — '+subdomainValue(anomaly)+
+                ' — '+environmentBucket(anomaly)+
+                ' — '+arrimageOctaneStatusBucket(anomaly)
+              )
+            ).join(' · ')+
+          '</div>';
+      }
+
+      return (
+        renderDomain('Acquisition')+
+        renderDomain('Issuing')+
+        '<div class="arrimageOctaneGlobalSummary">'+
+          '<b>Total anomalies Octane :</b> '+anomalies.length+
+          ' — <b>Ventilées ACQ / ISS :</b> '+qualified.length+
+          (unqualified.length
+            ? ' — <b>À qualifier :</b> '+unqualified.length
+            : ''
+          )+
+        '</div>'+
+        footer
+      );
     }
 
     function anomalyVerticalHistogram(data){
