@@ -536,9 +536,17 @@
 
     /* ARRIMAGE_TABLE_FIXED_WIDTH */
     #arrimageReady{
+      width:100% !important;
+      max-width:100% !important;
+      min-width:0 !important;
+      table-layout:fixed !important;
+    }
+
+    #arrimageContent{
       width:100%;
       max-width:100%;
-      table-layout:fixed;
+      min-width:0;
+      overflow-x:hidden;
     }
 
     #arrimageReady th,

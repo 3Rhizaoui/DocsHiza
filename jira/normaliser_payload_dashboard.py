@@ -101,14 +101,44 @@ def normalize_item(x, sprint="", forced_status=None, forced_type=None):
     y = deepcopy(x) if isinstance(x, dict) else {}
     text = joined_text(y)
 
+    # La référence Jira et le flux métier sont deux informations
+    # différentes. Une référence métier (OA5-2, CMS14_003, etc.)
+    # ne doit jamais devenir la clé Jira.
     key = first(
         y.get("jiraKey"),
+        y.get("jira_key"),
+        y.get("epicKey"),
+        y.get("epic_key"),
         y.get("key"),
         y.get("cle"),
-        y.get("reference"),
-        y.get("référence"),
-        y.get("flux"),
     )
+
+    business_flux = first(
+        y.get("flux"),
+        y.get("referenceFlux"),
+        y.get("reference_flux"),
+        y.get("id"),
+        y.get("reference"),
+    )
+
+    # Si l'ancien payload a mis la clé Jira dans "flux",
+    # on récupère la référence métier lorsqu'elle est différente.
+    if (
+        business_flux
+        and str(business_flux).upper().startswith("AERL_GIL-")
+    ):
+        candidate = first(
+            y.get("referenceFlux"),
+            y.get("reference_flux"),
+            y.get("id"),
+            y.get("reference"),
+        )
+
+        if (
+            candidate
+            and not str(candidate).upper().startswith("AERL_GIL-")
+        ):
+            business_flux = candidate
 
     title = first(
         y.get("summary"),
@@ -121,9 +151,10 @@ def normalize_item(x, sprint="", forced_status=None, forced_type=None):
         y["jiraKey"] = key
         y["key"] = key
         y["cle"] = key
-        y["reference"] = key
-        y["référence"] = key
-        y["flux"] = first(y.get("flux"), key)
+        y["referenceJira"] = key
+
+    if business_flux:
+        y["flux"] = business_flux
 
     if title:
         y["summary"] = title

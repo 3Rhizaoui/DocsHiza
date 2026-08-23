@@ -359,9 +359,14 @@ def extract_arrimage_flux_metadata(row):
 
     env_aliases = {
         "SIT": ("SIT",),
-        "UAT": ("UAT", "QUA"),
+        "UAT": ("UAT", "QUA", "QUAL", "QUALIFICATION"),
         "PROD": ("PROD", "PRODUCTION"),
     }
+
+    # Jira peut restituer la description avec des retours ligne,
+    # des puces ou du texte aplati. On normalise uniquement pour
+    # l'extraction des couples environnement/date.
+    env_corpus = re.sub(r"[\t\r]+", " ", corpus)
 
     for env_name, aliases in env_aliases.items():
         found_date = ""
@@ -375,7 +380,7 @@ def extract_arrimage_flux_metadata(row):
                 rf"\b{alias}\b"
                 rf"\s*(?:[:=\-]|prévu(?:e)?\s*(?:le)?|disponible\s*(?:le)?)?"
                 rf"\s*({date_expr})",
-                corpus,
+                env_corpus,
                 flags=re.I
             )
 
