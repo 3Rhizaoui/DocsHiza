@@ -2044,6 +2044,576 @@
 
 /* GIL_TARGETED_VISUAL_V4_END */
 
+
+
+/* GIL_PRINT_LAYOUT_V1_START */
+
+@media print {
+
+  /* ==========================================================
+     PAGE
+     ========================================================== */
+
+  @page {
+    size: A4 landscape;
+    margin: 6mm;
+  }
+
+  html,
+  body {
+    width:100% !important;
+    margin:0 !important;
+    padding:0 !important;
+    background:#fff !important;
+
+    -webkit-print-color-adjust:exact !important;
+    print-color-adjust:exact !important;
+  }
+
+  * {
+    -webkit-print-color-adjust:exact !important;
+    print-color-adjust:exact !important;
+  }
+
+
+  /* ==========================================================
+     HEADER
+     ========================================================== */
+
+  .top {
+    width:100% !important;
+
+    margin:0 0 4px !important;
+    padding:5px 9px !important;
+
+    background:var(--gil-blue) !important;
+    color:#fff !important;
+
+    border:0 !important;
+    box-shadow:none !important;
+  }
+
+  .gilBrandLogo {
+    width:105px !important;
+    max-width:105px !important;
+  }
+
+  .top h1,
+  .top .reportTitle {
+    font-size:15px !important;
+    line-height:1.1 !important;
+  }
+
+  .top p {
+    margin:2px 0 0 !important;
+    font-size:8px !important;
+    line-height:1.2 !important;
+    color:#dcecff !important;
+  }
+
+  /*
+   * IMPORTANT :
+   * règle plus spécifique que les styles boutons ajoutés ensuite.
+   */
+  .top .actions,
+  .actions,
+  .back,
+  .chartTooltip {
+    display:none !important;
+  }
+
+
+  /* ==========================================================
+     STRUCTURE GENERALE
+     ========================================================== */
+
+  main,
+  #dashboardView {
+    width:100% !important;
+    max-width:none !important;
+
+    margin:0 !important;
+    padding:0 !important;
+  }
+
+  .hero,
+  .stack {
+    width:100% !important;
+
+    margin:0 !important;
+    padding:0 !important;
+
+    gap:4px !important;
+  }
+
+  .hero {
+    display:block !important;
+    margin-bottom:4px !important;
+  }
+
+  .stack {
+    display:grid !important;
+    gap:4px !important;
+    margin-bottom:4px !important;
+  }
+
+  section,
+  .panel,
+  .graphPanel {
+    margin:0 !important;
+  }
+
+  section h2,
+  .panel h2 {
+    padding:5px 8px !important;
+
+    font-size:10px !important;
+    line-height:1.15 !important;
+
+    break-after:avoid !important;
+    page-break-after:avoid !important;
+  }
+
+  .panelBody {
+    padding:4px !important;
+  }
+
+
+  /* ==========================================================
+     PAGINATION
+     Supprime les gros espaces blancs provoques par avoid-page
+     ========================================================== */
+
+  section,
+  .panel,
+  .graphPanel,
+  .subsection {
+    break-inside:auto !important;
+    page-break-inside:auto !important;
+  }
+
+  section:has(#weeklyChart),
+  section:has(#weeklyStory),
+  section:has(#arrimageOctaneHistograms),
+  section:has(>#arrimageContent:not(.hidden)),
+  .hero > section {
+    break-inside:auto !important;
+    page-break-inside:auto !important;
+
+    break-before:auto !important;
+    page-break-before:auto !important;
+  }
+
+  section:has(>#arrimageContent:not(.hidden)) h2 {
+    break-after:avoid !important;
+    page-break-after:avoid !important;
+  }
+
+  section:has(>#arrimageContent.hidden) {
+    display:none !important;
+  }
+
+
+  /* ==========================================================
+     PREMIER BLOC :
+     Santé | Répartition | Constat
+     Toujours 3 colonnes en impression.
+     ========================================================== */
+
+  .arrimageStatusLayout {
+    display:grid !important;
+
+    grid-template-columns:
+      repeat(3,minmax(0,1fr)) !important;
+
+    gap:5px !important;
+    align-items:stretch !important;
+
+    width:100% !important;
+  }
+
+  /*
+   * On conserve l'architecture HTML actuelle.
+   */
+  #arrimagePie3d {
+    display:contents !important;
+  }
+
+  .arrimageStatusLayout > #healthGauge,
+  .arrimagePieMain,
+  .arrimageConstatCard {
+    width:100% !important;
+    min-width:0 !important;
+
+    height:175px !important;
+    min-height:175px !important;
+    max-height:175px !important;
+
+    margin:0 !important;
+
+    padding:8px 9px !important;
+
+    box-sizing:border-box !important;
+
+    overflow:hidden !important;
+
+    break-inside:avoid !important;
+    page-break-inside:avoid !important;
+  }
+
+
+  /* Santé Sprint */
+
+  .arrimageStatusLayout > #healthGauge {
+    padding-top:28px !important;
+  }
+
+  .arrimageStatusLayout > #healthGauge::before {
+    top:8px !important;
+    left:9px !important;
+    font-size:10px !important;
+  }
+
+  .healthWeatherIndicator {
+    top:5px !important;
+
+    width:22px !important;
+    min-width:22px !important;
+    height:22px !important;
+
+    padding:0 !important;
+
+    font-size:14px !important;
+  }
+
+  .speedGauge {
+    width:145px !important;
+    max-width:145px !important;
+
+    margin:0 auto !important;
+  }
+
+  .speedText {
+    margin-top:-8px !important;
+  }
+
+  .speedText strong {
+    font-size:18px !important;
+  }
+
+  .speedText span {
+    font-size:8px !important;
+  }
+
+  .healthLegend {
+    gap:4px !important;
+    margin-top:5px !important;
+  }
+
+  .healthLegend .level {
+    padding:3px 6px !important;
+    font-size:7px !important;
+  }
+
+
+  /* Répartition */
+
+  .arrimagePieMain h3,
+  .arrimageConstatCard h3 {
+    margin:0 0 5px !important;
+    font-size:10px !important;
+  }
+
+  .arrimagePieWrap {
+    display:grid !important;
+
+    grid-template-columns:
+      minmax(0,1fr)
+      minmax(105px,120px) !important;
+
+    gap:4px !important;
+
+    height:140px !important;
+    min-height:0 !important;
+
+    align-items:center !important;
+  }
+
+  .arrimagePieSvg {
+    width:135px !important;
+    max-width:135px !important;
+    height:120px !important;
+
+    margin:auto !important;
+  }
+
+  .arrimagePieLegendSimple {
+    gap:2px !important;
+    font-size:8px !important;
+  }
+
+  .arrimagePieLegendRow {
+    display:grid !important;
+
+    grid-template-columns:minmax(0,1fr) auto !important;
+
+    min-height:22px !important;
+
+    gap:3px !important;
+
+    margin:0 !important;
+    padding:1px 0 !important;
+
+    border-bottom:0 !important;
+  }
+
+  .arrimagePieLegendRow span {
+    gap:4px !important;
+
+    font-size:8px !important;
+
+    white-space:nowrap !important;
+  }
+
+  .arrimagePieLegendRow i {
+    width:6px !important;
+    height:6px !important;
+    flex:0 0 6px !important;
+  }
+
+  .arrimagePieLegendRow b {
+    font-size:9px !important;
+    white-space:nowrap !important;
+  }
+
+  .arrimagePiePct {
+    font-size:8px !important;
+  }
+
+
+  /* Constat général */
+
+  .arrimageConstatCard {
+    display:flex !important;
+    flex-direction:column !important;
+
+    justify-content:flex-start !important;
+    align-items:flex-start !important;
+
+    text-align:left !important;
+  }
+
+  .arrimageConstatList {
+    width:100% !important;
+
+    margin:0 !important;
+    padding-left:13px !important;
+
+    font-size:8px !important;
+    line-height:1.25 !important;
+
+    text-align:left !important;
+  }
+
+  .arrimageConstatList li {
+    margin:2px 0 !important;
+  }
+
+
+  /* ==========================================================
+     4 CARTES STATUT
+     Livres | En cours | Bloques | Rejetes
+     ========================================================== */
+
+  .arrimageCardsGrid {
+    grid-column:1 / -1 !important;
+
+    display:grid !important;
+
+    grid-template-columns:
+      repeat(4,minmax(0,1fr)) !important;
+
+    gap:5px !important;
+
+    width:100% !important;
+
+    margin:5px 0 0 !important;
+  }
+
+  .arrimageStatusCard {
+    min-width:0 !important;
+
+    height:auto !important;
+    min-height:125px !important;
+    max-height:none !important;
+
+    margin:0 !important;
+    padding:6px !important;
+
+    break-inside:avoid !important;
+    page-break-inside:avoid !important;
+  }
+
+  .arrimageStatusHead {
+    margin-bottom:3px !important;
+    font-size:8px !important;
+  }
+
+  .arrimageCardBody {
+    max-height:none !important;
+    overflow:visible !important;
+
+    font-size:7px !important;
+    line-height:1.2 !important;
+  }
+
+  .arrimageCardFooter {
+    margin-top:4px !important;
+    padding-top:3px !important;
+
+    font-size:7px !important;
+  }
+
+
+  /* ==========================================================
+     TABLEAUX
+     ========================================================== */
+
+  .tableWrap {
+    overflow:visible !important;
+
+    margin:0 !important;
+    padding:0 !important;
+  }
+
+  table {
+    width:100% !important;
+
+    table-layout:fixed !important;
+
+    break-inside:auto !important;
+    page-break-inside:auto !important;
+  }
+
+  thead {
+    display:table-header-group !important;
+  }
+
+  tfoot {
+    display:table-footer-group !important;
+  }
+
+  tr {
+    break-inside:avoid !important;
+    page-break-inside:avoid !important;
+  }
+
+  th,
+  td {
+    padding:2px 3px !important;
+
+    font-size:7px !important;
+    line-height:1.15 !important;
+  }
+
+  .domainRow td,
+  .subdomainRow td {
+    font-size:7px !important;
+  }
+
+
+  /* ==========================================================
+     ANOMALIES ARRIMAGE
+     Les 2 graphes restent cote a cote.
+     ========================================================== */
+
+  #arrimageAnomaliesSection {
+    margin:0 !important;
+  }
+
+  #arrimageOctaneHistograms.arrimageOctaneHistGrid {
+    display:grid !important;
+
+    grid-template-columns:
+      repeat(2,minmax(0,1fr)) !important;
+
+    gap:5px !important;
+
+    padding:4px !important;
+  }
+
+  #arrimageOctaneHistograms .arrimageOctaneDomainBox,
+  #arrimageOctaneHistograms .histBox {
+    margin:0 !important;
+    padding:4px !important;
+
+    break-inside:avoid !important;
+    page-break-inside:avoid !important;
+  }
+
+  #arrimageOctaneHistograms .verticalChart {
+    min-height:145px !important;
+    height:145px !important;
+  }
+
+  #arrimageOctaneHistograms .verticalGroup {
+    grid-template-rows:
+      90px
+      32px
+      15px !important;
+  }
+
+  #arrimageOctaneHistograms .verticalLegend,
+  #arrimageOctaneHistograms .chartTotals,
+  #arrimageOctaneHistograms .miniNote {
+    font-size:6px !important;
+  }
+
+
+  /* ==========================================================
+     COMPARAISON SPRINT
+     Graphique + tableau comme HTML, côte à côte.
+     ========================================================== */
+
+  .trendLayout {
+    display:grid !important;
+
+    grid-template-columns:
+      minmax(260px,.75fr)
+      minmax(0,1.7fr) !important;
+
+    gap:5px !important;
+
+    align-items:start !important;
+  }
+
+  .trendLayout .chartBox {
+    width:100% !important;
+
+    margin:0 !important;
+    padding:4px !important;
+  }
+
+  .barChart,
+  .lineChart {
+    height:125px !important;
+  }
+
+
+  /* ==========================================================
+     ESPACEMENTS FINAUX
+     ========================================================== */
+
+  .foot {
+    margin:3px 0 0 !important;
+
+    font-size:6px !important;
+  }
+
+}
+
+/* GIL_PRINT_LAYOUT_V1_END */
+
 </style>
 
 </head>
