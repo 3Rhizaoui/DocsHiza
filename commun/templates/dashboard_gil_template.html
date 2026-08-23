@@ -2886,6 +2886,118 @@
 
 /* GIL_PRINT_LAYOUT_V2_END */
 
+
+
+/* GIL_VISUAL_V5_START */
+
+/* ============================================================
+   SANTE DU SPRINT
+   Indicateur météo plus visible sans agrandir la carte
+   ============================================================ */
+
+.healthWeatherIndicator{
+  width:38px !important;
+  min-width:38px !important;
+  height:38px !important;
+
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+
+  padding:0 !important;
+
+  font-size:27px !important;
+  line-height:1 !important;
+
+  background:linear-gradient(
+    180deg,
+    #fffdf5 0%,
+    #fff7dc 100%
+  ) !important;
+
+  border:1px solid #f1d48a !important;
+  border-radius:50% !important;
+
+  box-shadow:
+    0 2px 5px rgba(15,23,42,.14),
+    inset 0 1px 0 rgba(255,255,255,.95) !important;
+}
+
+
+/* ============================================================
+   CAMEMBERT ARRIMAGE
+   Le graphique possede deja une couche laterale SVG.
+   On renforce seulement sa profondeur et son ombre.
+   ============================================================ */
+
+.arrimagePieSvg{
+  overflow:visible !important;
+
+  filter:
+    drop-shadow(0 8px 3px rgba(15,23,42,.25))
+    drop-shadow(0 3px 1px rgba(15,23,42,.14)) !important;
+}
+
+
+/* ============================================================
+   LISTES PAR STATUT
+   La logique Domaine / Sous-domaine est deja dynamique.
+   On améliore seulement la lecture du regroupement.
+   ============================================================ */
+
+.arrimageCardGroup{
+  margin:0 !important;
+  padding:3px 2px !important;
+
+  line-height:1.3 !important;
+
+  border-bottom:1px dotted rgba(100,116,139,.24);
+}
+
+.arrimageCardGroup:last-child{
+  border-bottom:0;
+}
+
+.arrimageCardGroup b{
+  font-weight:900 !important;
+  color:#243447 !important;
+}
+
+
+/* ============================================================
+   VERSION PDF
+   Même principe mais dimensions adaptées à l'impression
+   ============================================================ */
+
+@media print{
+
+  .healthWeatherIndicator{
+    width:30px !important;
+    min-width:30px !important;
+    height:30px !important;
+
+    font-size:21px !important;
+
+    top:4px !important;
+  }
+
+  .arrimagePieSvg{
+    overflow:visible !important;
+
+    filter:
+      drop-shadow(0 6px 2px rgba(15,23,42,.24))
+      drop-shadow(0 2px 1px rgba(15,23,42,.12)) !important;
+  }
+
+  .arrimageCardGroup{
+    padding:1px 0 !important;
+    line-height:1.2 !important;
+    font-size:7px !important;
+  }
+}
+
+/* GIL_VISUAL_V5_END */
+
 </style>
 
 </head>
@@ -3935,7 +4047,7 @@
         '<div class="arrimageConstatCard">'+arrimageGeneralConstat(data)+'</div>';
       }
 
-      const cx = 116, cy = 88, r = 68, depth = 13;
+      const cx = 116, cy = 84, r = 68, depth = 20;
       let angle = 0;
       let side = '';
       let top = '';
@@ -3959,10 +4071,10 @@
           ' style="cursor:pointer"';
 
         if(full){
-          side += '<circle cx="'+cx+'" cy="'+(cy+depth)+'" r="'+r+'" fill="'+seg.color+'" opacity=".42"'+attrs+'></circle>';
+          side += '<circle cx="'+cx+'" cy="'+(cy+depth)+'" r="'+r+'" fill="'+seg.color+'" opacity=".55"'+attrs+'></circle>';
           top += '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+seg.color+'" stroke="white" stroke-width="2"'+attrs+'></circle>';
         }else{
-          side += '<path d="'+pieArcPath(cx,cy+depth,r,a0,a1)+'" fill="'+seg.color+'" opacity=".42"'+attrs+'></path>';
+          side += '<path d="'+pieArcPath(cx,cy+depth,r,a0,a1)+'" fill="'+seg.color+'" opacity=".55"'+attrs+'></path>';
           top += '<path d="'+pieArcPath(cx,cy,r,a0,a1)+'" fill="'+seg.color+'" stroke="white" stroke-width="2"'+attrs+'></path>';
         }
 
