@@ -1453,10 +1453,201 @@ async function captureActiveSprintBoard(
   );
 
   /*
-   * On conserve temporairement la réponse brute dans jira_brut.json.
-   * Elle nous permettra d'identifier précisément la structure
-   * tickets / colonnes / swimlanes avant le patch d'affichage.
+   * Normalisation fonctionnelle de la page Sprints actifs.
+   *
+   * columnsData :
+   *   statut du board + compteur officiel affiché.
+   *
+   * swimlanesData :
+   *   regroupement Testing / Arrimage / Design / Développement.
+   *
+   * issuesData :
+   *   tickets réellement présents sur le board.
    */
+  const boardColumns =
+    raw &&
+    raw.columnsData &&
+    Array.isArray(raw.columnsData.columns)
+      ? raw.columnsData.columns
+      : [];
+
+  const boardIssues =
+    raw &&
+    raw.issuesData &&
+    Array.isArray(raw.issuesData.issues)
+      ? raw.issuesData.issues
+      : [];
+
+  const boardSwimlanes =
+    raw &&
+    raw.swimlanesData &&
+    raw.swimlanesData.customSwimlanesData &&
+    Array.isArray(
+      raw.swimlanesData.customSwimlanesData.swimlanes
+    )
+      ? raw.swimlanesData.customSwimlanesData.swimlanes
+      : [];
+
+  const normalizeText = value =>
+    String(value || "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const cleanSwimlaneName = value => {
+    let text = normalizeText(value);
+
+    /*
+     * On retire uniquement l'information SP entre crochets
+     * pour obtenir un libellé métier stable :
+     *
+     * Arrimage [12 SP théorique] / Actions BA
+     * -> Arrimage / Actions BA
+     *
+     * Développement [26 SP théorique]
+     * -> Développement
+     */
+    text = text
+      .replace(/\s*\[[^\]]*SP[^\]]*\]\s*/gi, " ")
+      .replace(/\s*\/\s*/g, " / ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    return text;
+  };
+
+  const columnByStatusId = new Map();
+
+  for (const column of boardColumns) {
+    for (const statusId of (column.statusIds || [])) {
+      columnByStatusId.set(
+        String(statusId),
+        column
+      );
+    }
+  }
+
+  const swimlaneByIssueId = new Map();
+
+  for (const lane of boardSwimlanes) {
+    for (const issueId of (lane.issueIds || [])) {
+      swimlaneByIssueId.set(
+        String(issueId),
+        lane
+      );
+    }
+  }
+
+  const statuts = boardColumns.map(column => {
+    const nombre =
+      Number(column.statisticsFieldValue || 0);
+
+    return {
+      id: column.id,
+      nom: normalizeText(column.name),
+      nombre,
+      pourcentage:
+        issueCount > 0
+          ? Math.round(
+              (nombre / issueCount) * 1000
+            ) / 10
+          : 0,
+      statusIds:
+        Array.isArray(column.statusIds)
+          ? column.statusIds.map(String)
+          : []
+    };
+  });
+
+  const tickets = boardIssues.map(issue => {
+    const column =
+      columnByStatusId.get(
+        String(issue.statusId || "")
+      ) || null;
+
+    const lane =
+      swimlaneByIssueId.get(
+        String(issue.id || "")
+      ) || null;
+
+    return {
+      id: issue.id,
+      jiraKey: issue.key || "",
+      resume: normalizeText(issue.summary),
+      typeId: String(issue.typeId || ""),
+      statusId: String(issue.statusId || ""),
+      statut:
+        column
+          ? normalizeText(column.name)
+          : "Non renseigné",
+      colonneId:
+        column
+          ? column.id
+          : null,
+      groupe:
+        lane
+          ? cleanSwimlaneName(lane.name)
+          : "Tout le reste",
+      groupeBrut:
+        lane
+          ? normalizeText(lane.name)
+          : "Tout le reste",
+      swimlaneId:
+        lane
+          ? lane.id
+          : null,
+      termine:
+        Boolean(issue.done)
+    };
+  });
+
+  const groupes = boardSwimlanes
+    .filter(lane =>
+      Array.isArray(lane.issueIds) &&
+      lane.issueIds.length > 0
+    )
+    .map(lane => {
+      const ids =
+        new Set(
+          (lane.issueIds || []).map(String)
+        );
+
+      return {
+        id: lane.id,
+        nom: cleanSwimlaneName(lane.name),
+        nomBrut: normalizeText(lane.name),
+        total: ids.size,
+        tickets:
+          tickets.filter(ticket =>
+            ids.has(String(ticket.id))
+          )
+      };
+    });
+
+  console.log(
+    "[SPRINT_ACTIVE_API][NORMALISE] total=",
+    issueCount,
+    "tickets=",
+    tickets.length
+  );
+
+  console.log(
+    "[SPRINT_ACTIVE_API][STATUTS]",
+    statuts
+      .map(item =>
+        `${item.nom}=${item.nombre} (${item.pourcentage}%)`
+      )
+      .join(" | ")
+  );
+
+  console.log(
+    "[SPRINT_ACTIVE_API][GROUPES]",
+    groupes
+      .map(item =>
+        `${item.nom}=${item.total}`
+      )
+      .join(" | ")
+  );
+
   return {
     source:
       "jira_greenhopper_allData",
@@ -1486,6 +1677,12 @@ async function captureActiveSprintBoard(
     topLevelKeys,
 
     arraySummary,
+
+    statuts,
+
+    tickets,
+
+    groupes,
 
     raw
   };
