@@ -113,7 +113,11 @@ function readConfiguration() {
 
     return {
       baseUrl,
-      queries: activeQueries
+      queries: activeQueries,
+      activeSprintBoard:
+        config.active_sprint_board ||
+        config.activeSprintBoard ||
+        {}
     };
   }
 
@@ -1111,7 +1115,8 @@ async function collectOfficialSprintDiagnostics(cdp, baseUrl, projectKey) {
 async function captureActiveSprintBoard(
   cdp,
   baseUrl,
-  sprintDiagnostic
+  sprintDiagnostic,
+  activeSprintBoard = {}
 ) {
   /*
    * Source de vérité :
@@ -1170,17 +1175,31 @@ async function captureActiveSprintBoard(
   const currentHref =
     String(pageState.href || "");
 
-  let rapidViewId = "";
+  let rapidViewId =
+    String(
+      activeSprintBoard.rapidViewId ||
+      activeSprintBoard.rapid_view_id ||
+      ""
+    ).trim();
+
+  if (rapidViewId) {
+    console.log(
+      "[SPRINT_ACTIVE_API] RapidView configuré =",
+      rapidViewId
+    );
+  }
 
   try {
     const u = new URL(currentHref);
 
-    rapidViewId =
-      String(
-        u.searchParams.get("rapidView") ||
-        u.searchParams.get("rapidViewId") ||
-        ""
-      );
+    if (!rapidViewId) {
+      rapidViewId =
+        String(
+          u.searchParams.get("rapidView") ||
+          u.searchParams.get("rapidViewId") ||
+          ""
+        );
+    }
   } catch (_) {}
 
   /*
@@ -1550,7 +1569,8 @@ console.log('Connectez-vous avec le SSO, puis attendez que la page JIRA soit com
         sprintActiveBoard = await captureActiveSprintBoard(
           cdp,
           config.baseUrl,
-          sprintDiagnostic
+          sprintDiagnostic,
+          config.activeSprintBoard
         );
 
         console.log(
