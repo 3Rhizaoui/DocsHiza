@@ -1089,6 +1089,24 @@ def main():
     payload["sprintPrecedent"] = precedent
     payload["semaineCourante"] = semaine_courante
 
+    # Population JIRA réelle du sprint courant.
+    # Cette source reste indépendante des métriques de comparaison des flux.
+    sprint_jira_courant = read_json(SPRINT_COURANT, {}) or {}
+
+    payload["sprintJiraCourant"] = (
+        copy.deepcopy(sprint_jira_courant)
+        if isinstance(sprint_jira_courant, dict)
+        else {}
+    )
+
+    print(
+        "[TRACE][BUILD_PAYLOAD][SPRINT_JIRA]",
+        "type=", type(sprint_jira_courant).__name__,
+        "keys=", list(sprint_jira_courant.keys())[:20]
+            if isinstance(sprint_jira_courant, dict)
+            else []
+    )
+
     payload["santeFluxArrimage"] = {
         "total": total,
         "prets": prets,
