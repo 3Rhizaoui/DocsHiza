@@ -109,9 +109,29 @@ def find_metric(obj, aliases):
     return 0
 
 
-def pick_sprint(path, fallback):
-    data = read_json(path, {})
-    return clean_label(data, fallback)
+def sprint_name_from_doc(data):
+    """Retourne le nom réel du sprint sans fallback codé en dur."""
+    if not isinstance(data, dict):
+        return clean_label(data, "")
+
+    sprint = data.get("sprint")
+
+    if isinstance(sprint, dict):
+        for key in ("nom", "name", "sprint", "label"):
+            value = sprint.get(key)
+            if value not in (None, ""):
+                return clean_label(value, "")
+
+    for key in ("nom", "name", "sprint", "label", "sprintCourant"):
+        value = data.get(key)
+        if value not in (None, ""):
+            return clean_label(value, "")
+
+    return ""
+
+
+def pick_sprint(path):
+    return sprint_name_from_doc(read_json(path, {}) or {})
 
 
 def iso_week_now():
@@ -1072,8 +1092,17 @@ def main():
     )
     comparison = read_json(COMPARAISON, [])
 
-    courant = pick_sprint(SPRINT_COURANT, "Scrum Sprint 23")
-    precedent = pick_sprint(SPRINT_PRECEDENT, "Scrum Sprint 22")
+    sprint_courant_doc = read_json(SPRINT_COURANT, {}) or {}
+    sprint_precedent_doc = read_json(SPRINT_PRECEDENT, {}) or {}
+
+    courant = sprint_name_from_doc(sprint_courant_doc)
+    precedent = sprint_name_from_doc(sprint_precedent_doc)
+
+    if not courant:
+        fail("Nom du sprint courant absent de sprint_courant.json")
+
+    if not precedent:
+        precedent = "Sprint précédent"
 
     total, prets, en_cours, bugs = source_metrics(source)
     if total <= 0:
@@ -1088,6 +1117,11 @@ def main():
     payload["sprintCourant"] = courant
     payload["sprintPrecedent"] = precedent
     payload["semaineCourante"] = semaine_courante
+
+    # Source de vérité du constat Sprint :
+    # tickets réels renvoyés par l'API Agile Jira.
+    payload["sprintJiraCourant"] = sprint_courant_doc
+    payload["sprintJiraPrecedent"] = sprint_precedent_doc
 
     payload["santeFluxArrimage"] = {
         "total": total,
