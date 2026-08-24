@@ -3325,132 +3325,6 @@
 
 /* GIL_ALIGN_STATUS_2X2_V1_END */
 
-
-
-/* GIL_SPRINT_REAL_CONTRIBUTION_V1_START */
-
-.arrSprintRealHeader{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:8px;
-  margin:0 0 7px;
-}
-
-.arrSprintRemaining{
-  font-size:10px;
-  font-weight:800;
-  color:#475569;
-  white-space:nowrap;
-}
-
-.arrSprintStatusGrid{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:5px;
-  margin:7px 0 9px;
-}
-
-.arrSprintStatus{
-  border:1px solid #e2e8f0;
-  border-left:4px solid var(--sprint-status-color,#94a3b8);
-  border-radius:7px;
-  padding:5px 6px;
-  background:#fff;
-  min-width:0;
-}
-
-.arrSprintStatusLabel{
-  display:block;
-  font-size:9px;
-  color:#64748b;
-  line-height:1.15;
-}
-
-.arrSprintStatusValue{
-  display:block;
-  margin-top:2px;
-  font-size:14px;
-  font-weight:900;
-  color:#153454;
-}
-
-.arrSprintContribution{
-  border:1px solid #e2e8f0;
-  border-radius:8px;
-  padding:7px 8px;
-  margin-top:7px;
-  background:#fbfdff;
-}
-
-.arrSprintContribution h4{
-  margin:0 0 5px;
-  font-size:11px;
-  font-weight:900;
-  color:#153454;
-}
-
-.arrSprintContributionLine{
-  display:flex;
-  justify-content:space-between;
-  gap:8px;
-  padding:2px 0;
-  font-size:10px;
-  line-height:1.3;
-}
-
-.arrSprintContributionLine b{
-  white-space:nowrap;
-}
-
-.arrSprintGroupLine{
-  margin-top:3px;
-  padding-left:7px;
-  border-left:3px solid #dbeafe;
-  color:#475569;
-  font-size:9px;
-  line-height:1.35;
-}
-
-.arrSprintDebt{
-  margin-top:4px;
-  padding:5px 6px;
-  border:1px solid #fecaca;
-  border-left:4px solid #b91c1c;
-  border-radius:6px;
-  background:#fff7f7;
-  font-size:9px;
-  line-height:1.35;
-}
-
-.arrSprintDebt b{
-  color:#991b1b;
-}
-
-.arrSprintSourceNote{
-  margin-top:6px;
-  color:#64748b;
-  font-size:8.5px;
-  line-height:1.3;
-}
-
-@media print{
-  .arrSprintStatusGrid{
-    gap:3px !important;
-  }
-
-  .arrSprintStatus{
-    padding:3px 4px !important;
-  }
-
-  .arrSprintContribution{
-    padding:5px 6px !important;
-    margin-top:5px !important;
-  }
-}
-
-/* GIL_SPRINT_REAL_CONTRIBUTION_V1_END */
-
 </style>
 
 </head>
@@ -4577,801 +4451,372 @@ function arrimageSprintGroupedList(items, options){
 
 function arrimageSprintConstat(data){
 
-  /*
-   * SOURCE DE VERITE :
-   * jira/sprints/sprint_courant.json
-   *
-   * On ne dérive plus le nombre de tickets Jira depuis
-   * comparaisonSprints / fluxTotal.
-   */
-  const sprintDoc =
-    data &&
-    data.sprintJiraCourant &&
-    typeof data.sprintJiraCourant === 'object'
-      ? data.sprintJiraCourant
-      : null;
-
-  if(!sprintDoc){
-    return (
-      '<h3>Constat du sprint</h3>'+
-      '<div class="miniNote">'+
-        'Population Jira réelle du sprint non disponible. '+
-        'Relancer l’import Jira pour alimenter sprintJiraCourant.'+
-      '</div>'
-    );
-  }
-
-  const sprintMeta =
-    sprintDoc.sprint && typeof sprintDoc.sprint === 'object'
-      ? sprintDoc.sprint
-      : {};
-
-  const tickets = Array.isArray(sprintDoc.tickets)
-    ? sprintDoc.tickets.filter(x => x && typeof x === 'object')
-    : [];
-
-  const stats =
-    sprintDoc.statistiques &&
-    typeof sprintDoc.statistiques === 'object'
-      ? sprintDoc.statistiques
-      : {};
-
   const sprintLabel = String(
-    sprintMeta.nom ||
-    sprintMeta.name ||
-    data.sprintCourant ||
-    'Sprint courant'
+    data.sprintCourant || ''
   ).trim();
 
-  /*
-   * Total officiel du board.
-   * Les détails collectés restent affichés séparément si besoin.
-   */
-  const officialTotal =
-    Number(stats.total) > 0
-      ? Number(stats.total)
-      : tickets.length;
 
-  const collectedTotal = tickets.length;
+  /* ========================================================
+     A. SPRINT JIRA COURANT
+     ======================================================== */
 
-
-  /* ---------------------------------------------------------
-     Jours ouvrés restants
-
-     Jira affiche les jours de sprint restants sans compter
-     les week-ends. On compte les jours ouvrés strictement
-     après aujourd'hui et avant la date de fin.
-     --------------------------------------------------------- */
-
-  const businessDaysRemaining = endValue => {
-    if(!endValue) return null;
-
-    const end = new Date(endValue);
-
-    if(Number.isNaN(end.getTime())){
-      return null;
-    }
-
-    const now = new Date();
-
-    const cursor = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate() + 1
-    );
-
-    const limit = new Date(
-      end.getFullYear(),
-      end.getMonth(),
-      end.getDate()
-    );
-
-    let count = 0;
-
-    while(cursor < limit){
-      const day = cursor.getDay();
-
-      if(day !== 0 && day !== 6){
-        count += 1;
-      }
-
-      cursor.setDate(cursor.getDate() + 1);
-    }
-
-    return Math.max(0,count);
-  };
-
-  const remainingDays = businessDaysRemaining(
-    sprintMeta.dateFin ||
-    sprintMeta.endDate
-  );
+  const sprintData =
+    (data.comparaisonSprints || []).find(
+      x => String(x && x.sprint || '').trim() === sprintLabel
+    ) || null;
 
 
-  /* ---------------------------------------------------------
-     Statuts réels Jira du sprint
-     --------------------------------------------------------- */
-
-  const sprintStatusBucket = ticket => {
-    const raw = [
-      ticket && ticket.status,
-      ticket && ticket.statusCategory,
-      ticket && ticket.resolution
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g,'')
-      .toLowerCase();
-
-    if(
-      raw.includes('done') ||
-      raw.includes('termine') ||
-      raw.includes('closed') ||
-      raw.includes('resolu') ||
-      raw.includes('resolved')
-    ){
-      return 'Terminé';
-    }
-
-    if(
-      raw.includes('bloqu') ||
-      raw.includes('blocked')
-    ){
-      return 'Bloqué';
-    }
-
-    if(
-      raw.includes('tester') ||
-      raw.includes('a tester') ||
-      raw.includes('test')
-    ){
-      return 'À tester';
-    }
-
-    if(
-      raw.includes('analyse') ||
-      raw.includes('analysis')
-    ){
-      return 'Analyse en cours';
-    }
-
-    if(
-      raw.includes('dev') ||
-      raw.includes('progress') ||
-      raw.includes('en cours')
-    ){
-      return 'Dev en cours';
-    }
-
-    return 'À faire';
-  };
-
-  const statusDefs = [
-    {label:'À faire', color:'#64748b'},
-    {label:'Analyse en cours', color:'#0ea5e9'},
-    {label:'Dev en cours', color:'#f59e0b'},
-    {label:'À tester', color:'#7c3aed'},
-    {label:'Bloqué', color:'#b91c1c'},
-    {label:'Terminé', color:'#15803d'}
-  ];
-
-  const statusCounts = {};
-
-  statusDefs.forEach(x => {
-    statusCounts[x.label] = 0;
-  });
-
-  tickets.forEach(ticket => {
-    const bucket = sprintStatusBucket(ticket);
-
-    statusCounts[bucket] =
-      (statusCounts[bucket] || 0) + 1;
-  });
-
-  const statusHtml = statusDefs.map(def =>
-    '<div class="arrSprintStatus" '+
-      'style="--sprint-status-color:'+def.color+'">'+
-      '<span class="arrSprintStatusLabel">'+
-        esc(def.label)+
-      '</span>'+
-      '<span class="arrSprintStatusValue">'+
-        (statusCounts[def.label] || 0)+
-      '</span>'+
-    '</div>'
-  ).join('');
-
-
-  /* ---------------------------------------------------------
-     Clés de rapprochement fiables
-     --------------------------------------------------------- */
-
-  const normKey = value =>
-    String(value || '')
-      .trim()
-      .toUpperCase();
-
-  const ticketKeys = ticket => {
-    const parent =
-      ticket &&
-      ticket.parent &&
-      typeof ticket.parent === 'object'
-        ? ticket.parent
-        : {};
-
-    return [
-      ticket && ticket.key,
-      ticket && ticket.jiraKey,
-      ticket && ticket.referenceJira,
-      parent.key
-    ]
-      .map(normKey)
-      .filter(Boolean);
-  };
-
-  const rowKeys = row =>
-    [
-      row && row.jiraKey,
-      row && row.referenceJira,
-      row && row.key,
-      row && row.issueKey,
-      row && row.epicParent
-    ]
-      .map(normKey)
-      .filter(Boolean);
-
-  const intersects = (a,b) => {
-    const set = new Set(a || []);
-    return (b || []).some(x => set.has(x));
-  };
-
-  const currentTicketKeySet = new Set();
-
-  tickets.forEach(ticket => {
-    ticketKeys(ticket).forEach(key => {
-      currentTicketKeySet.add(key);
-    });
-  });
-
-
-  /* =========================================================
-     CONTRIBUTION ARRIMAGE
-     ========================================================= */
-
-  const arrimageRows = Array.isArray(data.fluxPretsArrimage)
-    ? data.fluxPretsArrimage
+  const totalDetail = sprintData && Array.isArray(sprintData.fluxTotalDetail)
+    ? sprintData.fluxTotalDetail
     : [];
 
-  /*
-   * Population globale dédupliquée :
-   * priorité à JiraKey, sinon identifiant fonctionnel du flux.
-   *
-   * SIT et UAT du même flux ne deviennent donc pas
-   * deux demandes globales différentes.
-   */
-  const arrimageRequestId = row =>
-    normKey(
-      row &&
-      (
-        row.jiraKey ||
-        row.referenceJira ||
-        row.flux ||
-        row.reference
-      )
-    );
+  const traitesDetail = sprintData && Array.isArray(sprintData.fluxLivresDetail)
+    ? sprintData.fluxLivresDetail
+    : [];
 
-  const allArrimageIds = new Set(
-    arrimageRows
-      .map(arrimageRequestId)
-      .filter(Boolean)
-  );
+  const enCoursDetail = sprintData && Array.isArray(sprintData.fluxEnCoursDetail)
+    ? sprintData.fluxEnCoursDetail
+    : [];
 
-  const sprintArrimageRows = arrimageRows.filter(row =>
-    intersects(
-      rowKeys(row),
-      [...currentTicketKeySet]
-    )
-  );
-
-  const sprintArrimageIds = new Set(
-    sprintArrimageRows
-      .map(arrimageRequestId)
-      .filter(Boolean)
-  );
 
   /*
-   * Pour chaque demande Arrimage touchée,
-   * on récupère les tickets Jira correspondants.
+   * Somme dynamique.
+   * Si "nombre" existe, on le respecte.
+   * Sinon une ligne = une demande.
    */
-  const arrimageRequestStates = {};
+  const sumSprint = rows =>
+    (rows || []).reduce((total,x) => {
+      const n = Number(x && x.nombre);
 
-  sprintArrimageRows.forEach(row => {
-    const id = arrimageRequestId(row);
-
-    if(!id) return;
-
-    const keys = rowKeys(row);
-
-    const linkedTickets = tickets.filter(ticket =>
-      intersects(ticketKeys(ticket),keys)
-    );
-
-    if(!arrimageRequestStates[id]){
-      arrimageRequestStates[id] = [];
-    }
-
-    linkedTickets.forEach(ticket => {
-      arrimageRequestStates[id].push(
-        sprintStatusBucket(ticket)
+      return total + (
+        Number.isFinite(n) && n > 0
+          ? n
+          : 1
       );
-    });
-  });
-
-  let arrimageTerminees = 0;
-  let arrimageActives = 0;
-
-  Object.keys(arrimageRequestStates).forEach(id => {
-    const states = arrimageRequestStates[id];
-
-    /*
-     * Une demande est considérée terminée dans ce sprint
-     * seulement si tous les tickets Jira liés sont terminés.
-     */
-    if(
-      states.length &&
-      states.every(x => x === 'Terminé')
-    ){
-      arrimageTerminees += 1;
-    }
-    else{
-      arrimageActives += 1;
-    }
-  });
+    },0);
 
 
-  /* Groupe Domaine / Sous-domaine + SIT/UAT */
+  const totalJira =
+    Number(sprintData && sprintData.fluxTotal) ||
+    sumSprint(totalDetail);
 
-  const arrimageGroups = {};
 
-  sprintArrimageRows.forEach(row => {
-    const domaine = arrimageClean(
-      row && (
-        row.domaine ||
-        row.domain
-      )
-    );
+  const totalTraites =
+    Number(sprintData && sprintData.fluxLivresTotal) ||
+    sumSprint(traitesDetail);
 
-    const sousDomaine = arrimageClean(
-      row && (
-        row.sousDomaine ||
-        row.subdomain
-      )
-    );
 
+  const totalEnCours =
+    Number(sprintData && sprintData.fluxEnCoursTotal) ||
+    sumSprint(enCoursDetail);
+
+
+  const pctTraites = arrimagePct(
+    totalTraites,
+    totalJira
+  );
+
+
+  const pctEnCours = arrimagePct(
+    totalEnCours,
+    totalJira
+  );
+
+
+  /* ========================================================
+     B. DEMANDES TRAITEES — SIT / UAT UNIQUEMENT
+     ======================================================== */
+
+  const demandesTraitees = traitesDetail.filter(x => {
     const env = String(
-      row && (
-        row.environnement ||
-        row.environment
+      x && (
+        x.environnement ||
+        x.environment
       ) || ''
     ).toUpperCase();
 
-    const key = domaine+' / '+sousDomaine;
-
-    if(!arrimageGroups[key]){
-      arrimageGroups[key] = {
-        ids:new Set(),
-        SIT:new Set(),
-        UAT:new Set()
-      };
-    }
-
-    const id = arrimageRequestId(row);
-
-    if(id){
-      arrimageGroups[key].ids.add(id);
-
-      if(env === 'SIT'){
-        arrimageGroups[key].SIT.add(id);
-      }
-
-      if(env === 'UAT'){
-        arrimageGroups[key].UAT.add(id);
-      }
-    }
-  });
-
-  const arrimageGroupHtml = Object.keys(arrimageGroups)
-    .sort((a,b) => a.localeCompare(b,'fr'))
-    .map(key => {
-      const g = arrimageGroups[key];
-
-      return (
-        '<div class="arrSprintGroupLine">'+
-          esc(key)+
-          ' — Total <b>'+g.ids.size+'</b>'+
-          ' · SIT <b>'+g.SIT.size+'</b>'+
-          ' · UAT <b>'+g.UAT.size+'</b>'+
-        '</div>'
-      );
-    })
-    .join('');
-
-
-  /* =========================================================
-     CONTRIBUTION OCTANE
-     ========================================================= */
-
-  const octaneRows = arrimageOctaneAnomalies(data) || [];
-
-  const octaneKeys = anomaly =>
-    [
-      anomaly && anomaly.jiraKey,
-      anomaly && anomaly.referenceJira,
-      anomaly && anomaly.key,
-      anomaly && anomaly.issueKey
-    ]
-      .map(normKey)
-      .filter(Boolean);
-
-  const octaneId = anomaly =>
-    normKey(
-      anomaly &&
-      (
-        anomaly.referenceOctane ||
-        anomaly.octaneReference ||
-        anomaly.reference ||
-        anomaly.jiraKey ||
-        anomaly.key
-      )
-    );
-
-  const sprintOctaneRows = octaneRows.filter(anomaly =>
-    intersects(
-      octaneKeys(anomaly),
-      [...currentTicketKeySet]
-    )
-  );
-
-  const octaneMap = {};
-
-  sprintOctaneRows.forEach(anomaly => {
-    const id = octaneId(anomaly);
-
-    if(!id) return;
-
-    if(!octaneMap[id]){
-      octaneMap[id] = {
-        anomaly:anomaly,
-        tickets:[]
-      };
-    }
-
-    const keys = octaneKeys(anomaly);
-
-    octaneMap[id].tickets.push(
-      ...tickets.filter(ticket =>
-        intersects(ticketKeys(ticket),keys)
-      )
-    );
-  });
-
-  let octaneResolues = 0;
-  let octaneEnCours = 0;
-  let octaneBloquees = 0;
-
-  Object.values(octaneMap).forEach(entry => {
-    const states = entry.tickets.map(
-      sprintStatusBucket
-    );
-
-    if(
-      states.length &&
-      states.every(x => x === 'Terminé')
-    ){
-      octaneResolues += 1;
-      return;
-    }
-
-    if(states.some(x => x === 'Bloqué')){
-      octaneBloquees += 1;
-      return;
-    }
-
-    octaneEnCours += 1;
+    return env === 'SIT' || env === 'UAT';
   });
 
 
-  /* =========================================================
-     DETTE D'ANOMALIES
+  /* ========================================================
+     C. ANOMALIES OCTANE DU SPRINT
 
-     On exploite l'historique Sprint présent dans le raw Jira.
-     normalize_issue() conserve volontairement issue.raw.
-     ========================================================= */
+     Population Octane officielle :
+       anomaliesArrimageDetail
 
-  const sprintNumber = label => {
-    const m = String(label || '').match(
-      /(?:SCRUM\s+)?SPRINT\s+(\d+)/i
-    );
+     On ne transforme PAS toutes les anomalies du sprint
+     en anomalies Octane.
 
-    return m ? Number(m[1]) : null;
-  };
+     On fait l'intersection entre :
+       - anomalies Octane dédiées
+       - anomalies appartenant au sprint courant.
+     ======================================================== */
 
-  const currentSprintNumber =
-    sprintNumber(sprintLabel);
+  const octaneGlobal =
+    arrimageOctaneAnomalies(data) || [];
 
-  const collectSprintLabels = ticket => {
-    const found = new Set();
-
-    const visit = (value,keyHint) => {
-      if(value == null) return;
-
-      if(Array.isArray(value)){
-        value.forEach(x => visit(x,keyHint));
-        return;
-      }
-
-      if(typeof value === 'object'){
-        Object.keys(value).forEach(key =>
-          visit(value[key],key)
-        );
-        return;
-      }
-
-      const text = String(value);
-
-      /*
-       * On privilégie les champs dont le nom contient sprint,
-       * mais on accepte également les libellés Sprint explicites.
-       */
-      if(
-        String(keyHint || '')
-          .toLowerCase()
-          .includes('sprint') ||
-        /(?:Scrum\s+)?Sprint\s+\d+/i.test(text)
-      ){
-        const matches = text.match(
-          /(?:Scrum\s+)?Sprint\s+\d+/gi
-        ) || [];
-
-        matches.forEach(label =>
-          found.add(label.trim())
-        );
-      }
-    };
-
-    visit(ticket && ticket.raw,'raw');
-
-    return [...found];
-  };
-
-  const debts = [];
-
-  Object.entries(octaneMap).forEach(([id,entry]) => {
-    const activeTickets = entry.tickets.filter(
-      ticket => sprintStatusBucket(ticket) !== 'Terminé'
-    );
-
-    activeTickets.forEach(ticket => {
-      const labels = collectSprintLabels(ticket);
-
-      const historic = labels
-        .map(label => ({
-          label:label,
-          number:sprintNumber(label)
-        }))
-        .filter(x =>
-          x.number != null &&
-          currentSprintNumber != null &&
-          x.number < currentSprintNumber
-        )
-        .sort((a,b) => a.number - b.number);
-
-      if(!historic.length){
-        return;
-      }
-
-      const first = historic[0];
-
-      debts.push({
-        id:id,
-        jiraKey:
-          ticket.key ||
-          entry.anomaly.jiraKey ||
-          entry.anomaly.reference ||
-          id,
-        status:sprintStatusBucket(ticket),
-        since:first.label,
-        age:
-          currentSprintNumber != null
-            ? currentSprintNumber - first.number
-            : null
-      });
-    });
-  });
 
   /*
-   * Déduplication d'une même anomalie.
+   * Population d'anomalies du sprint.
+   *
+   * Priorité à anomaliesSprintDetail si disponible.
+   * Sinon anomaliesDetail avec sprint = sprint courant.
    */
-  const debtById = {};
+  let sprintAnomalies = [];
 
-  debts.forEach(item => {
-    const key = normKey(item.id || item.jiraKey);
+  if(Array.isArray(data.anomaliesSprintDetail)){
+    sprintAnomalies = data.anomaliesSprintDetail.filter(a =>
+      !sprintLabel ||
+      !a ||
+      !a.sprint ||
+      String(a.sprint).trim() === sprintLabel
+    );
+  }
+  else if(Array.isArray(data.anomaliesDetail)){
+    sprintAnomalies = data.anomaliesDetail.filter(a =>
+      a &&
+      String(a.sprint || '').trim() === sprintLabel
+    );
+  }
 
-    if(
-      !debtById[key] ||
-      (
-        item.age != null &&
-        item.age > (debtById[key].age || 0)
-      )
-    ){
-      debtById[key] = item;
-    }
+
+  /*
+   * Normalisation d'une référence pour permettre
+   * l'intersection sans dépendre d'un field ID.
+   */
+  const anomalyKeys = a => {
+    const values = [
+      a && a.reference,
+      a && a.jiraKey,
+      a && a.id,
+      a && a.key,
+      a && a.issueKey,
+      a && a.flux
+    ]
+      .filter(Boolean)
+      .map(v => String(v).trim().toUpperCase())
+      .filter(Boolean);
+
+    return [...new Set(values)];
+  };
+
+
+  const sprintReferenceSet = new Set();
+
+  sprintAnomalies.forEach(a => {
+    anomalyKeys(a).forEach(k =>
+      sprintReferenceSet.add(k)
+    );
   });
 
-  const debtRows = Object.values(debtById)
-    .sort((a,b) =>
-      (b.age || 0) - (a.age || 0)
+
+  /*
+   * Une anomalie Octane appartient au sprint si :
+   *
+   * 1. elle porte explicitement sprintCourant,
+   * OU
+   * 2. une de ses références correspond à une anomalie
+   *    de la population du sprint courant.
+   *
+   * Pas de fallback vers toute la population Octane.
+   */
+  const octaneSprint = octaneGlobal.filter(a => {
+
+    const explicitSprint = String(
+      a && a.sprint || ''
+    ).trim();
+
+    if(
+      explicitSprint &&
+      explicitSprint === sprintLabel
+    ){
+      return true;
+    }
+
+    const keys = anomalyKeys(a);
+
+    return keys.some(k =>
+      sprintReferenceSet.has(k)
     );
-
-  const debtHtml = debtRows.length
-    ? debtRows.map(item =>
-        '<div class="arrSprintDebt">'+
-          '<b>'+esc(item.jiraKey)+'</b>'+
-          ' — '+esc(item.status)+
-          ' — depuis <b>'+esc(item.since)+'</b>'+
-          (
-            item.age != null
-              ? ' — dette : <b>'+
-                  item.age+
-                  ' sprint'+
-                  (item.age > 1 ? 's' : '')+
-                '</b>'
-              : ''
-          )+
-        '</div>'
-      ).join('')
-    : '<div class="miniNote">Aucune dette Octane identifiée dans le sprint courant.</div>';
+  });
 
 
-  /* =========================================================
-     RENDU
-     ========================================================= */
-
-  const remainingText =
-    remainingDays == null
-      ? ''
-      : (
-          remainingDays+
-          ' jour'+
-          (remainingDays > 1 ? 's' : '')+
-          ' ouvré'+
-          (remainingDays > 1 ? 's' : '')+
-          ' restant'+
-          (remainingDays > 1 ? 's' : '')
-        );
-
-  const collectionNote =
-    officialTotal !== collectedTotal
-      ? (
-          '<div class="arrSprintSourceNote">'+
-            'Jira annonce <b>'+officialTotal+'</b> ticket(s) ; '+
-            '<b>'+collectedTotal+'</b> détail(s) ont été collectés par l’API.'+
-          '</div>'
-        )
-      : '';
-
-  return (
-    '<div class="arrSprintRealHeader">'+
-      '<h3>Constat du sprint</h3>'+
-      (
-        remainingText
-          ? '<span class="arrSprintRemaining">'+esc(remainingText)+'</span>'
-          : ''
-      )+
-    '</div>'+
-
-    '<div class="arrSprintContributionLine">'+
-      '<span><b>'+esc(sprintLabel)+'</b></span>'+
-      '<b>'+officialTotal+' tickets Jira</b>'+
-    '</div>'+
-
-    statusHtml+
-
-    collectionNote+
-
-    '<div class="arrSprintContribution">'+
-      '<h4>Contribution du sprint à l’arrimage</h4>'+
-
-      '<div class="arrSprintContributionLine">'+
-        '<span>Demandes Arrimage concernées</span>'+
-        '<b>'+sprintArrimageIds.size+
-          ' / '+allArrimageIds.size+'</b>'+
-      '</div>'+
-
-      '<div class="arrSprintContributionLine">'+
-        '<span>Terminées dans ce sprint</span>'+
-        '<b style="color:#15803d">'+
-          arrimageTerminees+
-        '</b>'+
-      '</div>'+
-
-      '<div class="arrSprintContributionLine">'+
-        '<span>Encore actives</span>'+
-        '<b style="color:#d97706">'+
-          arrimageActives+
-        '</b>'+
-      '</div>'+
-
-      (
-        allArrimageIds.size
-          ? (
-              '<div class="arrSprintContributionLine">'+
-                '<span>Contribution à l’avancement global</span>'+
-                '<b>'+
-                  arrimagePct(
-                    arrimageTerminees,
-                    allArrimageIds.size
-                  )+
-                '</b>'+
-              '</div>'
-            )
-          : ''
-      )+
-
-      arrimageGroupHtml+
-    '</div>'+
-
-    '<div class="arrSprintContribution">'+
-      '<h4>Contribution du sprint aux anomalies Octane</h4>'+
-
-      '<div class="arrSprintContributionLine">'+
-        '<span>Anomalies Octane concernées</span>'+
-        '<b>'+Object.keys(octaneMap).length+'</b>'+
-      '</div>'+
-
-      '<div class="arrSprintContributionLine">'+
-        '<span>Résolues dans ce sprint</span>'+
-        '<b style="color:#15803d">'+
-          octaneResolues+
-        '</b>'+
-      '</div>'+
-
-      '<div class="arrSprintContributionLine">'+
-        '<span>En cours</span>'+
-        '<b style="color:#d97706">'+
-          octaneEnCours+
-        '</b>'+
-      '</div>'+
-
-      '<div class="arrSprintContributionLine">'+
-        '<span>Bloquées</span>'+
-        '<b style="color:#b91c1c">'+
-          octaneBloquees+
-        '</b>'+
-      '</div>'+
-    '</div>'+
-
-    '<div class="arrSprintContribution">'+
-      '<h4>Dette anomalies Octane</h4>'+
-      '<div class="arrSprintContributionLine">'+
-        '<span>Anomalies héritées d’un ancien sprint</span>'+
-        '<b style="color:#b91c1c">'+
-          debtRows.length+
-        '</b>'+
-      '</div>'+
-      debtHtml+
-    '</div>'+
-
-    '<div class="arrSprintSourceNote">'+
-      'Source sprint : API Agile Jira officielle. '+
-      'Les croisements Arrimage et Octane utilisent les clés Jira / parents Jira disponibles ; '+
-      'aucun numéro de sprint ni compteur n’est codé en dur.'+
-    '</div>'
+  const anomaliesTraitees = octaneSprint.filter(
+    a =>
+      arrimageOctaneStatusBucket(a) === 'Livrés'
   );
+
+
+  const anomaliesEnCours = octaneSprint.filter(
+    a =>
+      arrimageOctaneStatusBucket(a) === 'En cours'
+  );
+
+
+  /* ========================================================
+     D. RENDU
+     ======================================================== */
+
+  return ''+
+
+    '<h3>Constat du sprint</h3>'+
+
+    '<div class="arrimageSprintStats">'+
+
+      '<span class="arrimageSprintKpi">'+
+        'JIRA du sprint : <b>'+
+          totalJira+
+        '</b>'+
+      '</span>'+
+
+      '<span class="arrimageSprintKpi">'+
+        'Traités : <b>'+
+          totalTraites+
+          ' ('+pctTraites+')'+
+        '</b>'+
+      '</span>'+
+
+      '<span class="arrimageSprintKpi">'+
+        'En cours : <b>'+
+          totalEnCours+
+          ' ('+pctEnCours+')'+
+        '</b>'+
+      '</span>'+
+
+    '</div>'+
+
+
+    '<div class="miniNote">'+
+      '<b>'+esc(sprintLabel || 'Sprint courant')+'</b>'+
+      ' — données issues de la population JIRA du sprint courant.'+
+    '</div>'+
+
+
+    '<div class="arrimageSprintSections">'+
+
+
+      /* ----------------------------------------------------
+         Demandes / flux traités
+         ---------------------------------------------------- */
+
+      '<div class="arrimageSprintBlock">'+
+
+        '<h4>'+
+          '1. Demandes / flux traités — SIT / UAT'+
+        '</h4>'+
+
+        arrimageSprintGroupedList(
+          demandesTraitees,
+          {
+            empty:
+              'Aucune demande traitée SIT / UAT pour le sprint courant.',
+
+            showEnv:true,
+
+            ref:x =>
+              x.flux ||
+              x.jiraKey ||
+              x.reference ||
+              x.id ||
+              ''
+          }
+        )+
+
+      '</div>'+
+
+
+      /* ----------------------------------------------------
+         Anomalies Octane
+         ---------------------------------------------------- */
+
+      '<div class="arrimageSprintBlock">'+
+
+        '<h4>'+
+          '2. Anomalies Octane du sprint'+
+        '</h4>'+
+
+
+        '<div class="miniNote">'+
+          '<b>Traitées : '+
+            anomaliesTraitees.length+
+          '</b>'+
+        '</div>'+
+
+        arrimageSprintGroupedList(
+          anomaliesTraitees,
+          {
+            empty:
+              'Aucune anomalie Octane traitée identifiée dans le sprint courant.',
+
+            showEnv:false,
+
+            ref:a =>
+              a.reference ||
+              a.jiraKey ||
+              a.id ||
+              a.key ||
+              a.flux ||
+              ''
+          }
+        )+
+
+
+        '<div class="miniNote" style="margin-top:8px">'+
+          '<b>En cours : '+
+            anomaliesEnCours.length+
+          '</b>'+
+        '</div>'+
+
+        arrimageSprintGroupedList(
+          anomaliesEnCours,
+          {
+            empty:
+              'Aucune anomalie Octane en cours identifiée dans le sprint courant.',
+
+            showEnv:false,
+
+            ref:a =>
+              a.reference ||
+              a.jiraKey ||
+              a.id ||
+              a.key ||
+              a.flux ||
+              ''
+          }
+        )+
+
+      '</div>'+
+
+
+    '</div>';
 }
 
+/* GIL_SPRINT_CONSTAT_V1_JS_END */
 
+    function arrimageGeneralConstat(data){
+      const pie = arrimagePieData(data);
 
-function renderArrimagePie3d(data){
+      const seg = label =>
+        (pie.segments || []).find(s => s.label === label) || {count:0};
+
+      const livres = seg('Livrés');
+      const encours = seg('En cours');
+      const bloques = seg('Bloqués');
+      const rejetes = seg('Rejetés');
+
+      return '<h3>Constat général</h3>'+
+        '<ul class="arrimageConstatList">'+
+          '<li class="arrOk"><b>'+arrimagePct(livres.count,pie.total)+' des flux d’arrimage sont livrés.</b></li>'+
+          '<li class="arrProgress"><b>'+encours.count+' flux sont en cours de traitement.</b></li>'+
+          '<li class="arrBlocked"><b>'+bloques.count+' flux sont bloqués.</b></li>'+
+          '<li class="arrRejected"><b>'+rejetes.count+' flux sont rejetés.</b></li>'+
+          '<li>Total : <b>'+pie.total+'</b> flux.</li>'+
+          '<li>Bugs Octane liés : <b>'+pie.bugsOctane+'</b> — terminés : <b>'+pie.bugsOctaneTermines+'</b> — annulés : <b>'+pie.bugsOctaneAnnules+'</b>.</li>'+
+        '</ul>';
+    }
+
+    function renderArrimagePie3d(data){
       const d = arrimagePieData(data);
 
       if(!d.total){
