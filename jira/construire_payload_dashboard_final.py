@@ -1120,7 +1120,11 @@ def main():
     )
 
     sprint_billets_bruts = (
-        sprint_jira_courant.get("billets", [])
+        (
+            sprint_jira_courant.get("tickets")
+            or sprint_jira_courant.get("billets")
+            or []
+        )
         if isinstance(sprint_jira_courant, dict)
         else []
     )
@@ -1269,6 +1273,239 @@ def main():
         "billets": billets_uniques,
         "source": "API Agile Jira officielle — sprint courant",
     }
+
+    # ============================================================
+    # CONTRIBUTION REELLE DU SPRINT COURANT
+    #
+    # Population de depart :
+    #   tickets du sprint courant uniquement.
+    #
+    # Arrimage :
+    #   project = AERL_GIL
+    #   AND summary ~ "Arrimage"
+    #   AND issuetype = Epic
+    #
+    # Octane :
+    #   project = "Group Integration Layer"
+    #   AND issuetype = Bug
+    #   AND Reference IS NOT EMPTY
+    #
+    # Les taches / sous-taches ne participent pas aux croisements.
+    # ============================================================
+
+    def sprint_text(value):
+        value = unicodedata.normalize("NFD", str(value or ""))
+        value = "".join(
+            ch for ch in value
+            if unicodedata.category(ch) != "Mn"
+        )
+        return value.strip().lower()
+
+    def sprint_find_reference(value):
+        """
+        Recherche dynamiquement un champ nomme Reference / Référence
+        sans coder en dur un customfield Jira.
+        """
+        if isinstance(value, dict):
+            # Priorite aux champs dont le nom est exactement Reference.
+            for key, item in value.items():
+                if sprint_text(key) == "reference":
+                    if isinstance(item, (str, int, float)):
+                        ref = str(item).strip()
+                        if ref:
+                            return ref
+
+            # Puis recherche recursive.
+            for item in value.values():
+                found = sprint_find_reference(item)
+                if found:
+                    return found
+
+        elif isinstance(value, list):
+            for item in value:
+                found = sprint_find_reference(item)
+                if found:
+                    return found
+
+        return ""
+
+    def sprint_ticket_key(ticket):
+        return clean_label(
+            row_value(
+                ticket,
+                "clé",
+                "cle",
+                "key",
+                "jiraKey"
+            ),
+            ""
+        )
+
+    def sprint_ticket_type(ticket):
+        return clean_label(
+            row_value(
+                ticket,
+                "type",
+                "issueType",
+                "issuetype",
+                "categorie"
+            ),
+            ""
+        )
+
+    def sprint_ticket_status(ticket):
+        return clean_label(
+            row_value(
+                ticket,
+                "status",
+                "statut"
+            ),
+            "À qualifier"
+        )
+
+    def sprint_ticket_summary(ticket):
+        return clean_label(
+            row_value(
+                ticket,
+                "summary",
+                "resume",
+                "titre"
+            ),
+            ""
+        )
+
+    def sprint_minimal_ticket(ticket, reference=""):
+        champs_metiers = ticket.get("champsMétiers")
+        if not isinstance(champs_metiers, dict):
+            champs_metiers = {}
+
+        return {
+            "jiraKey": sprint_ticket_key(ticket),
+            "type": sprint_ticket_type(ticket),
+            "resume": sprint_ticket_summary(ticket),
+            "statutJira": sprint_ticket_status(ticket),
+            "statusCategory": clean_label(
+                row_value(
+                    ticket,
+                    "statusCategory",
+                    "categorieStatut"
+                ),
+                ""
+            ),
+            "reference": reference,
+            "environnement": clean_label(
+                row_value(
+                    champs_metiers,
+                    "environnement",
+                    "environment",
+                    "env"
+                ),
+                "Non renseigné"
+            ),
+        }
+
+    arrimage_sprint = []
+    octane_sprint = []
+
+    for ticket in sprint_billets_bruts:
+        if not isinstance(ticket, dict):
+            continue
+
+        issue_type = sprint_text(
+            sprint_ticket_type(ticket)
+        )
+
+        summary = sprint_text(
+            sprint_ticket_summary(ticket)
+        )
+
+        # --------------------------------------------------------
+        # Epic Arrimage
+        # Equivalent fonctionnel de :
+        #
+        # project = AERL_GIL
+        # AND summary ~ "Arrimage"
+        # AND issuetype = Epic
+        # --------------------------------------------------------
+        is_epic = issue_type in {
+            "epic",
+            "epique",
+        }
+
+        if is_epic and "arrimage" in summary:
+            arrimage_sprint.append(
+                sprint_minimal_ticket(ticket)
+            )
+
+        # --------------------------------------------------------
+        # Bug Octane avec Reference non vide
+        # Equivalent fonctionnel de :
+        #
+        # issuetype = Bug
+        # AND Reference IS NOT EMPTY
+        #
+        # Bug/Bogue tolérés car Jira peut restituer le libellé FR.
+        # --------------------------------------------------------
+        is_bug = issue_type in {
+            "bug",
+            "bogue",
+        }
+
+        if is_bug:
+            reference = sprint_find_reference(ticket)
+
+            if reference:
+                octane_sprint.append(
+                    sprint_minimal_ticket(
+                        ticket,
+                        reference=reference
+                    )
+                )
+
+    payload["contributionSprintCourant"] = {
+        "sprint": clean_label(
+            row_value(
+                sprint_meta,
+                "nom",
+                "name"
+            ),
+            courant
+        ),
+
+        "arrimage": {
+            "total": len(arrimage_sprint),
+            "tickets": arrimage_sprint,
+            "regle": (
+                'project = AERL_GIL '
+                'AND summary ~ "Arrimage" '
+                'AND issuetype = Epic'
+            ),
+        },
+
+        "octane": {
+            "total": len(octane_sprint),
+            "tickets": octane_sprint,
+            "regle": (
+                'project = "Group Integration Layer" '
+                'AND issuetype = Bug '
+                'AND Reference IS NOT EMPTY'
+            ),
+        },
+
+        "source": (
+            "Intersection avec les tickets du sprint Jira courant"
+        ),
+    }
+
+    print(
+        "[TRACE][BUILD_PAYLOAD][SPRINT_CONTRIBUTION]",
+        "sprint=",
+        payload["contributionSprintCourant"]["sprint"],
+        "arrimage=",
+        len(arrimage_sprint),
+        "octane=",
+        len(octane_sprint),
+    )
 
     print(
         "[TRACE][BUILD_PAYLOAD][SPRINT_REAL]",
