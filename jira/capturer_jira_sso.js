@@ -1108,337 +1108,196 @@ async function collectOfficialSprintDiagnostics(cdp, baseUrl, projectKey) {
 }
 
 
-async function captureActiveSprintBoard(cdp, baseUrl, sprintDiagnostic) {
-  const boardId =
+async function captureActiveSprintBoard(
+  cdp,
+  baseUrl,
+  sprintDiagnostic
+) {
+  /*
+   * Source de vérité :
+   * endpoint GreenHopper utilisé directement par la page
+   * Jira "Sprints actifs".
+   *
+   * Endpoint observé :
+   * /rest/greenhopper/1.0/xboard/work/allData.json
+   *
+   * Aucun rapidViewId n'est codé en dur.
+   */
+
+  const projectKey =
+    sprintDiagnostic &&
+    sprintDiagnostic.projectKey
+      ? String(sprintDiagnostic.projectKey)
+      : "";
+
+  const fallbackBoardId =
     sprintDiagnostic &&
     sprintDiagnostic.board &&
-    sprintDiagnostic.board.id;
+    sprintDiagnostic.board.id
+      ? String(sprintDiagnostic.board.id)
+      : "";
 
   const sprintName =
     sprintDiagnostic &&
     sprintDiagnostic.courant &&
-    sprintDiagnostic.courant.nom;
-
-  if (!boardId) {
-    throw new Error(
-      "Board Jira absent du diagnostic officiel"
-    );
-  }
+    sprintDiagnostic.courant.nom
+      ? String(sprintDiagnostic.courant.nom)
+      : "";
 
   /*
-   * Source de vérité pour le constat du sprint :
-   * vue visuelle "Sprints actifs" du board Jira.
-   *
-   * On ne déduit pas ici la population depuis sprint_courant.json.
-   * On lit les compteurs réellement affichés par Jira.
+   * Le RapidView de la page Jira réellement ouverte
+   * est prioritaire sur le board API Agile.
    */
-  let activeUrl =
-    `${baseUrl}/secure/RapidBoard.jspa?rapidView=${encodeURIComponent(boardId)}`;
-
-  /*
-   * Si le CDP est déjà attaché à la vraie page Sprints actifs ouverte
-   * par l'utilisateur, elle devient prioritaire.
-   * Aucun rapidView n'est codé en dur.
-   */
-  try {
-    const currentPage = await cdp.send(
-      "Runtime.evaluate",
-      {
-        expression: "location.href",
-        returnByValue: true
-      }
-    );
-
-    const href =
-      currentPage &&
-      currentPage.result &&
-      currentPage.result.value
-        ? String(currentPage.result.value)
-        : "";
-
-    if (
-      /\/secure\/RapidBoard\.jspa/i.test(href) &&
-      /[?&]rapidView=\d+/i.test(href)
-    ) {
-      activeUrl = href;
-
-      console.log(
-        "[SPRINT_ACTIVE] RapidBoard utilisateur détecté :",
-        activeUrl
-      );
-    }
-  } catch (_) {}
-
-  console.log("");
-  console.log("============================================================");
-  console.log("[SPRINT_ACTIVE] CAPTURE DE LA PAGE SPRINTS ACTIFS");
-  console.log("============================================================");
-  console.log("[SPRINT_ACTIVE] URL :", activeUrl);
-
-  await cdp.send(
-    "Page.enable"
-  );
-
-  const currentHrefResult = await cdp.send(
+  const pageStateResult = await cdp.send(
     "Runtime.evaluate",
     {
-      expression: "location.href",
+      expression: `({
+        href: location.href,
+        origin: location.origin,
+        title: document.title
+      })`,
       returnByValue: true
     }
   );
 
+  const pageState =
+    pageStateResult &&
+    pageStateResult.result &&
+    pageStateResult.result.value
+      ? pageStateResult.result.value
+      : {};
+
   const currentHref =
-    currentHrefResult &&
-    currentHrefResult.result &&
-    currentHrefResult.result.value
-      ? String(currentHrefResult.result.value)
-      : "";
+    String(pageState.href || "");
 
-  if (currentHref !== activeUrl) {
-    await cdp.send(
-      "Page.navigate",
-      { url: activeUrl }
+  let rapidViewId = "";
+
+  try {
+    const u = new URL(currentHref);
+
+    rapidViewId =
+      String(
+        u.searchParams.get("rapidView") ||
+        u.searchParams.get("rapidViewId") ||
+        ""
+      );
+  } catch (_) {}
+
+  if (!rapidViewId) {
+    rapidViewId = fallbackBoardId;
+  }
+
+  if (!rapidViewId) {
+    throw new Error(
+      "Impossible de déterminer le rapidView Jira"
     );
   }
+
+  console.log("");
+  console.log(
+    "============================================================"
+  );
+  console.log(
+    "[SPRINT_ACTIVE_API] LECTURE GREENHOPPER ALLDATA"
+  );
+  console.log(
+    "============================================================"
+  );
+
+  console.log(
+    "[SPRINT_ACTIVE_API] page=",
+    currentHref || "(inconnue)"
+  );
+
+  console.log(
+    "[SPRINT_ACTIVE_API] rapidViewId=",
+    rapidViewId
+  );
+
+  console.log(
+    "[SPRINT_ACTIVE_API] projectKey=",
+    projectKey || "(non renseigné)"
+  );
 
   /*
-   * Attendre le chargement du document.
+   * IMPORTANT :
+   * ne pas envoyer le paramètre etag.
+   *
+   * Jira utilise etag pour ses appels de polling et peut alors
+   * retourner uniquement etagData.
+   *
+   * Sans etag, on demande le jeu complet utilisé pour construire
+   * le board.
    */
-  for (let i = 0; i < 60; i += 1) {
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const ready = await cdp.send(
-      "Runtime.evaluate",
-      {
-        expression: "document.readyState",
-        returnByValue: true
-      }
-    );
-
-    if (
-      ready &&
-      ready.result &&
-      ready.result.value === "complete"
-    ) {
-      break;
-    }
-  }
-
-  /*
-   * Jira charge ensuite le board de manière asynchrone.
-   * On attend que le nom du sprint ou les colonnes apparaissent.
-   */
-  for (let i = 0; i < 60; i += 1) {
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const check = await cdp.send(
-      "Runtime.evaluate",
-      {
-        expression: `
-          (() => {
-            const t = document.body
-              ? document.body.innerText || ""
-              : "";
-
-            return (
-              /À\\s*FAIRE|A\\s*FAIRE/i.test(t) &&
-              /DEV\\s*EN\\s*COURS/i.test(t)
-            );
-          })()
-        `,
-        returnByValue: true
-      }
-    );
-
-    if (
-      check &&
-      check.result &&
-      check.result.value === true
-    ) {
-      break;
-    }
-  }
-
   const result = await cdp.send(
     "Runtime.evaluate",
     {
       expression: `
-        (() => {
-          const bodyText =
-            document.body
-              ? document.body.innerText || ""
-              : "";
+        (async () => {
+          const rapidViewId =
+            ${JSON.stringify(rapidViewId)};
 
-          const lines = bodyText
-            .split(/\\r?\\n/)
-            .map(x => x.replace(/\\s+/g, " ").trim())
-            .filter(Boolean);
+          const projectKey =
+            ${JSON.stringify(projectKey)};
 
-          const normalize = value =>
-            String(value || "")
-              .normalize("NFD")
-              .replace(/[\\u0300-\\u036f]/g, "")
-              .toUpperCase()
-              .replace(/\\s+/g, " ")
-              .trim();
+          const params =
+            new URLSearchParams();
 
-          /*
-           * Statuts fonctionnels du board.
-           * MAX / limite WIP n'est volontairement pas retenu.
-           */
-          const statusPatterns = [
-            {
-              key: "aFaire",
-              label: "À faire",
-              re: /^A FAIRE\\s+(\\d+)$/i
-            },
-            {
-              key: "analyseEnCours",
-              label: "Analyse en cours",
-              re: /^ANALYSE EN COURS\\s+(\\d+)$/i
-            },
-            {
-              key: "devEnCours",
-              label: "Dev en cours",
-              re: /^DEV EN COURS\\s+(\\d+)$/i
-            },
-            {
-              key: "bloque",
-              label: "Bloqué",
-              re: /^BLOQUE\\s+(\\d+)$/i
-            },
-            {
-              key: "aTester",
-              label: "À tester",
-              re: /^A TESTER\\s+(\\d+)$/i
-            },
-            {
-              key: "termine",
-              label: "Terminé",
-              re: /^TERMINE\\s+(\\d+)$/i
-            }
-          ];
-
-          const statuts = {};
-
-          for (const def of statusPatterns) {
-            statuts[def.key] = {
-              label: def.label,
-              nombre: 0
-            };
-          }
-
-          for (const line of lines) {
-            const n = normalize(line);
-
-            for (const def of statusPatterns) {
-              const m = n.match(def.re);
-
-              if (m) {
-                statuts[def.key].nombre =
-                  Number(m[1]) || 0;
-              }
-            }
-          }
-
-          const total = Object.values(statuts)
-            .reduce(
-              (sum, item) =>
-                sum + Number(item.nombre || 0),
-              0
-            );
-
-          for (const item of Object.values(statuts)) {
-            item.pourcentage =
-              total > 0
-                ? Math.round(
-                    (Number(item.nombre || 0) / total) *
-                    1000
-                  ) / 10
-                : 0;
-          }
-
-          /*
-           * Lignes / swimlanes Jira.
-           *
-           * Exemples actuels :
-           * Testing 2 tickets
-           * Arrimage [12 SP théorique] / Actions BA 3 tickets
-           * Design 4 tickets
-           * Développement [26 SP théorique] 8 tickets
-           *
-           * Le texte est conservé tel que Jira l'affiche.
-           */
-          const groupes = [];
-
-          for (const line of lines) {
-            const m = line.match(
-              /^(.+?)\\s+(\\d+)\\s+tickets?$/i
-            );
-
-            if (!m) {
-              continue;
-            }
-
-            const titre = m[1].trim();
-
-            /*
-             * Exclure l'en-tête éventuel du sprint
-             * du type "Scrum Sprint XX 15 tickets".
-             */
-            if (/^Scrum\\s+Sprint\\b/i.test(titre)) {
-              continue;
-            }
-
-            if (
-              !groupes.some(
-                x => x.titre === titre
-              )
-            ) {
-              groupes.push({
-                titre,
-                nombreAffiche: Number(m[2]) || 0
-              });
-            }
-          }
-
-          /*
-           * Liste brute des clés visibles.
-           * Elle servira plus tard au détail repliable.
-           */
-          const ticketKeys = Array.from(
-            new Set(
-              (bodyText.match(
-                /\\b[A-Z][A-Z0-9_]+-\\d+\\b/g
-              ) || [])
-            )
+          params.set(
+            "rapidViewId",
+            rapidViewId
           );
 
-          let sprint =
-            ${JSON.stringify(sprintName || "")};
+          if (projectKey) {
+            params.set(
+              "selectedProjectKey",
+              projectKey
+            );
+          }
 
-          if (!sprint) {
-            const sprintLine = lines.find(
-              x => /^Scrum\\s+Sprint\\b/i.test(x)
+          const url =
+            "/rest/greenhopper/1.0/xboard/work/allData.json?" +
+            params.toString();
+
+          const response =
+            await fetch(
+              url,
+              {
+                method: "GET",
+                credentials: "include",
+                headers: {
+                  "Accept": "application/json"
+                },
+                cache: "no-store"
+              }
             );
 
-            if (sprintLine) {
-              sprint = sprintLine
-                .replace(/\\s+\\d+\\s+tickets?.*$/i, "")
-                .trim();
-            }
+          const text =
+            await response.text();
+
+          if (!response.ok) {
+            throw new Error(
+              "GreenHopper HTTP " +
+              response.status +
+              " : " +
+              text.slice(0, 500)
+            );
+          }
+
+          let data;
+
+          try {
+            data = JSON.parse(text);
+          } catch (_) {
+            throw new Error(
+              "Réponse allData.json non JSON : " +
+              text.slice(0, 500)
+            );
           }
 
           return {
-            source: "jira_active_sprint_page",
-            capturedAt: new Date().toISOString(),
-            url: location.href,
-            boardId: ${JSON.stringify(boardId)},
-            sprint,
-            total,
-            statuts,
-            groupes,
-            ticketKeys
+            requestUrl: url,
+            data
           };
         })()
       `,
@@ -1447,49 +1306,110 @@ async function captureActiveSprintBoard(cdp, baseUrl, sprintDiagnostic) {
     }
   );
 
-  if (
-    !result ||
-    !result.result ||
-    !result.result.value
-  ) {
+  const value =
+    result &&
+    result.result &&
+    result.result.value
+      ? result.result.value
+      : null;
+
+  if (!value || !value.data) {
     throw new Error(
-      "Capture de la page Sprints actifs vide"
+      "Réponse GreenHopper allData.json vide"
     );
   }
 
-  const capture = result.result.value;
+  const raw =
+    value.data;
 
-  console.log(
-    "[SPRINT_ACTIVE]",
-    "sprint=",
-    capture.sprint,
-    "total=",
-    capture.total
-  );
+  const etagData =
+    raw &&
+    typeof raw.etagData === "object" &&
+    raw.etagData
+      ? raw.etagData
+      : {};
 
-  for (
-    const item of Object.values(
-      capture.statuts || {}
-    )
-  ) {
-    console.log(
-      "[SPRINT_ACTIVE][STATUS]",
-      item.label,
-      "=",
-      item.nombre,
-      "|",
-      item.pourcentage + "%"
-    );
+  const issueCount =
+    Number(
+      etagData.issueCount ??
+      raw.issueCount ??
+      0
+    ) || 0;
+
+  /*
+   * Diagnostic générique de structure.
+   * On ne suppose pas encore le nom exact des tableaux
+   * tickets/colonnes/swimlanes de cette version Jira.
+   */
+  const topLevelKeys =
+    raw && typeof raw === "object"
+      ? Object.keys(raw)
+      : [];
+
+  const arraySummary = {};
+
+  if (raw && typeof raw === "object") {
+    for (const [key, item] of Object.entries(raw)) {
+      if (Array.isArray(item)) {
+        arraySummary[key] = item.length;
+      }
+    }
   }
 
   console.log(
-    "[SPRINT_ACTIVE][GROUPES]",
-    (capture.groupes || [])
-      .map(x => x.titre)
-      .join(" | ")
+    "[SPRINT_ACTIVE_API] sprint=",
+    sprintName || "(non renseigné)",
+    "issueCount=",
+    issueCount
   );
 
-  return capture;
+  console.log(
+    "[SPRINT_ACTIVE_API] topLevelKeys=",
+    topLevelKeys.join(", ")
+  );
+
+  console.log(
+    "[SPRINT_ACTIVE_API] arrays=",
+    JSON.stringify(arraySummary)
+  );
+
+  /*
+   * On conserve temporairement la réponse brute dans jira_brut.json.
+   * Elle nous permettra d'identifier précisément la structure
+   * tickets / colonnes / swimlanes avant le patch d'affichage.
+   */
+  return {
+    source:
+      "jira_greenhopper_allData",
+
+    reliable:
+      issueCount > 0,
+
+    capturedAt:
+      new Date().toISOString(),
+
+    sprint:
+      sprintName,
+
+    rapidViewId:
+      Number(rapidViewId) || rapidViewId,
+
+    projectKey,
+
+    issueCount,
+
+    total:
+      issueCount,
+
+    requestUrl:
+      value.requestUrl || "",
+
+    topLevelKeys,
+
+    arraySummary,
+
+    raw
+  };
 }
 
 
