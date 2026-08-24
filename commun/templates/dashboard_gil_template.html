@@ -3121,6 +3121,210 @@
 
 /* GIL_SPRINT_CONSTAT_V1_END */
 
+
+
+/* GIL_ALIGN_STATUS_2X2_V1_START */
+
+/*
+ * Organisation cible :
+ *
+ * Ligne 1 :
+ * Santé | Répartition | Constat général
+ *
+ * Ligne 2 :
+ * Constat du sprint sur toute la largeur
+ *
+ * Ligne 3-4 :
+ * 4 cartes statut en grille 2 x 2
+ */
+
+.arrimageStatusLayout{
+  grid-template-columns:
+    minmax(0,300px)
+    minmax(0,1.15fr)
+    minmax(0,.85fr) !important;
+
+  grid-template-rows:auto auto auto !important;
+
+  gap:10px !important;
+  align-items:stretch !important;
+}
+
+#healthGauge{
+  grid-column:1 !important;
+  grid-row:1 !important;
+}
+
+.arrimagePieMain{
+  grid-column:2 !important;
+  grid-row:1 !important;
+}
+
+.arrimageConstatStack{
+  display:contents !important;
+}
+
+.arrimageConstatStack > .arrimageConstatCard:first-child{
+  grid-column:3 !important;
+  grid-row:1 !important;
+}
+
+.arrimageSprintConstatCard{
+  grid-column:1 / -1 !important;
+  grid-row:2 !important;
+
+  margin:0 !important;
+}
+
+/* ---------------------------------------------------------
+   4 cartes en 2 x 2
+   --------------------------------------------------------- */
+
+.arrimageCardsGrid{
+  grid-column:1 / -1 !important;
+  grid-row:3 !important;
+
+  display:grid !important;
+  grid-template-columns:
+    repeat(2,minmax(0,1fr)) !important;
+
+  gap:10px !important;
+  align-items:stretch !important;
+}
+
+.arrimageStatusCard{
+  min-width:0 !important;
+  width:100% !important;
+  height:100% !important;
+
+  padding:10px !important;
+}
+
+.arrimageStatusHead{
+  margin-bottom:7px !important;
+}
+
+.arrimageCardBody{
+  min-height:0 !important;
+}
+
+
+/* ---------------------------------------------------------
+   Constat du sprint un peu plus compact
+   --------------------------------------------------------- */
+
+.arrimageSprintConstatCard{
+  padding:10px 12px !important;
+}
+
+.arrimageSprintStats{
+  gap:6px !important;
+  margin-bottom:7px !important;
+}
+
+.arrimageSprintKpi{
+  padding:4px 8px !important;
+  font-size:11px !important;
+}
+
+.arrimageSprintSections{
+  grid-template-columns:
+    minmax(0,1fr)
+    minmax(0,1fr) !important;
+
+  gap:10px !important;
+}
+
+.arrimageSprintBlock{
+  padding:8px 9px !important;
+}
+
+
+/* ---------------------------------------------------------
+   PDF
+   --------------------------------------------------------- */
+
+@media print{
+
+  .arrimageStatusLayout{
+    grid-template-columns:
+      minmax(0,260px)
+      minmax(0,1.05fr)
+      minmax(0,.95fr) !important;
+
+    gap:6px !important;
+  }
+
+  .arrimageSprintConstatCard{
+    grid-column:1 / -1 !important;
+    padding:6px 8px !important;
+  }
+
+  .arrimageSprintSections{
+    grid-template-columns:
+      minmax(0,1fr)
+      minmax(0,1fr) !important;
+
+    gap:6px !important;
+  }
+
+  .arrimageCardsGrid{
+    grid-template-columns:
+      repeat(2,minmax(0,1fr)) !important;
+
+    gap:6px !important;
+  }
+
+  .arrimageStatusCard{
+    padding:6px !important;
+  }
+
+  .arrimageSprintKpi{
+    padding:2px 5px !important;
+    font-size:8px !important;
+  }
+}
+
+
+/* ---------------------------------------------------------
+   Responsive
+   --------------------------------------------------------- */
+
+@media(max-width:900px){
+
+  .arrimageStatusLayout{
+    grid-template-columns:1fr !important;
+    grid-template-rows:auto !important;
+  }
+
+  #healthGauge,
+  .arrimagePieMain,
+  .arrimageConstatStack > .arrimageConstatCard:first-child,
+  .arrimageSprintConstatCard,
+  .arrimageCardsGrid{
+    grid-column:1 !important;
+    grid-row:auto !important;
+  }
+
+  .arrimageSprintSections{
+    grid-template-columns:1fr !important;
+  }
+
+  .arrimageCardsGrid{
+    grid-template-columns:
+      repeat(2,minmax(0,1fr)) !important;
+  }
+}
+
+@media(max-width:600px){
+
+  .arrimageCardsGrid{
+    grid-template-columns:1fr !important;
+  }
+}
+
+/* GIL_ALIGN_STATUS_2X2_V1_END */
+
 </style>
 
 </head>
