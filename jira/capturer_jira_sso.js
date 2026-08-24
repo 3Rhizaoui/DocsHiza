@@ -1183,8 +1183,68 @@ async function captureActiveSprintBoard(
       );
   } catch (_) {}
 
+  /*
+   * Si l'onglet CDP courant est le Dashboard Jira,
+   * rechercher un autre onglet de la même fenêtre de debug
+   * déjà positionné sur un RapidBoard.
+   */
+  if (!rapidViewId) {
+    try {
+      const targetsResponse =
+        await fetch(
+          `http://127.0.0.1:${PORT}/json/list`
+        );
+
+      if (targetsResponse.ok) {
+        const targets =
+          await targetsResponse.json();
+
+        const rapidTarget =
+          (targets || []).find(target => {
+            const url =
+              String(target && target.url || "");
+
+            return (
+              /\/secure\/RapidBoard\.jspa/i.test(url) &&
+              /[?&]rapidView=\d+/i.test(url)
+            );
+          });
+
+        if (rapidTarget) {
+          const rapidUrl =
+            String(rapidTarget.url || "");
+
+          const rapidMatch =
+            rapidUrl.match(
+              /[?&]rapidView=(\d+)/i
+            );
+
+          if (rapidMatch) {
+            rapidViewId =
+              String(rapidMatch[1]);
+
+            console.log(
+              "[SPRINT_ACTIVE_API] RapidBoard détecté parmi les onglets :",
+              rapidUrl
+            );
+          }
+        }
+      }
+    } catch (error) {
+      console.log(
+        "[SPRINT_ACTIVE_API][INFO] recherche onglets RapidBoard impossible :",
+        String(error && error.message || error)
+      );
+    }
+  }
+
   if (!rapidViewId) {
     rapidViewId = fallbackBoardId;
+
+    console.log(
+      "[SPRINT_ACTIVE_API][FALLBACK] board Agile =",
+      rapidViewId
+    );
   }
 
   if (!rapidViewId) {
