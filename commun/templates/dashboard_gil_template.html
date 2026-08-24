@@ -2998,6 +2998,129 @@
 
 /* GIL_VISUAL_V5_END */
 
+
+
+/* GIL_SPRINT_CONSTAT_V1_START */
+
+.arrimageConstatStack{
+  display:grid;
+  gap:10px;
+  align-content:start;
+}
+
+.arrimageSprintConstatCard{
+  border:1px solid var(--line);
+  border-radius:var(--radius-card);
+  background:#fff;
+  box-shadow:var(--shadow-soft);
+}
+
+.arrimageSprintStats{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin:0 0 10px;
+}
+
+.arrimageSprintKpi{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:5px 10px;
+  border-radius:999px;
+  border:1px solid #dbe4ef;
+  background:#f8fafc;
+  color:#153454;
+  font-size:12px;
+  font-weight:800;
+}
+
+.arrimageSprintSections{
+  display:grid;
+  gap:10px;
+}
+
+.arrimageSprintBlock{
+  border:1px solid #e2e8f0;
+  border-radius:8px;
+  padding:9px 10px;
+  background:#fbfdff;
+}
+
+.arrimageSprintBlock h4{
+  margin:0 0 7px;
+  font-size:12px;
+  color:var(--gil-blue-dark);
+  font-weight:800;
+}
+
+.arrimageSprintList{
+  display:grid;
+  gap:5px;
+  font-size:12px;
+  line-height:1.45;
+}
+
+.arrimageSprintItem{
+  border-bottom:1px solid #edf2f7;
+  padding-bottom:4px;
+}
+
+.arrimageSprintItem:last-child{
+  border-bottom:0;
+  padding-bottom:0;
+}
+
+.arrimageSprintItemTop{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+}
+
+.arrimageSprintItemLabel{
+  min-width:0;
+  flex:1;
+}
+
+.arrimageSprintItemValue{
+  font-weight:800;
+  white-space:nowrap;
+  color:#153454;
+}
+
+.arrimageSprintItemRefs{
+  display:block;
+  margin-top:2px;
+  color:var(--muted);
+  font-size:11px;
+}
+
+@media print{
+  .arrimageConstatStack{
+    gap:7px !important;
+  }
+
+  .arrimageSprintBlock{
+    padding:7px 8px !important;
+  }
+
+  .arrimageSprintList{
+    font-size:8px !important;
+    gap:3px !important;
+  }
+
+  .arrimageSprintItemRefs{
+    font-size:7px !important;
+  }
+
+  .arrimageSprintKpi{
+    font-size:8px !important;
+    padding:3px 6px !important;
+  }
+}
+
+/* GIL_SPRINT_CONSTAT_V1_END */
+
 </style>
 
 </head>
@@ -4014,6 +4137,459 @@
       ).join('');
     }
 
+    /* GIL_SPRINT_CONSTAT_V1_JS_START */
+
+function arrimageSprintGrouped(items, refFn){
+  const map = {};
+
+  (items || []).forEach(x => {
+    const domaine = arrimageClean(
+      x.domaine ||
+      x.domain
+    );
+
+    const sousDomaine = arrimageClean(
+      x.sousDomaine ||
+      x.subdomain
+    );
+
+    const env = String(
+      x.environnement ||
+      x.environment ||
+      ''
+    ).toUpperCase();
+
+    const key = domaine + ' / ' + sousDomaine;
+
+    if(!map[key]){
+      map[key] = {
+        label:key,
+        count:0,
+        sit:0,
+        uat:0,
+        refs:[]
+      };
+    }
+
+    const nRaw = Number(x.nombre);
+    const n = Number.isFinite(nRaw) && nRaw > 0
+      ? nRaw
+      : 1;
+
+    map[key].count += n;
+
+    if(env === 'SIT'){
+      map[key].sit += n;
+    }
+
+    if(env === 'UAT'){
+      map[key].uat += n;
+    }
+
+    const ref = refFn
+      ? refFn(x)
+      : (
+          x.flux ||
+          x.reference ||
+          x.jiraKey ||
+          x.id ||
+          ''
+        );
+
+    if(ref && !map[key].refs.includes(ref)){
+      map[key].refs.push(ref);
+    }
+  });
+
+  return Object.values(map).sort(
+    (a,b) =>
+      b.count - a.count ||
+      a.label.localeCompare(b.label,'fr')
+  );
+}
+
+function arrimageSprintGroupedList(items, options){
+  const opts = options || {};
+  const rows = arrimageSprintGrouped(items, opts.ref);
+
+  if(!rows.length){
+    return '<div class="arrimageFluxEmpty">'+
+      esc(opts.empty || 'Aucun élément pour ce sprint.')+
+    '</div>';
+  }
+
+  return '<div class="arrimageSprintList">'+
+    rows.map(r => {
+
+      const value = opts.showEnv
+        ? ('Total '+r.count+' · SIT '+r.sit+' · UAT '+r.uat)
+        : String(r.count);
+
+      const refs = r.refs.length
+        ? '<span class="arrimageSprintItemRefs">'+
+            esc(r.refs.slice(0,6).join(' — '))+
+            (r.refs.length > 6 ? ' …' : '')+
+          '</span>'
+        : '';
+
+      return ''+
+        '<div class="arrimageSprintItem">'+
+          '<div class="arrimageSprintItemTop">'+
+            '<div class="arrimageSprintItemLabel">• '+esc(r.label)+'</div>'+
+            '<div class="arrimageSprintItemValue">'+esc(value)+'</div>'+
+          '</div>'+
+          refs+
+        '</div>';
+
+    }).join('')+
+  '</div>';
+}
+
+function arrimageSprintConstat(data){
+
+  const sprintLabel = String(
+    data.sprintCourant || ''
+  ).trim();
+
+
+  /* ========================================================
+     A. SPRINT JIRA COURANT
+     ======================================================== */
+
+  const sprintData =
+    (data.comparaisonSprints || []).find(
+      x => String(x && x.sprint || '').trim() === sprintLabel
+    ) || null;
+
+
+  const totalDetail = sprintData && Array.isArray(sprintData.fluxTotalDetail)
+    ? sprintData.fluxTotalDetail
+    : [];
+
+  const traitesDetail = sprintData && Array.isArray(sprintData.fluxLivresDetail)
+    ? sprintData.fluxLivresDetail
+    : [];
+
+  const enCoursDetail = sprintData && Array.isArray(sprintData.fluxEnCoursDetail)
+    ? sprintData.fluxEnCoursDetail
+    : [];
+
+
+  /*
+   * Somme dynamique.
+   * Si "nombre" existe, on le respecte.
+   * Sinon une ligne = une demande.
+   */
+  const sumSprint = rows =>
+    (rows || []).reduce((total,x) => {
+      const n = Number(x && x.nombre);
+
+      return total + (
+        Number.isFinite(n) && n > 0
+          ? n
+          : 1
+      );
+    },0);
+
+
+  const totalJira =
+    Number(sprintData && sprintData.fluxTotal) ||
+    sumSprint(totalDetail);
+
+
+  const totalTraites =
+    Number(sprintData && sprintData.fluxLivresTotal) ||
+    sumSprint(traitesDetail);
+
+
+  const totalEnCours =
+    Number(sprintData && sprintData.fluxEnCoursTotal) ||
+    sumSprint(enCoursDetail);
+
+
+  const pctTraites = arrimagePct(
+    totalTraites,
+    totalJira
+  );
+
+
+  const pctEnCours = arrimagePct(
+    totalEnCours,
+    totalJira
+  );
+
+
+  /* ========================================================
+     B. DEMANDES TRAITEES — SIT / UAT UNIQUEMENT
+     ======================================================== */
+
+  const demandesTraitees = traitesDetail.filter(x => {
+    const env = String(
+      x && (
+        x.environnement ||
+        x.environment
+      ) || ''
+    ).toUpperCase();
+
+    return env === 'SIT' || env === 'UAT';
+  });
+
+
+  /* ========================================================
+     C. ANOMALIES OCTANE DU SPRINT
+
+     Population Octane officielle :
+       anomaliesArrimageDetail
+
+     On ne transforme PAS toutes les anomalies du sprint
+     en anomalies Octane.
+
+     On fait l'intersection entre :
+       - anomalies Octane dédiées
+       - anomalies appartenant au sprint courant.
+     ======================================================== */
+
+  const octaneGlobal =
+    arrimageOctaneAnomalies(data) || [];
+
+
+  /*
+   * Population d'anomalies du sprint.
+   *
+   * Priorité à anomaliesSprintDetail si disponible.
+   * Sinon anomaliesDetail avec sprint = sprint courant.
+   */
+  let sprintAnomalies = [];
+
+  if(Array.isArray(data.anomaliesSprintDetail)){
+    sprintAnomalies = data.anomaliesSprintDetail.filter(a =>
+      !sprintLabel ||
+      !a ||
+      !a.sprint ||
+      String(a.sprint).trim() === sprintLabel
+    );
+  }
+  else if(Array.isArray(data.anomaliesDetail)){
+    sprintAnomalies = data.anomaliesDetail.filter(a =>
+      a &&
+      String(a.sprint || '').trim() === sprintLabel
+    );
+  }
+
+
+  /*
+   * Normalisation d'une référence pour permettre
+   * l'intersection sans dépendre d'un field ID.
+   */
+  const anomalyKeys = a => {
+    const values = [
+      a && a.reference,
+      a && a.jiraKey,
+      a && a.id,
+      a && a.key,
+      a && a.issueKey,
+      a && a.flux
+    ]
+      .filter(Boolean)
+      .map(v => String(v).trim().toUpperCase())
+      .filter(Boolean);
+
+    return [...new Set(values)];
+  };
+
+
+  const sprintReferenceSet = new Set();
+
+  sprintAnomalies.forEach(a => {
+    anomalyKeys(a).forEach(k =>
+      sprintReferenceSet.add(k)
+    );
+  });
+
+
+  /*
+   * Une anomalie Octane appartient au sprint si :
+   *
+   * 1. elle porte explicitement sprintCourant,
+   * OU
+   * 2. une de ses références correspond à une anomalie
+   *    de la population du sprint courant.
+   *
+   * Pas de fallback vers toute la population Octane.
+   */
+  const octaneSprint = octaneGlobal.filter(a => {
+
+    const explicitSprint = String(
+      a && a.sprint || ''
+    ).trim();
+
+    if(
+      explicitSprint &&
+      explicitSprint === sprintLabel
+    ){
+      return true;
+    }
+
+    const keys = anomalyKeys(a);
+
+    return keys.some(k =>
+      sprintReferenceSet.has(k)
+    );
+  });
+
+
+  const anomaliesTraitees = octaneSprint.filter(
+    a =>
+      arrimageOctaneStatusBucket(a) === 'Livrés'
+  );
+
+
+  const anomaliesEnCours = octaneSprint.filter(
+    a =>
+      arrimageOctaneStatusBucket(a) === 'En cours'
+  );
+
+
+  /* ========================================================
+     D. RENDU
+     ======================================================== */
+
+  return ''+
+
+    '<h3>Constat du sprint</h3>'+
+
+    '<div class="arrimageSprintStats">'+
+
+      '<span class="arrimageSprintKpi">'+
+        'JIRA du sprint : <b>'+
+          totalJira+
+        '</b>'+
+      '</span>'+
+
+      '<span class="arrimageSprintKpi">'+
+        'Traités : <b>'+
+          totalTraites+
+          ' ('+pctTraites+')'+
+        '</b>'+
+      '</span>'+
+
+      '<span class="arrimageSprintKpi">'+
+        'En cours : <b>'+
+          totalEnCours+
+          ' ('+pctEnCours+')'+
+        '</b>'+
+      '</span>'+
+
+    '</div>'+
+
+
+    '<div class="miniNote">'+
+      '<b>'+esc(sprintLabel || 'Sprint courant')+'</b>'+
+      ' — données issues de la population JIRA du sprint courant.'+
+    '</div>'+
+
+
+    '<div class="arrimageSprintSections">'+
+
+
+      /* ----------------------------------------------------
+         Demandes / flux traités
+         ---------------------------------------------------- */
+
+      '<div class="arrimageSprintBlock">'+
+
+        '<h4>'+
+          '1. Demandes / flux traités — SIT / UAT'+
+        '</h4>'+
+
+        arrimageSprintGroupedList(
+          demandesTraitees,
+          {
+            empty:
+              'Aucune demande traitée SIT / UAT pour le sprint courant.',
+
+            showEnv:true,
+
+            ref:x =>
+              x.flux ||
+              x.jiraKey ||
+              x.reference ||
+              x.id ||
+              ''
+          }
+        )+
+
+      '</div>'+
+
+
+      /* ----------------------------------------------------
+         Anomalies Octane
+         ---------------------------------------------------- */
+
+      '<div class="arrimageSprintBlock">'+
+
+        '<h4>'+
+          '2. Anomalies Octane du sprint'+
+        '</h4>'+
+
+
+        '<div class="miniNote">'+
+          '<b>Traitées : '+
+            anomaliesTraitees.length+
+          '</b>'+
+        '</div>'+
+
+        arrimageSprintGroupedList(
+          anomaliesTraitees,
+          {
+            empty:
+              'Aucune anomalie Octane traitée identifiée dans le sprint courant.',
+
+            showEnv:false,
+
+            ref:a =>
+              a.reference ||
+              a.jiraKey ||
+              a.id ||
+              a.key ||
+              a.flux ||
+              ''
+          }
+        )+
+
+
+        '<div class="miniNote" style="margin-top:8px">'+
+          '<b>En cours : '+
+            anomaliesEnCours.length+
+          '</b>'+
+        '</div>'+
+
+        arrimageSprintGroupedList(
+          anomaliesEnCours,
+          {
+            empty:
+              'Aucune anomalie Octane en cours identifiée dans le sprint courant.',
+
+            showEnv:false,
+
+            ref:a =>
+              a.reference ||
+              a.jiraKey ||
+              a.id ||
+              a.key ||
+              a.flux ||
+              ''
+          }
+        )+
+
+      '</div>'+
+
+
+    '</div>';
+}
+
+/* GIL_SPRINT_CONSTAT_V1_JS_END */
+
     function arrimageGeneralConstat(data){
       const pie = arrimagePieData(data);
 
@@ -4044,7 +4620,7 @@
           '<h3>Répartition des flux d’arrimage</h3>'+
           '<div class="miniNote">Aucun flux d’arrimage disponible pour le périmètre courant.</div>'+
         '</div>'+
-        '<div class="arrimageConstatCard">'+arrimageGeneralConstat(data)+'</div>';
+        '<div class="arrimageConstatStack">'+'<div class="arrimageConstatCard">'+arrimageGeneralConstat(data)+'</div>'+'<div class="arrimageConstatCard arrimageSprintConstatCard">'+arrimageSprintConstat(data)+'</div>'+'</div>';
       }
 
       const cx = 116, cy = 84, r = 68, depth = 20;
@@ -4132,7 +4708,7 @@
             '<div class="arrimagePieLegendSimple">'+legend+'</div>'+
           '</div>'+
         '</div>'+
-        '<div class="arrimageConstatCard">'+arrimageGeneralConstat(data)+'</div>'+
+        '<div class="arrimageConstatStack">'+'<div class="arrimageConstatCard">'+arrimageGeneralConstat(data)+'</div>'+'<div class="arrimageConstatCard arrimageSprintConstatCard">'+arrimageSprintConstat(data)+'</div>'+'</div>'+
         '<div class="arrimageCardsGrid">'+cards+'</div>';
     }
 
@@ -5175,7 +5751,7 @@
 
     loadData();
 
-  
+
 
 async function runLocalAction(action){
 
