@@ -1097,6 +1097,341 @@ async function collectOfficialSprintDiagnostics(cdp, baseUrl, projectKey) {
   };
 }
 
+
+async function captureActiveSprintBoard(cdp, baseUrl, sprintDiagnostic) {
+  const boardId =
+    sprintDiagnostic &&
+    sprintDiagnostic.board &&
+    sprintDiagnostic.board.id;
+
+  const sprintName =
+    sprintDiagnostic &&
+    sprintDiagnostic.courant &&
+    sprintDiagnostic.courant.nom;
+
+  if (!boardId) {
+    throw new Error(
+      "Board Jira absent du diagnostic officiel"
+    );
+  }
+
+  /*
+   * Source de vérité pour le constat du sprint :
+   * vue visuelle "Sprints actifs" du board Jira.
+   *
+   * On ne déduit pas ici la population depuis sprint_courant.json.
+   * On lit les compteurs réellement affichés par Jira.
+   */
+  const activeUrl =
+    `${baseUrl}/secure/RapidBoard.jspa?rapidView=${encodeURIComponent(boardId)}`;
+
+  console.log("");
+  console.log("============================================================");
+  console.log("[SPRINT_ACTIVE] CAPTURE DE LA PAGE SPRINTS ACTIFS");
+  console.log("============================================================");
+  console.log("[SPRINT_ACTIVE] URL :", activeUrl);
+
+  await cdp.send(
+    "Page.enable"
+  );
+
+  await cdp.send(
+    "Page.navigate",
+    { url: activeUrl }
+  );
+
+  /*
+   * Attendre le chargement du document.
+   */
+  for (let i = 0; i < 60; i += 1) {
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const ready = await cdp.send(
+      "Runtime.evaluate",
+      {
+        expression: "document.readyState",
+        returnByValue: true
+      }
+    );
+
+    if (
+      ready &&
+      ready.result &&
+      ready.result.value === "complete"
+    ) {
+      break;
+    }
+  }
+
+  /*
+   * Jira charge ensuite le board de manière asynchrone.
+   * On attend que le nom du sprint ou les colonnes apparaissent.
+   */
+  for (let i = 0; i < 60; i += 1) {
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const check = await cdp.send(
+      "Runtime.evaluate",
+      {
+        expression: `
+          (() => {
+            const t = document.body
+              ? document.body.innerText || ""
+              : "";
+
+            return (
+              /À\\s*FAIRE|A\\s*FAIRE/i.test(t) &&
+              /DEV\\s*EN\\s*COURS/i.test(t)
+            );
+          })()
+        `,
+        returnByValue: true
+      }
+    );
+
+    if (
+      check &&
+      check.result &&
+      check.result.value === true
+    ) {
+      break;
+    }
+  }
+
+  const result = await cdp.send(
+    "Runtime.evaluate",
+    {
+      expression: `
+        (() => {
+          const bodyText =
+            document.body
+              ? document.body.innerText || ""
+              : "";
+
+          const lines = bodyText
+            .split(/\\r?\\n/)
+            .map(x => x.replace(/\\s+/g, " ").trim())
+            .filter(Boolean);
+
+          const normalize = value =>
+            String(value || "")
+              .normalize("NFD")
+              .replace(/[\\u0300-\\u036f]/g, "")
+              .toUpperCase()
+              .replace(/\\s+/g, " ")
+              .trim();
+
+          /*
+           * Statuts fonctionnels du board.
+           * MAX / limite WIP n'est volontairement pas retenu.
+           */
+          const statusPatterns = [
+            {
+              key: "aFaire",
+              label: "À faire",
+              re: /^A FAIRE\\s+(\\d+)$/i
+            },
+            {
+              key: "analyseEnCours",
+              label: "Analyse en cours",
+              re: /^ANALYSE EN COURS\\s+(\\d+)$/i
+            },
+            {
+              key: "devEnCours",
+              label: "Dev en cours",
+              re: /^DEV EN COURS\\s+(\\d+)$/i
+            },
+            {
+              key: "bloque",
+              label: "Bloqué",
+              re: /^BLOQUE\\s+(\\d+)$/i
+            },
+            {
+              key: "aTester",
+              label: "À tester",
+              re: /^A TESTER\\s+(\\d+)$/i
+            },
+            {
+              key: "termine",
+              label: "Terminé",
+              re: /^TERMINE\\s+(\\d+)$/i
+            }
+          ];
+
+          const statuts = {};
+
+          for (const def of statusPatterns) {
+            statuts[def.key] = {
+              label: def.label,
+              nombre: 0
+            };
+          }
+
+          for (const line of lines) {
+            const n = normalize(line);
+
+            for (const def of statusPatterns) {
+              const m = n.match(def.re);
+
+              if (m) {
+                statuts[def.key].nombre =
+                  Number(m[1]) || 0;
+              }
+            }
+          }
+
+          const total = Object.values(statuts)
+            .reduce(
+              (sum, item) =>
+                sum + Number(item.nombre || 0),
+              0
+            );
+
+          for (const item of Object.values(statuts)) {
+            item.pourcentage =
+              total > 0
+                ? Math.round(
+                    (Number(item.nombre || 0) / total) *
+                    1000
+                  ) / 10
+                : 0;
+          }
+
+          /*
+           * Lignes / swimlanes Jira.
+           *
+           * Exemples actuels :
+           * Testing 2 tickets
+           * Arrimage [12 SP théorique] / Actions BA 3 tickets
+           * Design 4 tickets
+           * Développement [26 SP théorique] 8 tickets
+           *
+           * Le texte est conservé tel que Jira l'affiche.
+           */
+          const groupes = [];
+
+          for (const line of lines) {
+            const m = line.match(
+              /^(.+?)\\s+(\\d+)\\s+tickets?$/i
+            );
+
+            if (!m) {
+              continue;
+            }
+
+            const titre = m[1].trim();
+
+            /*
+             * Exclure l'en-tête éventuel du sprint
+             * du type "Scrum Sprint XX 15 tickets".
+             */
+            if (/^Scrum\\s+Sprint\\b/i.test(titre)) {
+              continue;
+            }
+
+            if (
+              !groupes.some(
+                x => x.titre === titre
+              )
+            ) {
+              groupes.push({
+                titre,
+                nombreAffiche: Number(m[2]) || 0
+              });
+            }
+          }
+
+          /*
+           * Liste brute des clés visibles.
+           * Elle servira plus tard au détail repliable.
+           */
+          const ticketKeys = Array.from(
+            new Set(
+              (bodyText.match(
+                /\\b[A-Z][A-Z0-9_]+-\\d+\\b/g
+              ) || [])
+            )
+          );
+
+          let sprint =
+            ${JSON.stringify(sprintName || "")};
+
+          if (!sprint) {
+            const sprintLine = lines.find(
+              x => /^Scrum\\s+Sprint\\b/i.test(x)
+            );
+
+            if (sprintLine) {
+              sprint = sprintLine
+                .replace(/\\s+\\d+\\s+tickets?.*$/i, "")
+                .trim();
+            }
+          }
+
+          return {
+            source: "jira_active_sprint_page",
+            capturedAt: new Date().toISOString(),
+            url: location.href,
+            boardId: ${JSON.stringify(boardId)},
+            sprint,
+            total,
+            statuts,
+            groupes,
+            ticketKeys
+          };
+        })()
+      `,
+      awaitPromise: true,
+      returnByValue: true
+    }
+  );
+
+  if (
+    !result ||
+    !result.result ||
+    !result.result.value
+  ) {
+    throw new Error(
+      "Capture de la page Sprints actifs vide"
+    );
+  }
+
+  const capture = result.result.value;
+
+  console.log(
+    "[SPRINT_ACTIVE]",
+    "sprint=",
+    capture.sprint,
+    "total=",
+    capture.total
+  );
+
+  for (
+    const item of Object.values(
+      capture.statuts || {}
+    )
+  ) {
+    console.log(
+      "[SPRINT_ACTIVE][STATUS]",
+      item.label,
+      "=",
+      item.nombre,
+      "|",
+      item.pourcentage + "%"
+    );
+  }
+
+  console.log(
+    "[SPRINT_ACTIVE][GROUPES]",
+    (capture.groupes || [])
+      .map(x => x.titre)
+      .join(" | ")
+  );
+
+  return capture;
+}
+
+
 async function main() {
   const config = readConfiguration();
   if (!config.projectKey) config.projectKey = officialProjectKeyFromQueries(config.queries);
@@ -1145,6 +1480,7 @@ console.log('Connectez-vous avec le SSO, puis attendez que la page JIRA soit com
 
   let cdp;
   let sprintDiagnostic = null;
+  let sprintActiveBoard = null;
 
   try {
     cdp = await attachToAuthenticatedJira(
@@ -1168,6 +1504,37 @@ console.log('Connectez-vous avec le SSO, puis attendez que la page JIRA soit com
       console.log(`[SPRINTS] Board : ${sprintDiagnostic.board?.id || '?'} - ${sprintDiagnostic.board?.name || '?'}`);
       console.log(`[SPRINTS] Sprint courant : ${sprintDiagnostic.courant?.id || '?'} - ${sprintDiagnostic.courant?.nom || '?'}`);
       console.log(`[SPRINTS] Sprint précédent : ${sprintDiagnostic.precedent?.id || '?'} - ${sprintDiagnostic.precedent?.nom || '?'}`);
+
+      try {
+        sprintActiveBoard = await captureActiveSprintBoard(
+          cdp,
+          config.baseUrl,
+          sprintDiagnostic
+        );
+
+        console.log(
+          "[SPRINT_ACTIVE] Capture visuelle OK."
+        );
+      } catch (activeError) {
+        const activeMessage = String(
+          activeError &&
+          activeError.message
+            ? activeError.message
+            : activeError
+        );
+
+        sprintActiveBoard = {
+          source: "jira_active_sprint_page",
+          reliable: false,
+          erreur: activeMessage
+        };
+
+        console.log(
+          "[SPRINT_ACTIVE][ATTENTION]",
+          activeMessage
+        );
+      }
+
     } catch (error) {
       const message = String(error && error.message ? error.message : error);
 
@@ -1365,7 +1732,17 @@ console.log('Connectez-vous avec le SSO, puis attendez que la page JIRA soit com
     source_type: 'jira_sso',
 
     jira_base_url:
-      config.baseUrl, diagnostic_sprints: sprintDiagnostic,
+      config.baseUrl,
+
+    diagnostic_sprints:
+      sprintDiagnostic,
+
+    /*
+     * Capture directe de la vue Jira "Sprints actifs".
+     * Source de vérité du futur bloc Constat du sprint.
+     */
+    sprint_actif_board:
+      sprintActiveBoard,
 
     /*
      * Résultat brut des deux requêtes
