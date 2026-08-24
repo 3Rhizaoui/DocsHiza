@@ -280,6 +280,16 @@ async function attachToAuthenticatedJira(baseUrl) {
       if (String(target.url || '').startsWith('chrome-error://')) score += 70;
       if (String(target.title || '').includes(expected.host)) score += 60;
       if (path === '/' || path.includes('/secure') || path.includes('/browse') || path.includes('/projects')) score += 20;
+
+      // Pour la capture du sprint actif, privilégier explicitement
+      // la page Jira RapidBoard actuellement ouverte.
+      if (
+        path.includes('/secure/RapidBoard.jspa') &&
+        url.searchParams.get('rapidView')
+      ) {
+        score += 500;
+      }
+
       if (path.startsWith('/rest/')) score -= 20;
       if (title.includes('error') || title.includes('erreur')) score -= 20;
       if (String(target.url || '').includes('127.0.0.1')) score -= 1000;
@@ -1122,8 +1132,42 @@ async function captureActiveSprintBoard(cdp, baseUrl, sprintDiagnostic) {
    * On ne déduit pas ici la population depuis sprint_courant.json.
    * On lit les compteurs réellement affichés par Jira.
    */
-  const activeUrl =
+  let activeUrl =
     `${baseUrl}/secure/RapidBoard.jspa?rapidView=${encodeURIComponent(boardId)}`;
+
+  /*
+   * Si le CDP est déjà attaché à la vraie page Sprints actifs ouverte
+   * par l'utilisateur, elle devient prioritaire.
+   * Aucun rapidView n'est codé en dur.
+   */
+  try {
+    const currentPage = await cdp.send(
+      "Runtime.evaluate",
+      {
+        expression: "location.href",
+        returnByValue: true
+      }
+    );
+
+    const href =
+      currentPage &&
+      currentPage.result &&
+      currentPage.result.value
+        ? String(currentPage.result.value)
+        : "";
+
+    if (
+      /\/secure\/RapidBoard\.jspa/i.test(href) &&
+      /[?&]rapidView=\d+/i.test(href)
+    ) {
+      activeUrl = href;
+
+      console.log(
+        "[SPRINT_ACTIVE] RapidBoard utilisateur détecté :",
+        activeUrl
+      );
+    }
+  } catch (_) {}
 
   console.log("");
   console.log("============================================================");
@@ -1135,10 +1179,27 @@ async function captureActiveSprintBoard(cdp, baseUrl, sprintDiagnostic) {
     "Page.enable"
   );
 
-  await cdp.send(
-    "Page.navigate",
-    { url: activeUrl }
+  const currentHrefResult = await cdp.send(
+    "Runtime.evaluate",
+    {
+      expression: "location.href",
+      returnByValue: true
+    }
   );
+
+  const currentHref =
+    currentHrefResult &&
+    currentHrefResult.result &&
+    currentHrefResult.result.value
+      ? String(currentHrefResult.result.value)
+      : "";
+
+  if (currentHref !== activeUrl) {
+    await cdp.send(
+      "Page.navigate",
+      { url: activeUrl }
+    );
+  }
 
   /*
    * Attendre le chargement du document.
