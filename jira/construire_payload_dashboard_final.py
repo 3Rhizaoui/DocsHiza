@@ -1375,9 +1375,42 @@ def main():
         )
 
     def sprint_minimal_ticket(ticket, reference=""):
-        champs_metiers = ticket.get("champsMétiers")
+        # Le document sprint normalisé utilise actuellement "champsMetier".
+        # On garde aussi "champsMétiers" pour compatibilité avec les anciens
+        # payloads, sans dépendre d'un format unique.
+        champs_metiers = (
+            ticket.get("champsMetier")
+            or ticket.get("champsMétiers")
+            or {}
+        )
+
         if not isinstance(champs_metiers, dict):
             champs_metiers = {}
+
+        # Réutilise exactement le même enrichissement dynamique que le
+        # tableau global Arrimage : domaine, sous-domaine, flux, version.
+        meta_arrimage = extract_arrimage_flux_metadata(ticket)
+
+        environnement = clean_label(
+            row_value(
+                champs_metiers,
+                "environnement",
+                "environment",
+                "env"
+            ),
+            ""
+        )
+
+        if not environnement:
+            environnement = clean_label(
+                row_value(
+                    ticket,
+                    "environnement",
+                    "environment",
+                    "env"
+                ),
+                "Non renseigné"
+            )
 
         return {
             "jiraKey": sprint_ticket_key(ticket),
@@ -1393,15 +1426,28 @@ def main():
                 ""
             ),
             "reference": reference,
-            "environnement": clean_label(
-                row_value(
-                    champs_metiers,
-                    "environnement",
-                    "environment",
-                    "env"
-                ),
+
+            "flux": clean_label(
+                meta_arrimage.get("flux"),
+                "À qualifier"
+            ),
+
+            "domaine": clean_label(
+                meta_arrimage.get("domaine"),
                 "Non renseigné"
             ),
+
+            "sousDomaine": clean_label(
+                meta_arrimage.get("sousDomaine"),
+                "Non renseigné"
+            ),
+
+            "version": clean_label(
+                meta_arrimage.get("version"),
+                ""
+            ),
+
+            "environnement": environnement,
         }
 
     arrimage_sprint = []
@@ -1475,6 +1521,12 @@ def main():
         "arrimage": {
             "total": len(arrimage_sprint),
             "tickets": arrimage_sprint,
+
+            # Dénominateur de la contribution métier :
+            # demandes Arrimage globalement traitées.
+            # Valeur dynamique issue de la population Arrimage.
+            "traitesGlobaux": prets,
+
             "regle": (
                 'project = AERL_GIL '
                 'AND summary ~ "Arrimage" '
