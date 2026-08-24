@@ -1275,6 +1275,137 @@ def main():
     }
 
     # ============================================================
+    # SPRINT ACTIF - SOURCE GREENHOPPER / PAGE SPRINTS ACTIFS
+    #
+    # Cette source devient prioritaire pour le constat du sprint
+    # lorsqu'elle est disponible et fiable.
+    # ============================================================
+
+    jira_brut_active = read_json(
+        JIRA / "jira_brut.json",
+        {}
+    ) or {}
+
+    sprint_actif_board = (
+        jira_brut_active.get("sprint_actif_board") or {}
+        if isinstance(jira_brut_active, dict)
+        else {}
+    )
+
+    sprint_actif_total = as_int(
+        sprint_actif_board.get("total")
+        or sprint_actif_board.get("issueCount"),
+        0
+    ) if isinstance(sprint_actif_board, dict) else 0
+
+    sprint_actif_statuts = (
+        sprint_actif_board.get("statuts") or []
+        if isinstance(sprint_actif_board, dict)
+        else []
+    )
+
+    sprint_actif_tickets = (
+        sprint_actif_board.get("tickets") or []
+        if isinstance(sprint_actif_board, dict)
+        else []
+    )
+
+    sprint_actif_groupes = (
+        sprint_actif_board.get("groupes") or []
+        if isinstance(sprint_actif_board, dict)
+        else []
+    )
+
+    if (
+        sprint_actif_total > 0
+        and isinstance(sprint_actif_statuts, list)
+        and isinstance(sprint_actif_tickets, list)
+    ):
+        statuts_greenhopper = {}
+
+        for item in sprint_actif_statuts:
+            if not isinstance(item, dict):
+                continue
+
+            nom = clean_label(
+                item.get("nom"),
+                "Sans statut"
+            )
+
+            statuts_greenhopper[nom] = as_int(
+                item.get("nombre"),
+                0
+            )
+
+        payload["sprintJiraSynthese"] = {
+            "sprint": {
+                "id": sprint_meta.get("id"),
+                "nom": clean_label(
+                    sprint_actif_board.get("sprint"),
+                    courant
+                ),
+                "etat": clean_label(
+                    row_value(
+                        sprint_meta,
+                        "état",
+                        "etat",
+                        "state"
+                    ),
+                    ""
+                ),
+                "dateDebut": clean_label(
+                    row_value(
+                        sprint_meta,
+                        "dateDébut",
+                        "dateDebut",
+                        "startDate"
+                    ),
+                    ""
+                ),
+                "dateFin": clean_label(
+                    row_value(
+                        sprint_meta,
+                        "dateFin",
+                        "endDate"
+                    ),
+                    ""
+                ),
+            },
+
+            "totalJira": sprint_actif_total,
+
+            # Compatibilité avec les consommateurs existants.
+            "statuts": statuts_greenhopper,
+
+            # Détail complet : nombre + pourcentage + statusIds.
+            "statutsDetail": copy.deepcopy(
+                sprint_actif_statuts
+            ),
+
+            "billets": copy.deepcopy(
+                sprint_actif_tickets
+            ),
+
+            "groupes": copy.deepcopy(
+                sprint_actif_groupes
+            ),
+
+            "rapidViewId":
+                sprint_actif_board.get("rapidViewId"),
+
+            "source":
+                "Jira Sprints actifs — GreenHopper allData",
+        }
+
+        print(
+            "[TRACE][BUILD_PAYLOAD][SPRINT_ACTIVE]",
+            "total=", sprint_actif_total,
+            "tickets=", len(sprint_actif_tickets),
+            "statuts=", statuts_greenhopper,
+            "groupes=", len(sprint_actif_groupes)
+        )
+
+    # ============================================================
     # CONTRIBUTION REELLE DU SPRINT COURANT
     #
     # Population de depart :
