@@ -1107,6 +1107,181 @@ def main():
             else []
     )
 
+
+    # Synthèse normalisée du sprint Jira courant.
+    # Source : jira/sprints/sprint_courant.json -> billets[]
+    #
+    # Cette population est totalement indépendante de comparaisonSprints :
+    # un billet Jira = une fiche réelle présente dans le sprint actif.
+    sprint_meta = (
+        sprint_jira_courant.get("sprint", {})
+        if isinstance(sprint_jira_courant, dict)
+        else {}
+    )
+
+    sprint_billets_bruts = (
+        sprint_jira_courant.get("billets", [])
+        if isinstance(sprint_jira_courant, dict)
+        else []
+    )
+
+    if not isinstance(sprint_billets_bruts, list):
+        sprint_billets_bruts = []
+
+    # Déduplication uniquement par vraie clé Jira.
+    billets_uniques = []
+    cles_vues = set()
+
+    for billet in sprint_billets_bruts:
+        if not isinstance(billet, dict):
+            continue
+
+        cle = clean_label(
+            row_value(billet, "clé", "cle", "key", "jiraKey"),
+            ""
+        )
+
+        identifiant = cle.upper() if cle else ""
+
+        if identifiant:
+            if identifiant in cles_vues:
+                continue
+            cles_vues.add(identifiant)
+
+        champs_metiers = billet.get("champsMétiers")
+        if not isinstance(champs_metiers, dict):
+            champs_metiers = {}
+
+        statut = clean_label(
+            row_value(billet, "status", "statut"),
+            "À faire"
+        )
+
+        statut_categorie = clean_label(
+            row_value(billet, "statusCategory", "categorieStatut"),
+            ""
+        )
+
+        billets_uniques.append({
+            "jiraKey": cle,
+            "type": clean_label(
+                row_value(billet, "type", "categorie"),
+                "Non renseigné"
+            ),
+            "categorie": clean_label(
+                row_value(billet, "categorie"),
+                ""
+            ),
+            "resume": clean_label(
+                row_value(billet, "summary", "resume"),
+                ""
+            ),
+            "statut": statut,
+            "statutJira": statut,
+            "statusCategory": statut_categorie,
+            "resolution": clean_label(
+                row_value(billet, "résolution", "resolution"),
+                ""
+            ),
+            "environnement": clean_label(
+                row_value(
+                    champs_metiers,
+                    "environnement",
+                    "environment",
+                    "env"
+                ),
+                "Non renseigné"
+            ),
+            "domaine": clean_label(
+                row_value(champs_metiers, "domaine", "domain"),
+                "Non renseigné"
+            ),
+            "sousDomaine": clean_label(
+                row_value(
+                    champs_metiers,
+                    "sous-Domaine",
+                    "sousDomaine",
+                    "subdomain"
+                ),
+                "Non renseigné"
+            ),
+        })
+
+    # Comptage par statut Jira exact.
+    statuts_jira = {}
+
+    for billet in billets_uniques:
+        statut = clean_label(
+            billet.get("statutJira"),
+            "Sans statut"
+        )
+
+        statuts_jira[statut] = (
+            statuts_jira.get(statut, 0) + 1
+        )
+
+    # Comptage complémentaire selon la catégorie Jira officielle :
+    # À faire / En cours / Terminé.
+    categories_jira = {}
+
+    for billet in billets_uniques:
+        categorie = clean_label(
+            billet.get("statusCategory"),
+            "Non renseigné"
+        )
+
+        categories_jira[categorie] = (
+            categories_jira.get(categorie, 0) + 1
+        )
+
+    payload["sprintJiraSynthese"] = {
+        "sprint": {
+            "id": sprint_meta.get("id"),
+            "nom": clean_label(
+                row_value(sprint_meta, "nom", "name"),
+                courant
+            ),
+            "etat": clean_label(
+                row_value(sprint_meta, "état", "etat", "state"),
+                ""
+            ),
+            "dateDebut": clean_label(
+                row_value(
+                    sprint_meta,
+                    "dateDébut",
+                    "dateDebut",
+                    "startDate"
+                ),
+                ""
+            ),
+            "dateFin": clean_label(
+                row_value(
+                    sprint_meta,
+                    "dateFin",
+                    "endDate"
+                ),
+                ""
+            ),
+        },
+        "totalJira": len(billets_uniques),
+        "statuts": statuts_jira,
+        "categories": categories_jira,
+        "billets": billets_uniques,
+        "source": "API Agile Jira officielle — sprint courant",
+    }
+
+    print(
+        "[TRACE][BUILD_PAYLOAD][SPRINT_REAL]",
+        "sprint=",
+        payload["sprintJiraSynthese"]["sprint"]["nom"],
+        "totalJira=",
+        payload["sprintJiraSynthese"]["totalJira"],
+        "statuts=",
+        payload["sprintJiraSynthese"]["statuts"],
+        "categories=",
+        payload["sprintJiraSynthese"]["categories"],
+    )
+
     payload["santeFluxArrimage"] = {
         "total": total,
         "prets": prets,
