@@ -191,11 +191,43 @@ def issue_matches_sprint(issue, summary):
 
 
 def select_sprint_issues(all_issues, summary):
+    """
+    Population officielle du sprint.
+
+    Priorité absolue aux tickets explicitement retournés pour le sprint
+    par l'API Agile Jira.
+
+    On évite de reconstruire la population à partir d'une recherche
+    textuelle globale sur le nom/id du sprint, car un ticket peut contenir
+    un ancien sprint dans son historique ou dans ses champs Jira et être
+    alors compté à tort dans le sprint courant.
+    """
     explicit = explicit_issues_from_summary(summary)
+
+    print(
+        "[TRACE][SPRINT_SELECT]",
+        "sprint=",
+        summary.get("nom")
+        or summary.get("name")
+        or summary.get("sprint")
+        or summary.get("label"),
+        "explicit=",
+        len(explicit),
+        "all_issues=",
+        len(all_issues or []),
+    )
+
     if explicit:
         return explicit
 
-    matched = [issue for issue in all_issues if issue_matches_sprint(issue, summary)]
+    # Fallback historique uniquement si aucune population explicite
+    # n'est disponible dans la réponse Agile.
+    matched = [
+        issue
+        for issue in all_issues
+        if issue_matches_sprint(issue, summary)
+    ]
+
     return dedupe_issues(matched)
 
 
