@@ -935,7 +935,7 @@ function officialIssueType(issue) {
 }
 
 function officialIsAnomaly(issue) {
-  return /bug|anomal/i.test(officialIssueType(issue));
+  return /bug|bogue|anomal/i.test(officialIssueType(issue));
 }
 
 function filterProjectIssues(issues, projectKey) {
@@ -1038,17 +1038,25 @@ async function collectOfficialSprintDiagnostics(cdp, baseUrl, projectKey) {
   console.log(`[diagnostic_sprints_officiel] Sprint courant officiel : ${selected.active.id} - ${selected.active.name}`);
   console.log(`[diagnostic_sprints_officiel] Sprint précédent officiel : ${selected.previous.id} - ${selected.previous.name}`);
 
+  // Les tickets doivent être lus dans le contexte du board sélectionné.
+  //
+  // /sprint/{id}/issue peut retourner des tickets appartenant au sprint
+  // mais exclus du filtre du board. Le dashboard doit refléter exactement
+  // la population visible sur le board Jira officiel.
+  const currentSprintJql = `sprint = ${selected.active.id}`;
+  const previousSprintJql = `sprint = ${selected.previous.id}`;
+
   const currentIssuesResult = await agilePaged(
     cdp,
     baseUrl,
-    `/rest/agile/1.0/sprint/${selected.active.id}/issue?fields=*all&expand=names`,
+    `/rest/agile/1.0/board/${selected.board.id}/issue?jql=${encodeURIComponent(currentSprintJql)}&fields=*all&expand=names`,
     'issues'
   );
 
   const previousIssuesResult = await agilePaged(
     cdp,
     baseUrl,
-    `/rest/agile/1.0/sprint/${selected.previous.id}/issue?fields=*all&expand=names`,
+    `/rest/agile/1.0/board/${selected.board.id}/issue?jql=${encodeURIComponent(previousSprintJql)}&fields=*all&expand=names`,
     'issues'
   );
 
