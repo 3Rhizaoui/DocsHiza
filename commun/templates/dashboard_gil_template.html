@@ -4890,6 +4890,204 @@ function arrimageSprintConstat(data){
   });
 
 
+
+  /* PATCH_SPRINT_REAL_SELECTION_V1
+   *
+   * Source de vérité :
+   * tickets du vrai sprint actif GreenHopper.
+   *
+   * Demandes d'arrimage :
+   *   - ticket du sprint
+   *   - statut Terminé
+   *   - type Epic
+   *   - summary/titre contenant "Arrimage"
+   *
+   * Anomalies :
+   *   - ticket du sprint
+   *   - statut Terminé
+   *   - champ Référence non vide
+   */
+
+  const sprintRealTickets =
+    data &&
+    data.sprintJiraSynthese &&
+    Array.isArray(
+      data.sprintJiraSynthese.billets
+    )
+      ? data.sprintJiraSynthese.billets
+      : [];
+
+
+  const normalizeSprintText = value =>
+    String(value || '')
+      .replace(/Ã©/g,'e')
+      .replace(/Ã¨/g,'e')
+      .replace(/Ãª/g,'e')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g,'')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g,' ');
+
+
+  const sprintTicketValue = (ticket, keys) => {
+
+    if(
+      !ticket ||
+      typeof ticket !== 'object'
+    ){
+      return '';
+    }
+
+    for(const key of keys){
+
+      const value = ticket[key];
+
+      if(
+        value !== undefined &&
+        value !== null &&
+        String(value).trim() !== ''
+      ){
+        return value;
+      }
+    }
+
+    return '';
+  };
+
+
+  const sprintTicketStatus = ticket =>
+    sprintTicketValue(
+      ticket,
+      [
+        'statut',
+        'status',
+        'statusName',
+        'statutJira'
+      ]
+    );
+
+
+  const sprintTicketType = ticket =>
+    sprintTicketValue(
+      ticket,
+      [
+        'issueType',
+        'issuetype',
+        'type',
+        'typeTicket'
+      ]
+    );
+
+
+  const sprintTicketSummary = ticket =>
+    sprintTicketValue(
+      ticket,
+      [
+        'summary',
+        'resume',
+        'titre',
+        'title'
+      ]
+    );
+
+
+  const sprintTicketReference = ticket =>
+    sprintTicketValue(
+      ticket,
+      [
+        'reference',
+        'referenceOctane',
+        'octaneReference',
+        'customfield_23820'
+      ]
+    );
+
+
+  const sprintTicketIsDone = ticket => {
+
+    const status =
+      normalizeSprintText(
+        sprintTicketStatus(ticket)
+      );
+
+    return (
+      status === 'termine' ||
+      status === 'done' ||
+      status === 'closed' ||
+      status === 'resolu' ||
+      status === 'resolved'
+    );
+  };
+
+
+  /*
+   * Tickets terminés du sprint courant uniquement.
+   */
+  const sprintRealDoneTickets =
+    sprintRealTickets.filter(
+      sprintTicketIsDone
+    );
+
+
+  /*
+   * Demandes / flux d'arrimage :
+   *
+   * type = Epic
+   * ET summary contient Arrimage.
+   */
+  const sprintRealArrimageTickets =
+    sprintRealDoneTickets.filter(ticket => {
+
+      const type =
+        normalizeSprintText(
+          sprintTicketType(ticket)
+        );
+
+      const summary =
+        normalizeSprintText(
+          sprintTicketSummary(ticket)
+        );
+
+      return (
+        type === 'epic' &&
+        summary.includes('arrimage')
+      );
+    });
+
+
+  /*
+   * Anomalies :
+   * champ Référence renseigné.
+   *
+   * La Référence correspond à la référence Octane.
+   */
+  const sprintRealAnomalyTickets =
+    sprintRealDoneTickets.filter(ticket => {
+
+      const reference =
+        sprintTicketReference(ticket);
+
+      return (
+        reference !== undefined &&
+        reference !== null &&
+        String(reference).trim() !== ''
+      );
+    });
+
+
+  console.log(
+    '[SPRINT_CONTRIBUTION][SOURCE]',
+    'sprintTickets=',
+    sprintRealTickets.length,
+    'done=',
+    sprintRealDoneTickets.length,
+    'arrimageEpics=',
+    sprintRealArrimageTickets.length,
+    'anomaliesReference=',
+    sprintRealAnomalyTickets.length
+  );
+
   /* ========================================================
      C. ANOMALIES OCTANE DU SPRINT
 
@@ -5144,7 +5342,9 @@ function arrimageSprintConstat(data){
         '</h4>'+
 
         arrimageContributionRequestsHtml(
-          demandesTraitees,
+          Array.isArray(data.contributionSprintArrimage)
+            ? data.contributionSprintArrimage
+            : sprintRealArrimageTickets,
           sprintLabel
         )+
 
@@ -5157,9 +5357,9 @@ function arrimageSprintConstat(data){
         '</h4>'+
 
         arrimageContributionAnomaliesHtml(
-          anomaliesTraitees.concat(
-            anomaliesEnCours
-          ),
+          Array.isArray(data.contributionSprintAnomalies)
+            ? data.contributionSprintAnomalies
+            : sprintRealAnomalyTickets,
           sprintLabel
         )+
 

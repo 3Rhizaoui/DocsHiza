@@ -1702,6 +1702,738 @@ def main():
         payload["sprintJiraSynthese"].get("categories", {}),
     )
 
+
+    # ============================================================
+    # SPRINT_CONTRIBUTION_JOIN_V1
+    #
+    # Source de sélection :
+    #   sprintJiraSynthese.billets
+    #   -> vrai sprint actif GreenHopper
+    #   -> tickets au statut Terminé uniquement.
+    #
+    # Source de détail :
+    #   jira_brut.json / searches.epics
+    #   jira_brut.json / searches.anomalies_resolues
+    #
+    # JOIN :
+    #   clé Jira AERL_GIL-xxx
+    #
+    # Demandes d'arrimage :
+    #   intersection tickets terminés du sprint
+    #   avec la requête "epics"
+    #
+    # Anomalies :
+    #   intersection tickets terminés du sprint
+    #   avec la requête "anomalies_resolues"
+    #
+    # Aucune logique d'affichage ici.
+    # ============================================================
+
+    import unicodedata
+
+
+    def _sprint_join_text(value):
+        """Convertit proprement une valeur Jira en texte."""
+        if value is None:
+            return ""
+
+        if isinstance(value, dict):
+            for key in (
+                "name",
+                "nom",
+                "value",
+                "label",
+                "key",
+                "displayName",
+            ):
+                current = value.get(key)
+
+                if current not in (None, ""):
+                    return str(current).strip()
+
+            return ""
+
+        if isinstance(value, list):
+            values = []
+
+            for item in value:
+                text = _sprint_join_text(item)
+
+                if text and text not in values:
+                    values.append(text)
+
+            return ", ".join(values)
+
+        return str(value).strip()
+
+
+    def _sprint_join_normalize(value):
+        text = _sprint_join_text(value)
+
+        text = (
+            unicodedata
+            .normalize("NFD", text)
+            .encode("ascii", "ignore")
+            .decode("ascii")
+            .strip()
+            .lower()
+        )
+
+        return " ".join(text.split())
+
+
+    def _sprint_join_fields(issue):
+        if not isinstance(issue, dict):
+            return {}
+
+        fields = issue.get("fields")
+
+        return fields if isinstance(fields, dict) else {}
+
+
+    def _sprint_join_value(issue, *keys):
+        """
+        Recherche d'abord au niveau racine,
+        puis dans fields.
+        """
+        if not isinstance(issue, dict):
+            return None
+
+        fields = _sprint_join_fields(issue)
+
+        for key in keys:
+            value = issue.get(key)
+
+            if value not in (None, "", [], {}):
+                return value
+
+            value = fields.get(key)
+
+            if value not in (None, "", [], {}):
+                return value
+
+        return None
+
+
+    def _sprint_join_key(issue):
+        value = _sprint_join_value(
+            issue,
+            "jiraKey",
+            "issueKey",
+            "key",
+            "referenceJira",
+        )
+
+        text = _sprint_join_text(value)
+
+        if text:
+            return text.upper()
+
+        return ""
+
+
+    def _sprint_join_status(issue):
+        value = _sprint_join_value(
+            issue,
+            "statut",
+            "status",
+            "statusName",
+            "statutJira",
+        )
+
+        return _sprint_join_text(value)
+
+
+    def _sprint_join_is_done(issue):
+        status = _sprint_join_normalize(
+            _sprint_join_status(issue)
+        )
+
+        return status in {
+            "termine",
+            "done",
+            "closed",
+            "resolu",
+            "resolved",
+        }
+
+
+    def _sprint_join_issues_from_node(node):
+        """
+        Tolère plusieurs formes du jira_brut.json :
+          - liste directe
+          - {"issues": [...]}
+          - {"tickets": [...]}
+          - {"items": [...]}
+          - {"values": [...]}
+          - {"results": [...]}
+          - {"data": {...}}
+        """
+        if isinstance(node, list):
+            return [
+                item
+                for item in node
+                if isinstance(item, dict)
+            ]
+
+        if not isinstance(node, dict):
+            return []
+
+        for key in (
+            "issues",
+            "tickets",
+            "items",
+            "values",
+            "results",
+        ):
+            value = node.get(key)
+
+            if isinstance(value, list):
+                return [
+                    item
+                    for item in value
+                    if isinstance(item, dict)
+                ]
+
+        data = node.get("data")
+
+        if isinstance(data, (dict, list)):
+            return _sprint_join_issues_from_node(data)
+
+        return []
+
+
+    def _sprint_join_search(raw, search_name):
+        """
+        Retrouve une recherche par nom dans jira_brut.json.
+
+        Supporte :
+          searches = {
+              "epics": {...},
+              "anomalies_resolues": {...}
+          }
+
+        ou :
+          searches = [
+              {"name": "epics", ...},
+              ...
+          ]
+        """
+        if not isinstance(raw, dict):
+            return []
+
+        searches = raw.get("searches")
+
+        if isinstance(searches, dict):
+            node = searches.get(search_name)
+
+            issues = _sprint_join_issues_from_node(node)
+
+            if issues:
+                return issues
+
+        if isinstance(searches, list):
+            for search in searches:
+                if not isinstance(search, dict):
+                    continue
+
+                name = _sprint_join_text(
+                    search.get("name")
+                    or search.get("id")
+                    or search.get("key")
+                    or search.get("queryName")
+                )
+
+                if name == search_name:
+                    issues = _sprint_join_issues_from_node(
+                        search
+                    )
+
+                    if issues:
+                        return issues
+
+        # Compatibilité éventuelle avec une structure
+        # directement indexée par le nom de la recherche.
+        node = raw.get(search_name)
+
+        issues = _sprint_join_issues_from_node(node)
+
+        if issues:
+            return issues
+
+        results = raw.get("results")
+
+        if isinstance(results, dict):
+            issues = _sprint_join_issues_from_node(
+                results.get(search_name)
+            )
+
+            if issues:
+                return issues
+
+        return []
+
+
+    def _sprint_join_unique(values):
+        result = []
+
+        for value in values:
+            if value is None:
+                continue
+
+            if isinstance(value, list):
+                nested = _sprint_join_unique(value)
+
+                for item in nested:
+                    if item not in result:
+                        result.append(item)
+
+                continue
+
+            if isinstance(value, dict):
+                text = _sprint_join_text(value)
+
+                if text and text not in result:
+                    result.append(text)
+
+                continue
+
+            text = str(value).strip()
+
+            if not text:
+                continue
+
+            # Certains champs normalisés utilisent "/" ou ";"
+            # pour plusieurs environnements.
+            if ";" in text:
+                parts = [
+                    part.strip()
+                    for part in text.split(";")
+                    if part.strip()
+                ]
+            else:
+                parts = [text]
+
+            for part in parts:
+                if part not in result:
+                    result.append(part)
+
+        return result
+
+
+    def _sprint_join_context_index(payload_value):
+        """
+        Indexe les lignes déjà normalisées du payload par clé Jira.
+
+        Cela permet de récupérer domaine / sous-domaine /
+        flux / version / environnement lorsqu'ils ont déjà
+        été enrichis ailleurs dans le pipeline.
+        """
+        index = {}
+
+
+        def walk(value, depth=0):
+            if depth > 3:
+                return
+
+            if isinstance(value, list):
+                for item in value:
+                    walk(item, depth + 1)
+
+                return
+
+            if not isinstance(value, dict):
+                return
+
+            jira_key = _sprint_join_key(value)
+
+            if jira_key:
+                index.setdefault(jira_key, []).append(value)
+
+            for nested in value.values():
+                if isinstance(nested, (dict, list)):
+                    walk(nested, depth + 1)
+
+
+        walk(payload_value)
+
+        return index
+
+
+    def _sprint_join_first(sources, *keys):
+        for source in sources:
+            if not isinstance(source, dict):
+                continue
+
+            value = _sprint_join_value(
+                source,
+                *keys
+            )
+
+            if value not in (None, "", [], {}):
+                return value
+
+        return None
+
+
+    def _sprint_join_collect(sources, *keys):
+        values = []
+
+        for source in sources:
+            if not isinstance(source, dict):
+                continue
+
+            value = _sprint_join_value(
+                source,
+                *keys
+            )
+
+            if value in (None, "", [], {}):
+                continue
+
+            if isinstance(value, list):
+                values.extend(value)
+            else:
+                values.append(value)
+
+        return _sprint_join_unique(values)
+
+
+    def _sprint_join_build_row(
+        detailed_issue,
+        active_issue,
+        context_rows,
+        kind,
+    ):
+        sources = [
+            detailed_issue,
+            active_issue,
+            *context_rows,
+        ]
+
+        jira_key = (
+            _sprint_join_key(detailed_issue)
+            or _sprint_join_key(active_issue)
+        )
+
+        summary = _sprint_join_text(
+            _sprint_join_first(
+                sources,
+                "summary",
+                "resume",
+                "titre",
+                "title",
+            )
+        )
+
+        issue_type = _sprint_join_text(
+            _sprint_join_first(
+                sources,
+                "issuetype",
+                "issueType",
+                "typeTicket",
+                "type",
+            )
+        )
+
+        status = _sprint_join_text(
+            _sprint_join_first(
+                sources,
+                "status",
+                "statut",
+                "statusName",
+                "statutJira",
+            )
+        )
+
+        domaine = _sprint_join_text(
+            _sprint_join_first(
+                sources,
+                "domaine",
+                "domain",
+                "functionalDomain",
+            )
+        )
+
+        sous_domaine = _sprint_join_text(
+            _sprint_join_first(
+                sources,
+                "sousDomaine",
+                "sous_domaine",
+                "subDomain",
+                "subdomain",
+                "functionalSubDomain",
+            )
+        )
+
+        flux = _sprint_join_text(
+            _sprint_join_first(
+                sources,
+                "flux",
+                "nomFlux",
+                "referenceFlux",
+                "refFlux",
+                "flow",
+                "flowName",
+            )
+        )
+
+        versions = _sprint_join_collect(
+            sources,
+            "version",
+            "versionLivree",
+            "versionsLivrees",
+            "fixVersion",
+            "fixVersions",
+        )
+
+        environments = _sprint_join_collect(
+            sources,
+            "environnement",
+            "environment",
+            "env",
+            "environnements",
+            "environments",
+        )
+
+        sprints = _sprint_join_collect(
+            sources,
+            "sprint",
+            "sprints",
+            "sprintName",
+            "sprintNames",
+            "sprintNom",
+            "sprintNoms",
+        )
+
+        reference_octane = ""
+
+        if kind == "anomaly":
+            # Champ Jira Reference identifié pendant l'import.
+            reference_octane = _sprint_join_text(
+                _sprint_join_first(
+                    sources,
+                    "reference",
+                    "referenceOctane",
+                    "octaneReference",
+                    "octaneRef",
+                    "referenceExterne",
+                    "customfield_23820",
+                )
+            )
+
+        return {
+            "jiraKey": jira_key,
+            "referenceJira": jira_key,
+            "referenceOctane": reference_octane,
+            "reference": (
+                reference_octane
+                if kind == "anomaly"
+                else jira_key
+            ),
+            "summary": summary,
+            "issueType": issue_type,
+            "statut": status,
+            "statutJira": status,
+            "domaine": domaine,
+            "sousDomaine": sous_domaine,
+            "flux": flux,
+            "version": " / ".join(versions),
+            "versions": versions,
+            "environnement": " / ".join(environments),
+            "environnements": environments,
+            "sprint": ", ".join(sprints),
+            "sprints": sprints,
+            "sourceDetail": (
+                "JIRA query epics"
+                if kind == "arrimage"
+                else "JIRA query anomalies_resolues"
+            ),
+        }
+
+
+    # ------------------------------------------------------------
+    # 1. Population du vrai sprint actif
+    # ------------------------------------------------------------
+
+    sprint_join_summary = (
+        payload.get("sprintJiraSynthese") or {}
+    )
+
+    sprint_join_active_tickets = (
+        sprint_join_summary.get("billets") or []
+    )
+
+    sprint_join_done_tickets = [
+        ticket
+        for ticket in sprint_join_active_tickets
+        if (
+            isinstance(ticket, dict)
+            and _sprint_join_is_done(ticket)
+        )
+    ]
+
+    sprint_join_done_by_key = {
+        _sprint_join_key(ticket): ticket
+        for ticket in sprint_join_done_tickets
+        if _sprint_join_key(ticket)
+    }
+
+    sprint_join_done_keys = set(
+        sprint_join_done_by_key
+    )
+
+
+    # ------------------------------------------------------------
+    # 2. Fiches détaillées issues des deux JQL configurées
+    # ------------------------------------------------------------
+
+    sprint_join_epics = _sprint_join_search(
+        jira_brut_active,
+        "epics",
+    )
+
+    sprint_join_anomalies = _sprint_join_search(
+        jira_brut_active,
+        "anomalies_resolues",
+    )
+
+    sprint_join_epics_by_key = {
+        _sprint_join_key(issue): issue
+        for issue in sprint_join_epics
+        if _sprint_join_key(issue)
+    }
+
+    sprint_join_anomalies_by_key = {
+        _sprint_join_key(issue): issue
+        for issue in sprint_join_anomalies
+        if _sprint_join_key(issue)
+    }
+
+
+    # ------------------------------------------------------------
+    # 3. Index des données déjà enrichies dans le payload
+    # ------------------------------------------------------------
+
+    sprint_join_context = (
+        _sprint_join_context_index(payload)
+    )
+
+
+    # ------------------------------------------------------------
+    # 4. JOIN ARRIMAGE
+    #
+    # Intersection :
+    #   ticket Terminé du sprint actif
+    #   ∩ résultat JQL "epics"
+    #
+    # La JQL garantit déjà :
+    #   issuetype = Epic
+    #   summary ~ "Arrimage"
+    # ------------------------------------------------------------
+
+    sprint_join_arrimage_keys = sorted(
+        sprint_join_done_keys
+        & set(sprint_join_epics_by_key)
+    )
+
+    sprint_join_arrimage = []
+
+    for jira_key in sprint_join_arrimage_keys:
+        row = _sprint_join_build_row(
+            sprint_join_epics_by_key[jira_key],
+            sprint_join_done_by_key[jira_key],
+            sprint_join_context.get(jira_key, []),
+            "arrimage",
+        )
+
+        sprint_join_arrimage.append(row)
+
+
+    # ------------------------------------------------------------
+    # 5. JOIN ANOMALIES
+    #
+    # Intersection :
+    #   ticket Terminé du sprint actif
+    #   ∩ résultat JQL "anomalies_resolues"
+    #
+    # La JQL garantit déjà :
+    #   issuetype = Bug
+    #   Reference IS NOT EMPTY
+    # ------------------------------------------------------------
+
+    sprint_join_anomaly_keys = sorted(
+        sprint_join_done_keys
+        & set(sprint_join_anomalies_by_key)
+    )
+
+    sprint_join_anomaly_rows = []
+
+    for jira_key in sprint_join_anomaly_keys:
+        row = _sprint_join_build_row(
+            sprint_join_anomalies_by_key[jira_key],
+            sprint_join_done_by_key[jira_key],
+            sprint_join_context.get(jira_key, []),
+            "anomaly",
+        )
+
+        sprint_join_anomaly_rows.append(row)
+
+
+    # ------------------------------------------------------------
+    # 6. Publication dans le payload final
+    # ------------------------------------------------------------
+
+    payload["contributionSprintArrimage"] = (
+        sprint_join_arrimage
+    )
+
+    payload["contributionSprintAnomalies"] = (
+        sprint_join_anomaly_rows
+    )
+
+    payload["sprintJiraSynthese"][
+        "contributionArrimage"
+    ] = copy.deepcopy(
+        sprint_join_arrimage
+    )
+
+    payload["sprintJiraSynthese"][
+        "contributionAnomalies"
+    ] = copy.deepcopy(
+        sprint_join_anomaly_rows
+    )
+
+
+    print(
+        "[TRACE][BUILD_PAYLOAD][SPRINT_JOIN]",
+        "sprintTickets=",
+        len(sprint_join_active_tickets),
+        "done=",
+        len(sprint_join_done_tickets),
+        "epicsQuery=",
+        len(sprint_join_epics),
+        "anomaliesQuery=",
+        len(sprint_join_anomalies),
+        "arrimageJoin=",
+        len(sprint_join_arrimage),
+        "anomaliesJoin=",
+        len(sprint_join_anomaly_rows),
+    )
+
+    if sprint_join_arrimage:
+        print(
+            "[TRACE][BUILD_PAYLOAD][SPRINT_JOIN][ARRIMAGE_SAMPLE]",
+            sprint_join_arrimage[0],
+        )
+
+    if sprint_join_anomaly_rows:
+        print(
+            "[TRACE][BUILD_PAYLOAD][SPRINT_JOIN][ANOMALY_SAMPLE]",
+            sprint_join_anomaly_rows[0],
+        )
+
+
     payload["santeFluxArrimage"] = {
         "total": total,
         "prets": prets,
