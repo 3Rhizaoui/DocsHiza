@@ -3325,6 +3325,64 @@
 
 /* GIL_ALIGN_STATUS_2X2_V1_END */
 
+
+/* GIL_SPRINT_ACTIVE_STATUS_V1_START */
+.sprintActiveStatusRow{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  align-items:center;
+  margin:8px 0 12px;
+}
+
+.sprintStatusBadge{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:6px 10px;
+  border-radius:16px;
+  border:1px solid #d7dde5;
+  background:#f8fafc;
+  font-size:12px;
+  line-height:1;
+  white-space:nowrap;
+  box-shadow:0 1px 2px rgba(0,0,0,.06);
+}
+
+.sprintStatusTotal{
+  background:#eef3f8;
+  border-left:4px solid #334155;
+}
+
+.sprintStatusTodo{
+  border-left:4px solid #6b7280;
+}
+
+.sprintStatusAnalysis{
+  border-left:4px solid #64748b;
+}
+
+.sprintStatusDev{
+  border-left:4px solid #f59e0b;
+}
+
+.sprintStatusBlocked{
+  border-left:4px solid #b91c1c;
+}
+
+.sprintStatusTest{
+  border-left:4px solid #2563eb;
+}
+
+.sprintStatusDone{
+  border-left:4px solid #15803d;
+}
+
+.sprintStatusPct{
+  opacity:.75;
+}
+/* GIL_SPRINT_ACTIVE_STATUS_V1_END */
+
 </style>
 
 </head>
@@ -4449,6 +4507,85 @@ function arrimageSprintGroupedList(items, options){
   '</div>';
 }
 
+
+function sprintActiveStatusBadges(data){
+  const synthese =
+    data &&
+    data.sprintJiraSynthese &&
+    typeof data.sprintJiraSynthese === "object"
+      ? data.sprintJiraSynthese
+      : {};
+
+  const total =
+    Number(synthese.totalJira) || 0;
+
+  const details =
+    Array.isArray(synthese.statutsDetail)
+      ? synthese.statutsDetail
+      : [];
+
+  if (!total || !details.length) {
+    return "";
+  }
+
+  const fmtPct = value =>
+    Number(value || 0)
+      .toFixed(1)
+      .replace(".", ",");
+
+  const statusClass = name => {
+    const n = String(name || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+
+    if (n.includes("termine")) {
+      return "sprintStatusDone";
+    }
+
+    if (n.includes("bloque")) {
+      return "sprintStatusBlocked";
+    }
+
+    if (n.includes("tester")) {
+      return "sprintStatusTest";
+    }
+
+    if (n.includes("dev")) {
+      return "sprintStatusDev";
+    }
+
+    if (n.includes("analyse")) {
+      return "sprintStatusAnalysis";
+    }
+
+    return "sprintStatusTodo";
+  };
+
+  const badges = details
+    .map(item => `
+      <span class="sprintStatusBadge ${statusClass(item.nom)}">
+        <strong>${esc(item.nom || "Sans statut")}</strong>
+        ${Number(item.nombre) || 0}
+        <span class="sprintStatusPct">
+          (${fmtPct(item.pourcentage)} %)
+        </span>
+      </span>
+    `)
+    .join("");
+
+  return `
+    <div class="sprintActiveStatusRow">
+      <span class="sprintStatusBadge sprintStatusTotal">
+        <strong>JIRA du sprint :</strong>
+        ${total}
+      </span>
+
+      ${badges}
+    </div>
+  `;
+}
+
 function arrimageSprintConstat(data){
 
   const sprintLabel = String(
@@ -4662,29 +4799,7 @@ function arrimageSprintConstat(data){
 
     '<h3>Constat du sprint</h3>'+
 
-    '<div class="arrimageSprintStats">'+
-
-      '<span class="arrimageSprintKpi">'+
-        'JIRA du sprint : <b>'+
-          totalJira+
-        '</b>'+
-      '</span>'+
-
-      '<span class="arrimageSprintKpi">'+
-        'Traités : <b>'+
-          totalTraites+
-          ' ('+pctTraites+')'+
-        '</b>'+
-      '</span>'+
-
-      '<span class="arrimageSprintKpi">'+
-        'En cours : <b>'+
-          totalEnCours+
-          ' ('+pctEnCours+')'+
-        '</b>'+
-      '</span>'+
-
-    '</div>'+
+    '${sprintActiveStatusBadges(data)}'+
 
 
     '<div class="miniNote">'+
