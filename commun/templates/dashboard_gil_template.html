@@ -4449,6 +4449,357 @@ function arrimageSprintGroupedList(items, options){
   '</div>';
 }
 
+
+/* PATCH_CONTRIBUTION_DETAIL_V4 */
+
+function arrimageContributionValue(row, keys, fallback){
+  for(const key of keys){
+    const value = row && row[key];
+
+    if(
+      value !== undefined &&
+      value !== null &&
+      String(value).trim() !== ''
+    ){
+      return String(value).trim();
+    }
+  }
+
+  return fallback || 'Non renseigné';
+}
+
+
+function arrimageContributionJira(row){
+  return arrimageContributionValue(
+    row,
+    [
+      'jiraKey',
+      'issueKey',
+      'key',
+      'referenceJira'
+    ],
+    'JIRA non renseigné'
+  );
+}
+
+
+function arrimageContributionOctane(row){
+  /*
+   * Pour un bug Octane, la référence Octane
+   * est portée par le champ Référence.
+   */
+  return arrimageContributionValue(
+    row,
+    [
+      'referenceOctane',
+      'octaneReference',
+      'octaneRef',
+      'reference'
+    ],
+    'Octane non renseigné'
+  );
+}
+
+
+function arrimageContributionSprint(row, sprintCourant){
+  const raw =
+    row && (
+      row.sprints ||
+      row.sprintNames ||
+      row.sprint ||
+      row.sprintName
+    );
+
+  if(Array.isArray(raw)){
+    const values = raw
+      .map(x => {
+        if(x && typeof x === 'object'){
+          return (
+            x.name ||
+            x.nom ||
+            x.value ||
+            x.label ||
+            ''
+          );
+        }
+
+        return x;
+      })
+      .map(x => String(x || '').trim())
+      .filter(Boolean);
+
+    if(values.length){
+      return [...new Set(values)].join(', ');
+    }
+  }
+
+  if(raw !== undefined && raw !== null){
+    const value = String(raw).trim();
+
+    if(value){
+      return value;
+    }
+  }
+
+  return sprintCourant || 'Sprint non renseigné';
+}
+
+
+function arrimageContributionEnv(row){
+  return arrimageContributionValue(
+    row,
+    [
+      'environnement',
+      'environment',
+      'env'
+    ],
+    'Non renseigné'
+  );
+}
+
+
+function arrimageContributionGroup(rows){
+  const result = new Map();
+
+  (rows || []).forEach(row => {
+
+    const domaine =
+      arrimageContributionValue(
+        row,
+        ['domaine','domain'],
+        'Non renseigné'
+      );
+
+    const sousDomaine =
+      arrimageContributionValue(
+        row,
+        [
+          'sousDomaine',
+          'sous_domaine',
+          'subDomain',
+          'subdomain'
+        ],
+        'Non renseigné'
+      );
+
+    if(!result.has(domaine)){
+      result.set(domaine, new Map());
+    }
+
+    const subs = result.get(domaine);
+
+    if(!subs.has(sousDomaine)){
+      subs.set(sousDomaine, []);
+    }
+
+    subs.get(sousDomaine).push(row);
+  });
+
+  return result;
+}
+
+
+function arrimageContributionRequestsHtml(
+  rows,
+  sprintCourant
+){
+  const groups =
+    arrimageContributionGroup(rows);
+
+  if(!rows || !rows.length){
+    return (
+      '<div class="arrimageFluxEmpty">'+
+        'Aucune demande d’arrimage identifiée pour le sprint courant.'+
+      '</div>'
+    );
+  }
+
+  let html = '';
+
+  groups.forEach((subs,domaine) => {
+
+    html +=
+      '<div style="margin-top:10px">'+
+        '<b>'+esc(domaine)+'</b>'+
+      '</div>';
+
+    subs.forEach((items,sousDomaine) => {
+
+      html +=
+        '<div style="margin:5px 0 3px 12px">'+
+          '<b>'+
+            esc(sousDomaine)+
+            ' : '+items.length+
+          '</b>'+
+        '</div>';
+
+      items.forEach((row,index) => {
+
+        const jira =
+          arrimageContributionJira(row);
+
+        const flux =
+          arrimageContributionValue(
+            row,
+            [
+              'flux',
+              'nomFlux',
+              'referenceFlux',
+              'refFlux'
+            ],
+            'Flux non renseigné'
+          );
+
+        const version =
+          arrimageContributionValue(
+            row,
+            [
+              'version',
+              'versionLivree',
+              'fixVersion'
+            ],
+            'Version non renseignée'
+          );
+
+        const env =
+          arrimageContributionEnv(row);
+
+        const sprint =
+          arrimageContributionSprint(
+            row,
+            sprintCourant
+          );
+
+        html +=
+          '<div style="'+
+            'margin-left:24px;'+
+            'font-size:11px;'+
+            'line-height:1.7;'+
+          '">'+
+
+            '<b>'+(index+1)+'.</b> '+
+            esc(jira)+
+            ' -- '+
+            esc(flux)+
+            ' -- '+
+            esc(version)+
+            ' -- '+
+            esc(env)+
+            ' -- '+
+            esc(sprint)+
+
+          '</div>';
+      });
+    });
+  });
+
+  return html;
+}
+
+
+function arrimageContributionAnomaliesHtml(
+  rows,
+  sprintCourant
+){
+  const groups =
+    arrimageContributionGroup(rows);
+
+  if(!rows || !rows.length){
+    return (
+      '<div class="arrimageFluxEmpty">'+
+        'Aucune anomalie d’arrimage identifiée pour le sprint courant.'+
+      '</div>'
+    );
+  }
+
+  let html = '';
+
+  groups.forEach((subs,domaine) => {
+
+    html +=
+      '<div style="margin-top:10px">'+
+        '<b>'+esc(domaine)+'</b>'+
+      '</div>';
+
+    subs.forEach((items,sousDomaine) => {
+
+      html +=
+        '<div style="margin:5px 0 3px 12px">'+
+          '<b>'+
+            esc(sousDomaine)+
+            ' : '+items.length+
+          '</b>'+
+        '</div>';
+
+      items.forEach((row,index) => {
+
+        const jira =
+          arrimageContributionJira(row);
+
+        const octane =
+          arrimageContributionOctane(row);
+
+        const flux =
+          arrimageContributionValue(
+            row,
+            [
+              'flux',
+              'nomFlux',
+              'referenceFlux',
+              'refFlux'
+            ],
+            'Flux non renseigné'
+          );
+
+        const statut =
+          arrimageContributionValue(
+            row,
+            [
+              'statutJira',
+              'statut',
+              'status'
+            ],
+            'Statut non renseigné'
+          );
+
+        const env =
+          arrimageContributionEnv(row);
+
+        const sprint =
+          arrimageContributionSprint(
+            row,
+            sprintCourant
+          );
+
+        html +=
+          '<div style="'+
+            'margin-left:24px;'+
+            'font-size:11px;'+
+            'line-height:1.7;'+
+          '">'+
+
+            '<b>'+(index+1)+'.</b> '+
+            esc(jira)+
+            ' -- '+
+            esc(octane)+
+            ' -- '+
+            esc(flux)+
+            ' -- '+
+            esc(statut)+
+            ' -- '+
+            esc(env)+
+            ' -- '+
+            esc(sprint)+
+
+          '</div>';
+      });
+    });
+  });
+
+  return html;
+}
+
+
 function arrimageSprintConstat(data){
 
   const sprintLabel = String(
@@ -4780,106 +5131,39 @@ function arrimageSprintConstat(data){
 
 
     '<div class="miniNote">'+
-      '<b>'+esc(sprintLabel || 'Sprint courant')+'</b>'+
-      ' — données issues de la population JIRA du sprint courant.'+
+      '<b>Contribution du sprint actuel à la livraison des flux d’arrimage — BCEF / GIL / ESTREEM</b>'+
     '</div>'+
 
 
     '<div class="arrimageSprintSections">'+
 
-
-      /* ----------------------------------------------------
-         Demandes / flux traités
-         ---------------------------------------------------- */
-
       '<div class="arrimageSprintBlock">'+
 
         '<h4>'+
-          '1. Demandes / flux traités — SIT / UAT'+
+          '1. Demandes d’arrimage / flux livrés'+
         '</h4>'+
 
-        arrimageSprintGroupedList(
+        arrimageContributionRequestsHtml(
           demandesTraitees,
-          {
-            empty:
-              'Aucune demande traitée SIT / UAT pour le sprint courant.',
-
-            showEnv:true,
-
-            ref:x =>
-              x.flux ||
-              x.jiraKey ||
-              x.reference ||
-              x.id ||
-              ''
-          }
+          sprintLabel
         )+
 
       '</div>'+
-
-
-      /* ----------------------------------------------------
-         Anomalies Octane
-         ---------------------------------------------------- */
 
       '<div class="arrimageSprintBlock">'+
 
         '<h4>'+
-          '2. Anomalies Octane du sprint'+
+          '2. Anomalies d’arrimage'+
         '</h4>'+
 
-
-        '<div class="miniNote">'+
-          '<b>Traitées : '+
-            anomaliesTraitees.length+
-          '</b>'+
-        '</div>'+
-
-        arrimageSprintGroupedList(
-          anomaliesTraitees,
-          {
-            empty:
-              'Aucune anomalie Octane traitée identifiée dans le sprint courant.',
-
-            showEnv:false,
-
-            ref:a =>
-              a.reference ||
-              a.jiraKey ||
-              a.id ||
-              a.key ||
-              a.flux ||
-              ''
-          }
-        )+
-
-
-        '<div class="miniNote" style="margin-top:8px">'+
-          '<b>En cours : '+
-            anomaliesEnCours.length+
-          '</b>'+
-        '</div>'+
-
-        arrimageSprintGroupedList(
-          anomaliesEnCours,
-          {
-            empty:
-              'Aucune anomalie Octane en cours identifiée dans le sprint courant.',
-
-            showEnv:false,
-
-            ref:a =>
-              a.reference ||
-              a.jiraKey ||
-              a.id ||
-              a.key ||
-              a.flux ||
-              ''
-          }
+        arrimageContributionAnomaliesHtml(
+          anomaliesTraitees.concat(
+            anomaliesEnCours
+          ),
+          sprintLabel
         )+
 
       '</div>'+
-
 
     '</div>';
 }
