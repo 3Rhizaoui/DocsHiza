@@ -1729,9 +1729,6 @@ def main():
     # Aucune logique d'affichage ici.
     # ============================================================
 
-    import unicodedata
-
-
     def _sprint_join_text(value):
         """Convertit proprement une valeur Jira en texte."""
         if value is None:
