@@ -4705,8 +4705,33 @@ function arrimageSprintConstat(data){
       const statuts =
         synthese.statuts || {};
 
-      const value = name =>
-        Number(statuts[name] || 0);
+      const normalizeJiraStatus = value =>
+        String(value || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, ' ');
+
+      const value = names => {
+        const expected =
+          names.map(normalizeJiraStatus);
+
+        for (
+          const [key, count]
+          of Object.entries(statuts)
+        ) {
+          if (
+            expected.includes(
+              normalizeJiraStatus(key)
+            )
+          ) {
+            return Number(count || 0);
+          }
+        }
+
+        return 0;
+      };
 
       const pctJira = n =>
         total
@@ -4719,12 +4744,12 @@ function arrimageSprintConstat(data){
           : '0,0 %';
 
       const items = [
-        ['À faire', value('À faire')],
-        ['Analyse en cours', value('Analyse en cours')],
-        ['Dev en cours', value('Dev en cours')],
-        ['Bloqué', value('Bloqué')],
-        ['À tester', value('À tester')],
-        ['Terminé', value('Terminé')]
+        ['À faire', value(['A faire', 'À faire'])],
+        ['Analyse en cours', value(['Analyse en cours'])],
+        ['Dev en cours', value(['Dev en cours'])],
+        ['Bloqué', value(['Bloqué', 'Bloque'])],
+        ['À tester', value(['A tester', 'À tester'])],
+        ['Terminé', value(['Terminé', 'Termine'])]
       ];
 
       return ''+
