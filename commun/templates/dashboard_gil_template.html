@@ -4662,29 +4662,92 @@ function arrimageSprintConstat(data){
 
     '<h3>Constat du sprint</h3>'+
 
-    '<div class="arrimageSprintStats">'+
+    (function(){
+      const synthese =
+        data &&
+        data.sprintJiraSynthese;
 
-      '<span class="arrimageSprintKpi">'+
-        'JIRA du sprint : <b>'+
-          totalJira+
-        '</b>'+
-      '</span>'+
+      if(
+        !synthese ||
+        !synthese.statuts ||
+        synthese.totalJira === undefined ||
+        synthese.totalJira === null
+      ){
+        return ''+
+          '<div class="arrimageSprintStats">'+
 
-      '<span class="arrimageSprintKpi">'+
-        'Traités : <b>'+
-          totalTraites+
-          ' ('+pctTraites+')'+
-        '</b>'+
-      '</span>'+
+            '<span class="arrimageSprintKpi">'+
+              'JIRA du sprint : <b>'+
+                totalJira+
+              '</b>'+
+            '</span>'+
 
-      '<span class="arrimageSprintKpi">'+
-        'En cours : <b>'+
-          totalEnCours+
-          ' ('+pctEnCours+')'+
-        '</b>'+
-      '</span>'+
+            '<span class="arrimageSprintKpi">'+
+              'Traités : <b>'+
+                totalTraites+
+                ' ('+pctTraites+')'+
+              '</b>'+
+            '</span>'+
 
-    '</div>'+
+            '<span class="arrimageSprintKpi">'+
+              'En cours : <b>'+
+                totalEnCours+
+                ' ('+pctEnCours+')'+
+              '</b>'+
+            '</span>'+
+
+          '</div>';
+      }
+
+      const total =
+        Number(synthese.totalJira || 0);
+
+      const statuts =
+        synthese.statuts || {};
+
+      const value = name =>
+        Number(statuts[name] || 0);
+
+      const pctJira = n =>
+        total
+          ? (
+              (Number(n || 0) * 100 / total)
+                .toFixed(1)
+                .replace('.', ',') +
+              ' %'
+            )
+          : '0,0 %';
+
+      const items = [
+        ['À faire', value('À faire')],
+        ['Analyse en cours', value('Analyse en cours')],
+        ['Dev en cours', value('Dev en cours')],
+        ['Bloqué', value('Bloqué')],
+        ['À tester', value('À tester')],
+        ['Terminé', value('Terminé')]
+      ];
+
+      return ''+
+        '<div class="arrimageSprintStats">'+
+
+          '<span class="arrimageSprintKpi">'+
+            'JIRA du sprint : <b>'+
+              total+
+            '</b>'+
+          '</span>'+
+
+          items.map(item =>
+            '<span class="arrimageSprintKpi">'+
+              esc(item[0])+
+              ' : <b>'+
+                item[1]+
+                ' ('+pctJira(item[1])+')'+
+              '</b>'+
+            '</span>'
+          ).join('')+
+
+        '</div>';
+    })()+
 
 
     '<div class="miniNote">'+
