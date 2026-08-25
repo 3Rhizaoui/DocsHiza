@@ -1699,7 +1699,7 @@ def main():
         "statuts=",
         payload["sprintJiraSynthese"]["statuts"],
         "categories=",
-        payload["sprintJiraSynthese"]["categories"],
+        payload["sprintJiraSynthese"].get("categories", {}),
     )
 
     payload["santeFluxArrimage"] = {
