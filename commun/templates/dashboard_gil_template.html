@@ -4165,9 +4165,15 @@
 
       if(
         raw.includes('annul') ||
-        raw.includes('cancel') ||
+        raw.includes('cancel')
+      ){
+        return 'Annulés';
+      }
+
+      if(
         raw.includes('rejet') ||
-        raw.includes('refus')
+        raw.includes('refus') ||
+        raw.includes('reject')
       ){
         return 'Rejetés';
       }
@@ -5647,33 +5653,31 @@ function arrimageSprintConstat(data){
           key:'Livrés',
           label:'Terminées',
           sit:'#15803d',
-          uat:'#4ade80',
-          prod:'#22c55e',
-          other:'#86efac'
+          uat:'#4ade80'
         },
         {
           key:'En cours',
           label:'En cours',
           sit:'#d97706',
-          uat:'#fbbf24',
-          prod:'#f59e0b',
-          other:'#fde68a'
+          uat:'#fbbf24'
         },
         {
           key:'Bloqués',
           label:'Bloquées',
           sit:'#b91c1c',
-          uat:'#f87171',
-          prod:'#ef4444',
-          other:'#fecaca'
+          uat:'#f87171'
+        },
+        {
+          key:'Annulés',
+          label:'Annulées',
+          sit:'#475569',
+          uat:'#94a3b8'
         },
         {
           key:'Rejetés',
-          label:'Annulées / rejetées',
-          sit:'#475569',
-          uat:'#94a3b8',
-          prod:'#64748b',
-          other:'#cbd5e1'
+          label:'Rejetées',
+          sit:'#7f1d1d',
+          uat:'#fca5a5'
         }
       ];
 
@@ -5741,9 +5745,7 @@ function arrimageSprintConstat(data){
           ...groups.flatMap(group =>
             statusDefinitions.map(def =>
               count(group.items,def.key,'SIT') +
-              count(group.items,def.key,'UAT') +
-              count(group.items,def.key,'PROD') +
-              count(group.items,def.key,'Non ventilé')
+              count(group.items,def.key,'UAT')
             )
           )
         );
@@ -5807,21 +5809,9 @@ function arrimageSprintConstat(data){
               environmentBucket(anomaly) === 'UAT'
             );
 
-            const prodItems = group.items.filter(anomaly =>
-              arrimageOctaneStatusBucket(anomaly) === def.key &&
-              environmentBucket(anomaly) === 'PROD'
-            );
-
-            const otherItems = group.items.filter(anomaly =>
-              arrimageOctaneStatusBucket(anomaly) === def.key &&
-              environmentBucket(anomaly) === 'Non ventilé'
-            );
-
             const sit = sitItems.length;
             const uat = uatItems.length;
-            const prod = prodItems.length;
-            const other = otherItems.length;
-            const total = sit + uat + prod + other;
+            const total = sit + uat;
 
             const attrs = (items,environment) =>
               ' data-tip="'+
@@ -5851,14 +5841,6 @@ function arrimageSprintConstat(data){
               ? (uat / total * 100)
               : 0;
 
-            const prodHeight = total
-              ? (prod / total * 100)
-              : 0;
-
-            const otherHeight = total
-              ? (other / total * 100)
-              : 0;
-
             return (
               '<div class="stackedVBar arrimageOctaneBar"'+
                 ' style="height:'+totalHeight+'%">'+
@@ -5867,10 +5849,6 @@ function arrimageSprintConstat(data){
                   attrs(sitItems,'SIT')+'></i>'+
                 '<i style="height:'+uatHeight+'%;background:'+def.uat+'"'+
                   attrs(uatItems,'UAT')+'></i>'+
-                '<i style="height:'+prodHeight+'%;background:'+def.prod+'"'+
-                  attrs(prodItems,'PROD')+'></i>'+
-                '<i style="height:'+otherHeight+'%;background:'+def.other+'"'+
-                  attrs(otherItems,'Non ventilé')+'></i>'+
               '</div>'
             );
           }).join('');
@@ -5900,7 +5878,7 @@ function arrimageSprintConstat(data){
           '</span>'
         ).join('');
 
-        const environmentTotals = ['SIT','UAT','PROD','Non ventilé']
+        const environmentTotals = ['SIT','UAT']
           .map(environment => {
             const total = domainItems.filter(
               anomaly => environmentBucket(anomaly) === environment
@@ -5934,8 +5912,8 @@ function arrimageSprintConstat(data){
             '<h3>'+esc(domain)+
               ' — '+domainItems.length+' anomalie(s)</h3>'+
             '<p class="histSubtitle">'+
-              'Quatre barres par sous-domaine : terminées, en cours, bloquées et annulées/rejetées. '+
-              'Chaque barre est ventilée par environnement SIT / UAT / PROD / Non ventilé.'+
+              'Cinq barres par sous-domaine : terminées, en cours, bloquées, annulées et rejetées. '+
+              'Chaque barre est ventilée uniquement par environnement SIT / UAT.'+
             '</p>'+
             '<div class="verticalChart arrimageOctaneChart">'+
               body+
@@ -5943,17 +5921,14 @@ function arrimageSprintConstat(data){
             '<div class="verticalLegend arrimageOctaneLegend">'+
               '<span><i style="background:#15803d"></i>Terminées SIT</span>'+
               '<span><i style="background:#4ade80"></i>Terminées UAT</span>'+
-              '<span><i style="background:#22c55e"></i>Terminées PROD</span>'+
               '<span><i style="background:#d97706"></i>En cours SIT</span>'+
               '<span><i style="background:#fbbf24"></i>En cours UAT</span>'+
-              '<span><i style="background:#f59e0b"></i>En cours PROD</span>'+
               '<span><i style="background:#b91c1c"></i>Bloquées SIT</span>'+
               '<span><i style="background:#f87171"></i>Bloquées UAT</span>'+
-              '<span><i style="background:#ef4444"></i>Bloquées PROD</span>'+
-              '<span><i style="background:#475569"></i>Annulées / rejetées SIT</span>'+
-              '<span><i style="background:#94a3b8"></i>Annulées / rejetées UAT</span>'+
-              '<span><i style="background:#64748b"></i>Annulées / rejetées PROD</span>'+
-              '<span><i style="background:#cbd5e1"></i>Non ventilé</span>'+
+              '<span><i style="background:#475569"></i>Annulées SIT</span>'+
+              '<span><i style="background:#94a3b8"></i>Annulées UAT</span>'+
+              '<span><i style="background:#7f1d1d"></i>Rejetées SIT</span>'+
+              '<span><i style="background:#fca5a5"></i>Rejetées UAT</span>'+
             '</div>'+
             '<div class="chartTotals arrimageOctaneTotals">'+
               statusSummary+
