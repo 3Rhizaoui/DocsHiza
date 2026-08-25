@@ -2493,14 +2493,47 @@ def main():
         if isinstance(row, dict)
     ]
 
-    # Anomalies :
-    # garder la ligne source afin de conserver
-    # le champ Référence = référence Octane.
-    sprint_join_anomalies = [
-        copy.deepcopy(row)
-        for row in (source.get("anomalies") or [])
-        if isinstance(row, dict)
-    ]
+    # Anomalies normalisées :
+    # - conserve la clé Jira
+    # - conserve les données métier
+    # - la référence Octane source est réinjectée ensuite
+    sprint_join_anomalies = []
+
+    for anomaly_source_row in (source.get("anomalies") or []):
+        if not isinstance(anomaly_source_row, dict):
+            continue
+
+        anomaly_normalized = normalize_arrimage_anomaly(
+            copy.deepcopy(anomaly_source_row),
+            courant,
+            semaine_courante,
+        )
+
+        if not isinstance(anomaly_normalized, dict):
+            continue
+
+        # Préserver explicitement la référence Octane
+        # provenant de la JQL Reference IS NOT EMPTY.
+        anomaly_octane_reference = clean_label(
+            row_value(
+                anomaly_source_row,
+                "referenceOctane",
+                "octaneReference",
+                "reference_externe",
+                "reference",
+                "Reference",
+            ),
+            ""
+        )
+
+        if anomaly_octane_reference:
+            anomaly_normalized["referenceOctane"] = (
+                anomaly_octane_reference
+            )
+
+        sprint_join_anomalies.append(
+            anomaly_normalized
+        )
 
     sprint_join_epics_by_key = {
         _sprint_join_key(issue): issue
@@ -2513,6 +2546,73 @@ def main():
         for issue in sprint_join_anomalies
         if _sprint_join_key(issue)
     }
+
+
+    # ============================================================
+    # DIAG_SPRINT_ANOMALY_SOURCE_V1
+    # Diagnostic uniquement - aucune modification des donnees.
+    # ============================================================
+
+    print(
+        "[DIAG][SPRINT_ANOMALY][SOURCE]",
+        "count=",
+        len(sprint_join_anomalies),
+    )
+
+    print(
+        "[DIAG][SPRINT_ANOMALY][INDEX_KEYS]",
+        sorted(sprint_join_anomalies_by_key.keys()),
+    )
+
+    for diag_issue in sprint_join_anomalies:
+        if not isinstance(diag_issue, dict):
+            continue
+
+        diag_key = _sprint_join_key(diag_issue)
+
+        diag_reference = (
+            diag_issue.get("referenceOctane")
+            or diag_issue.get("reference")
+            or diag_issue.get("Reference")
+            or diag_issue.get("référence")
+            or diag_issue.get("Référence")
+            or ""
+        )
+
+        diag_type = (
+            diag_issue.get("type")
+            or diag_issue.get("issueType")
+            or diag_issue.get("issuetype")
+            or diag_issue.get("nature")
+            or ""
+        )
+
+        diag_status = (
+            diag_issue.get("statutJira")
+            or diag_issue.get("statut")
+            or diag_issue.get("status")
+            or ""
+        )
+
+        print(
+            "[DIAG][SPRINT_ANOMALY][ROW]",
+            "jiraKey=", repr(diag_key),
+            "reference=", repr(diag_reference),
+            "type=", repr(diag_type),
+            "status=", repr(diag_status),
+            "rawKeys=", sorted(diag_issue.keys()),
+        )
+
+    print(
+        "[DIAG][SPRINT_ANOMALY][DONE_TICKETS]",
+        [
+            _sprint_join_key(issue)
+            for issue in sprint_join_done_tickets
+            if _sprint_join_key(issue)
+        ],
+    )
+
+    # FIN DIAG_SPRINT_ANOMALY_SOURCE_V1
 
 
     # ------------------------------------------------------------
