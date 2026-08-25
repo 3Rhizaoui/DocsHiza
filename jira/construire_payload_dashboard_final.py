@@ -2466,15 +2466,41 @@ def main():
     # 2. Fiches détaillées issues des deux JQL configurées
     # ------------------------------------------------------------
 
-    sprint_join_epics = _sprint_join_search(
-        jira_brut_active,
-        "epics",
-    )
+    # ------------------------------------------------------------
+    # PATCH_SPRINT_JOIN_NORMALIZED_SOURCE_V2
+    #
+    # Les résultats des JQL ont déjà été normalisés en amont.
+    # On utilise donc directement SOURCE_DASHBOARD :
+    #
+    #   - source_flux_rows(source) : demandes / flux Arrimage
+    #   - source["anomalies"]      : Bugs Jira avec Reference
+    #
+    # La sélection du sprint reste dynamique :
+    # seuls les tickets Terminé du sprint actif seront ensuite
+    # intersectés par leur clé Jira.
+    # ------------------------------------------------------------
 
-    sprint_join_anomalies = _sprint_join_search(
-        jira_brut_active,
-        "anomalies_resolues",
-    )
+    # Flux Arrimage normalisés :
+    # conserve jiraKey et enrichit flux, version,
+    # domaine, sous-domaine et environnement.
+    sprint_join_epics = [
+        normalize_flux_row(
+            copy.deepcopy(row),
+            courant,
+            semaine_courante,
+        )
+        for row in source_flux_rows(source)
+        if isinstance(row, dict)
+    ]
+
+    # Anomalies :
+    # garder la ligne source afin de conserver
+    # le champ Référence = référence Octane.
+    sprint_join_anomalies = [
+        copy.deepcopy(row)
+        for row in (source.get("anomalies") or [])
+        if isinstance(row, dict)
+    ]
 
     sprint_join_epics_by_key = {
         _sprint_join_key(issue): issue
