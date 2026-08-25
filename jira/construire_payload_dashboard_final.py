@@ -1704,6 +1704,94 @@ def main():
 
 
     # ============================================================
+    # DEBUG_SPRINT_CONTRIBUTION_REAL_TICKETS_V1
+    #
+    # Diagnostic temporaire :
+    # afficher exactement les tickets TERMINES du sprint avant JOIN.
+    # ============================================================
+
+    _debug_sprint_billets = (
+        payload.get("sprintJiraSynthese", {}).get("billets") or []
+    )
+
+    print(
+        "[SPRINT_CONTRIBUTION][DEBUG] billets sprint =",
+        len(_debug_sprint_billets),
+    )
+
+    for _debug_ticket in _debug_sprint_billets:
+
+        _debug_status = sprint_text(
+            _debug_ticket.get("statut")
+            or _debug_ticket.get("status")
+            or _debug_ticket.get("statutJira")
+        )
+
+        _debug_status_normalized = (
+            unicodedata.normalize("NFD", _debug_status)
+            .encode("ascii", "ignore")
+            .decode("ascii")
+            .strip()
+            .lower()
+        )
+
+        if _debug_status_normalized not in (
+            "termine",
+            "done",
+            "closed",
+            "resolved",
+        ):
+            continue
+
+        print("")
+        print(
+            "[SPRINT_CONTRIBUTION][DONE_TICKET]"
+        )
+
+        print(
+            "  key      =",
+            _debug_ticket.get("key")
+            or _debug_ticket.get("jiraKey")
+            or _debug_ticket.get("id"),
+        )
+
+        print(
+            "  type     =",
+            _debug_ticket.get("type")
+            or _debug_ticket.get("issueType")
+            or _debug_ticket.get("issuetype"),
+        )
+
+        print(
+            "  summary  =",
+            _debug_ticket.get("summary")
+            or _debug_ticket.get("resume")
+            or _debug_ticket.get("titre"),
+        )
+
+        print(
+            "  status   =",
+            _debug_status,
+        )
+
+        print(
+            "  reference=",
+            _debug_ticket.get("reference")
+            or _debug_ticket.get("Reference"),
+        )
+
+        print(
+            "  RAW      =",
+            _debug_ticket,
+        )
+
+    print(
+        "[SPRINT_CONTRIBUTION][DEBUG]"
+        " fin tickets termines"
+    )
+
+
+    # ============================================================
     # SPRINT_CONTRIBUTION_JOIN_V1
     #
     # Source de sélection :
