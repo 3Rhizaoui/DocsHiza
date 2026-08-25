@@ -1792,6 +1792,99 @@ def main():
 
 
     # ============================================================
+    # SPRINT_CONTRIBUTION_SOURCE_DIAG_V1
+    # Diagnostic temporaire de la structure jira_brut.json
+    # ============================================================
+
+    print(
+        "[SPRINT_JOIN_SOURCE][ROOT_TYPE]",
+        type(jira_brut).__name__
+        if "jira_brut" in locals()
+        else "jira_brut variable absente"
+    )
+
+    if "jira_brut" in locals() and isinstance(jira_brut, dict):
+        print(
+            "[SPRINT_JOIN_SOURCE][ROOT_KEYS]",
+            list(jira_brut.keys())
+        )
+
+        searches_diag = jira_brut.get("searches")
+
+        print(
+            "[SPRINT_JOIN_SOURCE][SEARCHES_TYPE]",
+            type(searches_diag).__name__
+        )
+
+        if isinstance(searches_diag, dict):
+            print(
+                "[SPRINT_JOIN_SOURCE][SEARCHES_KEYS]",
+                list(searches_diag.keys())
+            )
+
+            for diag_name in (
+                "epics",
+                "anomalies_resolues",
+            ):
+                diag_value = searches_diag.get(diag_name)
+
+                print(
+                    "[SPRINT_JOIN_SOURCE][QUERY]",
+                    diag_name,
+                    "type=",
+                    type(diag_value).__name__,
+                )
+
+                if isinstance(diag_value, dict):
+                    print(
+                        "[SPRINT_JOIN_SOURCE][QUERY_KEYS]",
+                        diag_name,
+                        list(diag_value.keys()),
+                    )
+
+                    for candidate in (
+                        "issues",
+                        "tickets",
+                        "results",
+                        "values",
+                    ):
+                        candidate_value = diag_value.get(candidate)
+
+                        if isinstance(candidate_value, list):
+                            print(
+                                "[SPRINT_JOIN_SOURCE][LIST]",
+                                diag_name,
+                                candidate,
+                                "count=",
+                                len(candidate_value),
+                            )
+
+                            if candidate_value:
+                                sample = candidate_value[0]
+
+                                if isinstance(sample, dict):
+                                    print(
+                                        "[SPRINT_JOIN_SOURCE][SAMPLE_KEYS]",
+                                        diag_name,
+                                        list(sample.keys()),
+                                    )
+
+                            break
+
+                elif isinstance(diag_value, list):
+                    print(
+                        "[SPRINT_JOIN_SOURCE][LIST_DIRECT]",
+                        diag_name,
+                        "count=",
+                        len(diag_value),
+                    )
+
+    # ============================================================
+    # FIN SPRINT_CONTRIBUTION_SOURCE_DIAG_V1
+    # ============================================================
+
+
+    # ============================================================
     # SPRINT_CONTRIBUTION_JOIN_V1
     #
     # Source de sélection :
