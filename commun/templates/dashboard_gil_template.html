@@ -6013,25 +6013,40 @@ function arrimageSprintConstat(data){
 
     function anomalyVerticalHistogram(data){
 
-      const week=data.semaineCourante,sprintLabel=data.sprintCourant||'Sprint',details=(data.anomaliesDetail||[]).filter(a=>a.semaine===week),keys=[...new Set((data.ventilation||[]).filter(v=>v.semaine===week).map(v=>v.domaine+'|||'+v.sousDomaine))].sort();
+      const sprintLabel=data.sprintCourant||'Sprint',
+        details=typeof sprintContributionNormalizeRows==='function'
+          ? sprintContributionNormalizeRows(data,data.anomaliesArrimageDetail||[],'anomaly',sprintLabel)
+          : (data.anomaliesArrimageDetail||[]);
 
-      const categories=[['open','Open','Ouvertes'],['resolved','Corrected','Résolues'],['progress','Progress','En cours']];
+      const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),
+        status=a=>{const v=norm([a.statut,a.statutJira,a.etat,a.resolution].filter(Boolean).join(' '));return /annul|cancel/.test(v)?'cancelled':/rejet|reject|refus/.test(v)?'rejected':/bloqu|block|\bko\b/.test(v)?'blocked':/termin|done|clos|resolu|corrig|valid/.test(v)?'terminated':'progress'},
+        envs=a=>[...new Set(
+          (
+            Array.isArray(a.environments)
+              ? a.environments
+              : [a.environnement||a.environment||a.env||'']
+          )
+            .map(v=>String(v||'').trim().toUpperCase())
+            .filter(v=>v==='SIT'||v==='UAT')
+        )],
+        categories=[['terminated','Terminée','#15803d','#4ade80'],['progress','En cours','#d97706','#fbbf24'],['blocked','Bloquée','#991b1b','#ef4444'],['cancelled','Annulée','#475569','#94a3b8'],['rejected','Rejetée','#7f1d1d','#f87171']],
+        keys=[...new Set(details.map(a=>(a.domaine||'À qualifier')+'|||'+(a.sousDomaine||'À qualifier')))].sort(),
+        groups=keys.map(k=>{const [domain,subdomain]=k.split('|||');return {domain,subdomain,items:details.filter(a=>(a.domaine||'À qualifier')===domain&&(a.sousDomaine||'À qualifier')===subdomain)}}),
+        count=(items,st,e)=>items.filter(a=>status(a)===st&&envs(a).includes(e)).length,
+        max=Math.max(1,...groups.flatMap(g=>categories.map(c=>count(g.items,c[0],'SIT')+count(g.items,c[0],'UAT'))));
 
-      const matches=(a,key)=>key==='resolved'?a.statut==='Corrigée':(key==='progress'?a.statut==='En cours':a.statut==='Ouverte');
+      const tip=(items,label,e,total)=>label+' — '+e+' : '+items.length+'\n'+(items.length?items.map(a=>(a.referenceOctane||a.reference||a.jiraKey||'Sans référence')+' — '+(a.flux||'Flux non renseigné')+' — '+(a.statut||a.statutJira||'')).join('\n'):'Aucun élément')+'\nTotal SIT + UAT : '+total;
 
-      const groups=keys.map(key=>{const [domain,subdomain]=key.split('|||');return {domain,subdomain,items:details.filter(a=>a.domaine===domain&&a.sousDomaine===subdomain)}}),count=(items,status,env)=>items.filter(a=>matches(a,status)&&a.environnement===env).length,max=Math.max(1,...groups.flatMap(g=>categories.map(c=>count(g.items,c[0],'SIT')+count(g.items,c[0],'UAT'))));
+      const body=groups.map(g=>{const bars=categories.map(c=>{const sitItems=g.items.filter(a=>status(a)===c[0]&&envs(a).includes('SIT')),uatItems=g.items.filter(a=>status(a)===c[0]&&envs(a).includes('UAT')),sit=sitItems.length,uat=uatItems.length,total=sit+uat,events=(items,e)=>'data-tip="'+esc(tip(items,c[1],e,total))+'" onmouseenter="chartTip(event,this.dataset.tip)" onmousemove="moveChartTip(event)" onmouseleave="hideChartTip()"';return '<div class="stackedVBar" style="height:'+(total/max*100)+'%"><strong>'+total+'</strong><i style="height:'+(total?sit/total*100:0)+'%;background:'+c[2]+'" '+events(sitItems,'SIT')+'></i><i style="height:'+(total?uat/total*100:0)+'%;background:'+c[3]+'" '+events(uatItems,'UAT')+'></i></div>'}).join('');return '<div class="verticalGroup"><div class="verticalBars">'+bars+'</div><div class="verticalLabel"><b>'+esc(g.domain)+'</b>'+esc(g.subdomain)+'</div></div>'}).join('');
 
-      const tip=(items,label,env,total)=>label+' — '+env+' : '+items.length+'\n'+(items.length?items.map(a=>(a.reference||'Sans référence')+' — flux '+a.flux+' — '+a.statut+' — responsable '+a.affectation+' — sévérité '+(a.severite||'Non renseignée')+(a.version?' — '+a.version:'')).join('\n'):'Aucun élément')+'\nTotal SIT + UAT : '+total;
+      const total=(st,e)=>details.filter(a=>status(a)===st&&envs(a).includes(e)).length,
+        summary=e=>categories.map(c=>c[1]+' '+total(c[0],e)).join(', '),
+        legend=categories.map(c=>'<span><i style="background:'+c[2]+'"></i>'+c[1]+' SIT</span><span><i style="background:'+c[3]+'"></i>'+c[1]+' UAT</span>').join('');
 
-      const body=groups.map(g=>{const bars=categories.map(c=>{const sitItems=g.items.filter(a=>matches(a,c[0])&&a.environnement==='SIT'),uatItems=g.items.filter(a=>matches(a,c[0])&&a.environnement==='UAT'),sit=sitItems.length,uat=uatItems.length,total=sit+uat,events=(items,label,env)=>'onmouseenter="chartTip(event,this.dataset.tip)" onmousemove="moveChartTip(event)" onmouseleave="hideChartTip()" data-tip="'+esc(tip(items,label,env,total))+'"';return '<div class="stackedVBar" style="height:'+(total/max*100)+'%"><strong>'+total+'</strong><i class="sit'+c[1]+'" style="height:'+(total?sit/total*100:0)+'%" '+events(sitItems,c[2],'SIT')+'></i><i class="uat'+c[1]+'" style="height:'+(total?uat/total*100:0)+'%" '+events(uatItems,c[2],'UAT')+'></i></div>'}).join('');return '<div class="verticalGroup"><div class="verticalBars">'+bars+'</div><div class="verticalLabel"><b>'+esc(g.domain)+'</b>'+esc(g.subdomain)+'</div></div>'}).join('');
-
-      const totals=key=>({SIT:details.filter(a=>matches(a,key)&&a.environnement==='SIT').length,UAT:details.filter(a=>matches(a,key)&&a.environnement==='UAT').length}),o=totals('open'),c=totals('resolved'),p=totals('progress');
-
-      const referenceList=groups.map(g=>{const parts=categories.map(cat=>{const refs=[...new Set(g.items.filter(a=>matches(a,cat[0])).map(a=>a.reference||a.flux).filter(Boolean))];return refs.length?'<span><b>'+cat[2]+' :</b> '+refs.map(esc).join(', ')+'</span>':''}).filter(Boolean);return parts.length?'<div><b>'+esc(g.domain)+' — '+esc(g.subdomain)+'</b> · '+parts.join(' · ')+'</div>':''}).filter(Boolean).join('');
-
-      return '<div class="histBox"><h3>Anomalies par domaine et sous-domaine — '+esc(sprintLabel)+'</h3><p class="histSubtitle">Trois barres par sous-domaine : ouvertes, résolues (dont le statut source « Validé ») et en cours. Survol : numéro Octane/JIRA, flux, statut, responsable et sévérité.</p><div class="verticalChart">'+body+'</div><div class="verticalLegend"><span><i style="background:#1f5f99"></i>Ouvertes SIT</span><span><i style="background:#60a5fa"></i>Ouvertes UAT</span><span><i style="background:#15803d"></i>Résolues SIT</span><span><i style="background:#4ade80"></i>Résolues UAT</span><span><i style="background:#f59e0b"></i>En cours SIT</span><span><i style="background:#dc2626"></i>En cours UAT</span></div><div class="chartTotals"><span><b>SIT :</b> ouvertes '+o.SIT+', résolues '+c.SIT+', en cours '+p.SIT+'</span><span><b>UAT :</b> ouvertes '+o.UAT+', résolues '+c.UAT+', en cours '+p.UAT+'</span></div>'+(referenceList?'<div class="chartTotals" style="display:block;text-align:left"><b>Numéros des anomalies :</b>'+referenceList+'</div>':'')+'</div>';
+      return '<div class="histBox"><h3>Anomalies Octane par domaine et sous-domaine — '+esc(sprintLabel)+'</h3><p class="histSubtitle">Cinq barres par sous-domaine : Terminée, En cours, Bloquée, Annulée et Rejetée. Ventilation SIT / UAT uniquement.</p><div class="verticalChart">'+body+'</div><div class="verticalLegend">'+legend+'</div><div class="chartTotals"><span><b>SIT :</b> '+esc(summary('SIT'))+'</span><span><b>UAT :</b> '+esc(summary('UAT'))+'</span><span><b>Total anomalies Octane :</b> '+details.length+'</span></div></div>';
 
     }
+
 
     function fluxVerticalHistogram(data){
 
