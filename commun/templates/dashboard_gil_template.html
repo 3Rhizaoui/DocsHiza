@@ -4707,6 +4707,10 @@ function arrimageSprintConstat(data){
 
       const normalizeJiraStatus = value =>
         String(value || '')
+          .replace(/Ã©/g, 'e')
+          .replace(/Ã¨/g, 'e')
+          .replace(/Ãª/g, 'e')
+          .replace(/Ã /g, 'a')
           .normalize('NFD')
           .replace(/[\u0300-\u036f]/g, '')
           .trim()
