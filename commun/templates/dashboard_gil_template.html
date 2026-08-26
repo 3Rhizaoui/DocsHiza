@@ -5057,6 +5057,432 @@
   align-self:stretch !important;
 }
 
+
+
+/* ==========================================================
+   GIL_ARRIMAGE_TREE_BREAKDOWN_V1
+   Domaine > Sous-domaine > Flux
+   fermés par défaut
+   ========================================================== */
+
+.arrimageTree{
+  display:grid;
+  gap:6px;
+  margin-top:4px;
+}
+
+
+/* ---------------- Domaine ---------------- */
+
+.arrimageTreeDomain{
+  border:1px solid #dbe4ef;
+  border-radius:6px;
+  background:#fff;
+  overflow:hidden;
+}
+
+.arrimageTreeDomain > summary{
+  display:grid;
+  grid-template-columns:16px 1fr auto;
+  gap:6px;
+  align-items:center;
+
+  padding:7px 9px;
+
+  cursor:pointer;
+  list-style:none;
+
+  font-size:12px;
+  font-weight:800;
+
+  background:#f8fafc;
+}
+
+.arrimageTreeDomain > summary::-webkit-details-marker{
+  display:none;
+}
+
+
+/* ---------------- Sous-domaine ---------------- */
+
+.arrimageTreeDomainBody{
+  display:grid;
+  gap:4px;
+  padding:5px 7px 7px 20px;
+}
+
+.arrimageTreeSubdomain{
+  border-left:2px solid #dbe4ef;
+  padding-left:6px;
+}
+
+.arrimageTreeSubdomain > summary{
+  display:grid;
+  grid-template-columns:14px 1fr auto;
+  gap:5px;
+  align-items:center;
+
+  padding:5px 4px;
+
+  cursor:pointer;
+  list-style:none;
+
+  font-size:11px;
+  font-weight:700;
+}
+
+.arrimageTreeSubdomain > summary::-webkit-details-marker{
+  display:none;
+}
+
+
+/* ---------------- Flèches ---------------- */
+
+.arrimageTreeArrow::before{
+  content:"▶";
+  display:inline-block;
+  font-size:9px;
+  color:#64748b;
+  transition:transform .12s ease;
+}
+
+details[open] > summary .arrimageTreeArrow::before{
+  transform:rotate(90deg);
+}
+
+
+/* ---------------- Compteur ---------------- */
+
+.arrimageTreeCount{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  min-width:22px;
+  height:19px;
+
+  padding:0 6px;
+
+  border-radius:999px;
+
+  background:#eef2f7;
+  color:#334155;
+
+  font-size:10px;
+  font-weight:900;
+}
+
+
+/* ---------------- Liste flux ---------------- */
+
+.arrimageTreeFluxList{
+  display:grid;
+  gap:3px;
+  padding:2px 4px 6px 17px;
+}
+
+.arrimageTreeFlux{
+  display:grid;
+  grid-template-columns:10px 1fr;
+  gap:4px;
+
+  font-size:10px;
+  line-height:1.25;
+  color:#334155;
+}
+
+.arrimageTreeFlux small{
+  font-size:9px;
+  color:#64748b;
+  font-weight:600;
+}
+
+.arrimageTreeBullet{
+  color:#64748b;
+}
+
+
+/* ---------------- Hover ---------------- */
+
+.arrimageTreeDomain > summary:hover,
+.arrimageTreeSubdomain > summary:hover{
+  background:#f1f5f9;
+}
+
+
+/* ---------------- Impression ---------------- */
+
+@media print{
+
+  .arrimageTreeDomain,
+  .arrimageTreeSubdomain{
+    break-inside:avoid;
+  }
+}
+
+
+
+/* ==========================================================
+   GIL_STATUS_CARDS_4_COLUMNS_FINAL_V1
+
+   Livrés | En cours | Bloqués | Rejetés
+
+   Une seule ligne.
+   Même largeur.
+   Hauteur = carte la plus haute.
+   Aucun impact sur Constat du sprint.
+   ========================================================== */
+
+
+/* ==========================================================
+   1. CONTENEUR DES 4 STATUTS
+   ========================================================== */
+
+.arrimageCardsGrid{
+  grid-column:1 / -1 !important;
+  grid-row:2 !important;
+
+  display:grid !important;
+
+  grid-template-columns:
+    repeat(4,minmax(0,1fr)) !important;
+
+  /*
+   * Une seule ligne dont la hauteur est déterminée
+   * automatiquement par la carte la plus haute.
+   */
+  grid-template-rows:auto !important;
+  grid-auto-rows:auto !important;
+
+  gap:10px !important;
+
+  align-items:stretch !important;
+
+  width:100% !important;
+}
+
+
+/* ==========================================================
+   2. LES 4 CARTES SONT SUR LA MEME LIGNE
+   ========================================================== */
+
+.arrimageCardsGrid > .arrimageStatusCard:nth-child(1),
+.arrimageCardsGrid > .arrimageStatusCard:nth-child(2),
+.arrimageCardsGrid > .arrimageStatusCard:nth-child(3),
+.arrimageCardsGrid > .arrimageStatusCard:nth-child(4){
+  grid-row:1 !important;
+
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+
+  width:100% !important;
+  min-width:0 !important;
+
+  align-self:stretch !important;
+
+  box-sizing:border-box !important;
+}
+
+
+/* Position explicite */
+
+.arrimageCardsGrid > .arrimageStatusCard:nth-child(1){
+  grid-column:1 !important;
+}
+
+.arrimageCardsGrid > .arrimageStatusCard:nth-child(2){
+  grid-column:2 !important;
+}
+
+.arrimageCardsGrid > .arrimageStatusCard:nth-child(3){
+  grid-column:3 !important;
+}
+
+.arrimageCardsGrid > .arrimageStatusCard:nth-child(4){
+  grid-column:4 !important;
+}
+
+
+/* ==========================================================
+   3. STRUCTURE INTERNE
+   ========================================================== */
+
+.arrimageStatusCard{
+  display:flex !important;
+  flex-direction:column !important;
+
+  overflow:visible !important;
+}
+
+
+/*
+ * L'arborescence reste dans le flux normal.
+ * Pas de scrollbar interne forcée.
+ */
+.arrimageStatusCard .arrimageTree{
+  flex:0 0 auto !important;
+
+  height:auto !important;
+  max-height:none !important;
+
+  overflow:visible !important;
+}
+
+
+/* ==========================================================
+   4. ARBORESCENCE COMPACTE
+   Domaine > Sous-domaine > Flux
+   ========================================================== */
+
+.arrimageTree{
+  display:grid !important;
+  gap:4px !important;
+
+  margin:4px 0 6px !important;
+}
+
+
+/* Domaine */
+
+.arrimageTreeDomain{
+  width:100% !important;
+}
+
+.arrimageTreeDomain > summary{
+  min-height:26px !important;
+
+  padding:5px 7px !important;
+
+  font-size:11px !important;
+}
+
+
+/* Sous-domaine */
+
+.arrimageTreeDomainBody{
+  padding:
+    4px
+    6px
+    6px
+    17px !important;
+}
+
+.arrimageTreeSubdomain > summary{
+  min-height:22px !important;
+
+  padding:3px 4px !important;
+
+  font-size:10px !important;
+}
+
+
+/* Liste des flux */
+
+.arrimageTreeFluxList{
+  padding:
+    3px
+    3px
+    5px
+    15px !important;
+}
+
+.arrimageTreeFlux{
+  font-size:10px !important;
+}
+
+
+/* ==========================================================
+   5. COMPTEURS Domaine / Sous-domaine
+   ========================================================== */
+
+.arrimageTreeCount{
+  min-width:20px !important;
+  height:18px !important;
+
+  padding:0 5px !important;
+
+  font-size:9px !important;
+}
+
+
+/* ==========================================================
+   6. LES DETAILS SONT FERMES PAR DEFAUT
+   ========================================================== */
+
+/*
+ * Aucun attribut "open" n'est ajouté par le renderer.
+ * Les <details> restent donc fermés au chargement.
+ *
+ * Les règles suivantes ne changent que l'affichage
+ * lorsqu'un utilisateur ouvre un niveau.
+ */
+
+.arrimageTreeDomain:not([open]) > .arrimageTreeDomainBody,
+.arrimageTreeSubdomain:not([open]) > .arrimageTreeFluxList{
+  display:none;
+}
+
+
+/* ==========================================================
+   7. LE FOOTER Bugs Octane reste en bas si la carte s'étire
+   ========================================================== */
+
+/*
+ * On laisse le dernier élément de chaque carte descendre
+ * naturellement en bas lorsque les cartes sont étirées
+ * à la hauteur de la plus grande.
+ */
+
+.arrimageStatusCard > :last-child{
+  margin-top:auto;
+}
+
+
+/* ==========================================================
+   8. CONSTAT DU SPRINT :
+   NE PAS MODIFIER
+   ========================================================== */
+
+.arrimageSprintConstatCard{
+  grid-column:1 / -1 !important;
+  grid-row:3 !important;
+}
+
+
+/* ==========================================================
+   9. RESPONSIVE
+   Le desktop reste en 4 colonnes.
+   ========================================================== */
+
+@media (max-width:1100px){
+
+  .arrimageCardsGrid{
+    grid-template-columns:
+      repeat(2,minmax(0,1fr)) !important;
+  }
+
+  .arrimageCardsGrid > .arrimageStatusCard:nth-child(1){
+    grid-column:1 !important;
+    grid-row:1 !important;
+  }
+
+  .arrimageCardsGrid > .arrimageStatusCard:nth-child(2){
+    grid-column:2 !important;
+    grid-row:1 !important;
+  }
+
+  .arrimageCardsGrid > .arrimageStatusCard:nth-child(3){
+    grid-column:1 !important;
+    grid-row:2 !important;
+  }
+
+  .arrimageCardsGrid > .arrimageStatusCard:nth-child(4){
+    grid-column:2 !important;
+    grid-row:2 !important;
+  }
+}
+
 </style>
 
 </head>
@@ -6058,25 +6484,193 @@
 
 
     function arrimageCardBreakdown(seg){
-      const map = {};
 
-      (seg.items || []).forEach(x => {
-        const domaine = arrimageClean(x.domaine || x.domain);
-        const sousDomaine = arrimageClean(x.sousDomaine || x.subdomain);
-        const key = domaine + ' / ' + sousDomaine;
-        map[key] = (map[key] || 0) + 1;
+      const domains = new Map();
+
+      const rowRef = row =>
+        arrimageClean(
+          row && (
+            row.flux ||
+            row.nomFlux ||
+            row.name ||
+            row.jiraKey ||
+            row.key ||
+            row.reference ||
+            row.cle
+          )
+        );
+
+      const rowEnv = row =>
+        String(
+          row && (
+            row.environnement ||
+            row.environment ||
+            row.env
+          ) || ''
+        ).trim().toUpperCase();
+
+      const rowVersion = row =>
+        arrimageClean(
+          row && (
+            row.version ||
+            row.versionLivree ||
+            row.versionLivrée
+          )
+        );
+
+      (seg.items || []).forEach(row => {
+
+        if(!row || typeof row !== 'object'){
+          return;
+        }
+
+        const domain =
+          arrimageClean(
+            row.domaine ||
+            row.domain ||
+            'À qualifier'
+          ) || 'À qualifier';
+
+        const subdomain =
+          arrimageClean(
+            row.sousDomaine ||
+            row.subdomain ||
+            'À qualifier'
+          ) || 'À qualifier';
+
+        if(!domains.has(domain)){
+          domains.set(domain,new Map());
+        }
+
+        const subs = domains.get(domain);
+
+        if(!subs.has(subdomain)){
+          subs.set(subdomain,[]);
+        }
+
+        subs.get(subdomain).push(row);
       });
 
-      const keys = Object.keys(map)
-        .sort((a,b) => map[b] - map[a] || a.localeCompare(b));
-
-      if(!keys.length){
-        return '<div class="arrimageFluxEmpty">Aucun flux '+esc(seg.label.toLowerCase())+'.</div>';
+      if(!domains.size){
+        return (
+          '<div class="arrimageFluxEmpty">'+
+            'Aucun flux '+esc(seg.label.toLowerCase())+'.'+
+          '</div>'
+        );
       }
 
-      return keys.map(k =>
-        '<div class="arrimageCardGroup">• '+esc(k)+' : <b>'+map[k]+'</b></div>'
-      ).join('');
+      const domainEntries =
+        [...domains.entries()]
+          .sort((a,b) => {
+            const countA =
+              [...a[1].values()]
+                .reduce((n,rows) => n + rows.length,0);
+
+            const countB =
+              [...b[1].values()]
+                .reduce((n,rows) => n + rows.length,0);
+
+            return (
+              countB - countA ||
+              a[0].localeCompare(b[0],'fr')
+            );
+          });
+
+      return (
+        '<div class="arrimageTree">'+
+        domainEntries.map(([domain,subs]) => {
+
+          const domainCount =
+            [...subs.values()]
+              .reduce((n,rows) => n + rows.length,0);
+
+          const subEntries =
+            [...subs.entries()]
+              .sort((a,b) =>
+                b[1].length - a[1].length ||
+                a[0].localeCompare(b[0],'fr')
+              );
+
+          return (
+            '<details class="arrimageTreeDomain">'+
+              '<summary>'+
+                '<span class="arrimageTreeArrow"></span>'+
+                '<span class="arrimageTreeLabel">'+
+                  esc(domain)+
+                '</span>'+
+                '<span class="arrimageTreeCount">'+
+                  domainCount+
+                '</span>'+
+              '</summary>'+
+
+              '<div class="arrimageTreeDomainBody">'+
+                subEntries.map(([subdomain,rows]) => {
+
+                  const sortedRows =
+                    [...rows].sort((a,b) =>
+                      rowRef(a).localeCompare(
+                        rowRef(b),
+                        'fr'
+                      )
+                    );
+
+                  return (
+                    '<details class="arrimageTreeSubdomain">'+
+                      '<summary>'+
+                        '<span class="arrimageTreeArrow"></span>'+
+                        '<span class="arrimageTreeLabel">'+
+                          esc(subdomain)+
+                        '</span>'+
+                        '<span class="arrimageTreeCount">'+
+                          rows.length+
+                        '</span>'+
+                      '</summary>'+
+
+                      '<div class="arrimageTreeFluxList">'+
+                        sortedRows.map(row => {
+
+                          const ref =
+                            rowRef(row) ||
+                            'Flux non renseigné';
+
+                          const env = rowEnv(row);
+
+                          const version =
+                            rowVersion(row);
+
+                          const meta = [
+                            env,
+                            version
+                              ? 'v'+version
+                              : ''
+                          ].filter(Boolean).join(' — ');
+
+                          return (
+                            '<div class="arrimageTreeFlux">'+
+                              '<span class="arrimageTreeBullet">•</span>'+
+                              '<span>'+
+                                '<b>'+esc(ref)+'</b>'+
+                                (
+                                  meta
+                                    ? ' <small>— '+esc(meta)+'</small>'
+                                    : ''
+                                )+
+                              '</span>'+
+                            '</div>'
+                          );
+                        }).join('')+
+                      '</div>'+
+
+                    '</details>'
+                  );
+                }).join('')+
+              '</div>'+
+
+            '</details>'
+          );
+        }).join('')+
+        '</div>'
+      );
     }
 
     /* GIL_SPRINT_CONSTAT_V1_JS_START */
