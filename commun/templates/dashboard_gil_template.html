@@ -6185,7 +6185,7 @@ details[open] > summary .arrimageTreeArrow::before{
   id="gilSprintDetailToggleStatic"
   type="button"
   aria-expanded="false"
-  onclick="toggleGilSprintDetailZone()"
+  onclick="gilToggleSprintDetailsV5()"
 >
   <span id="gilSprintDetailToggleIcon">▼</span>
   <span id="gilSprintDetailToggleLabel">Afficher détails sprint</span>
@@ -10388,6 +10388,155 @@ if(
   }
 
 })();
+
+
+
+
+/* ==========================================================
+   GIL_SPRINT_TOGGLE_DIRECT_FINAL_V5
+   Toggle direct par IDs fixes
+   ========================================================== */
+
+window.gilToggleSprintDetailsV5 = function(){
+
+  const ids = [
+    'gilSprintComparisonSection',
+    'gilSprintEnvironmentSection',
+    'gilSprintWeeklyPrioritiesSection'
+  ];
+
+  const sections = ids
+    .map(id => document.getElementById(id))
+    .filter(Boolean);
+
+  const button =
+    document.getElementById(
+      'gilSprintDetailToggleStatic'
+    );
+
+  const label =
+    document.getElementById(
+      'gilSprintDetailToggleLabel'
+    );
+
+  /*
+   * aria-expanded=true signifie actuellement affiché.
+   */
+  const currentlyVisible =
+    button &&
+    button.getAttribute('aria-expanded') === 'true';
+
+  const show =
+    !currentlyVisible;
+
+
+  sections.forEach(section => {
+
+    if(show){
+
+      section.hidden = false;
+      section.style.removeProperty('display');
+
+    }else{
+
+      section.hidden = true;
+      section.style.setProperty(
+        'display',
+        'none',
+        'important'
+      );
+
+    }
+
+  });
+
+
+  if(button){
+
+    button.setAttribute(
+      'aria-expanded',
+      show ? 'true' : 'false'
+    );
+
+  }
+
+
+  if(label){
+
+    label.textContent =
+      show
+        ? 'Masquer détails sprint'
+        : 'Afficher détails sprint';
+
+  }
+
+};
+
+
+/*
+ * Etat initial :
+ * détails masqués.
+ */
+window.addEventListener(
+  'load',
+  function(){
+
+    const ids = [
+      'gilSprintComparisonSection',
+      'gilSprintEnvironmentSection',
+      'gilSprintWeeklyPrioritiesSection'
+    ];
+
+    ids.forEach(id => {
+
+      const section =
+        document.getElementById(id);
+
+      if(section){
+
+        section.hidden = true;
+
+        section.style.setProperty(
+          'display',
+          'none',
+          'important'
+        );
+
+      }
+
+    });
+
+
+    const button =
+      document.getElementById(
+        'gilSprintDetailToggleStatic'
+      );
+
+    const label =
+      document.getElementById(
+        'gilSprintDetailToggleLabel'
+      );
+
+
+    if(button){
+
+      button.setAttribute(
+        'aria-expanded',
+        'false'
+      );
+
+    }
+
+
+    if(label){
+
+      label.textContent =
+        'Afficher détails sprint';
+
+    }
+
+  }
+);
 
 
 </script>
