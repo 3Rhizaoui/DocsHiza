@@ -5980,6 +5980,102 @@ details[open] > summary .arrimageTreeArrow::before{
 }
 
 
+
+
+/* ==========================================================
+   GIL_SPRINT_DETAIL_TOGGLE_STATIC_V3B
+   ========================================================== */
+
+.gilSprintDetailStaticClosed{
+  display:none !important;
+}
+
+
+/* Bouton dans le bandeau bleu */
+
+#gilSprintDetailToggleStatic{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+
+  gap:7px !important;
+
+  min-height:36px !important;
+
+  padding:
+    8px
+    13px !important;
+
+  border:
+    1px solid
+    rgba(31,95,153,.40) !important;
+
+  border-radius:7px !important;
+
+  background:#fff !important;
+  color:#153454 !important;
+
+  font-size:12px !important;
+  font-weight:800 !important;
+  line-height:1 !important;
+
+  cursor:pointer !important;
+
+  box-shadow:
+    0 1px 2px
+    rgba(15,23,42,.07) !important;
+}
+
+
+#gilSprintDetailToggleStatic:hover{
+  transform:
+    translateY(-1px) !important;
+
+  background:#f7fbff !important;
+
+  border-color:
+    #1f5f99 !important;
+
+  box-shadow:
+    0 4px 10px
+    rgba(15,23,42,.13) !important;
+}
+
+
+#gilSprintDetailToggleIcon{
+  display:inline-block !important;
+
+  font-size:10px !important;
+
+  transition:
+    transform .18s ease !important;
+}
+
+
+#gilSprintDetailToggleStatic[aria-expanded="true"]
+#gilSprintDetailToggleIcon{
+  transform:
+    rotate(180deg) !important;
+}
+
+
+/* Pas de bouton dans le PDF */
+
+@media print{
+
+  #gilSprintDetailToggleStatic{
+    display:none !important;
+  }
+
+  /*
+   * Toujours afficher les détails dans le PDF.
+   */
+  .gilSprintDetailStaticClosed{
+    display:block !important;
+  }
+}
+
+
 </style>
 
 </head>
@@ -6001,6 +6097,17 @@ details[open] > summary .arrimageTreeArrow::before{
 <button onclick="window.print()"><span class="gilActionIcon gilPdfIcon"></span><span>Générer le rapport PDF</span></button>
 
 
+
+
+<button
+  id="gilSprintDetailToggleStatic"
+  type="button"
+  aria-expanded="false"
+  onclick="toggleGilSprintDetailZone()"
+>
+  <span id="gilSprintDetailToggleIcon">▼</span>
+  <span id="gilSprintDetailToggleLabel">Afficher détails sprint</span>
+</button>
 
 </div></header>
 
@@ -9771,6 +9878,211 @@ function hardRefreshDashboard(){
   }
 
 })();
+
+
+
+
+/* ==========================================================
+   GIL_SPRINT_DETAIL_TOGGLE_STATIC_V3B_JS
+   ========================================================== */
+
+function gilNormalizeSprintToggleText(value){
+
+  return String(value || '')
+    .normalize('NFD')
+    .replace(
+      /[\u0300-\u036f]/g,
+      ''
+    )
+    .replace(
+      /\s+/g,
+      ' '
+    )
+    .trim()
+    .toLowerCase();
+}
+
+
+function gilFindSprintDetailSections(){
+
+  const targets = [
+
+    'comparaison sprint n-1 / sprint actuel',
+
+    'sit/uat par semaine, domaine et sous-domaine',
+
+    'sujets prioritaires suivis cette semaine'
+
+  ].map(
+    gilNormalizeSprintToggleText
+  );
+
+
+  return Array.from(
+    document.querySelectorAll(
+      '#dashboardView section'
+    )
+  ).filter(section => {
+
+    const title =
+      section.querySelector(
+        ':scope > h2'
+      );
+
+    if(!title){
+      return false;
+    }
+
+    const text =
+      gilNormalizeSprintToggleText(
+        title.textContent
+      );
+
+    return targets.some(
+      target =>
+        text === target ||
+        text.includes(target)
+    );
+
+  });
+
+}
+
+
+function applyGilSprintDetailState(
+  visible
+){
+
+  const sections =
+    gilFindSprintDetailSections();
+
+
+  sections.forEach(section => {
+
+    /*
+     * Nettoyage de l'ancien patch V2
+     * pour éviter toute interférence.
+     */
+    section.classList.remove(
+      'gilSprintDetailHidden'
+    );
+
+    section.classList.toggle(
+      'gilSprintDetailStaticClosed',
+      !visible
+    );
+
+  });
+
+
+  const button =
+    document.getElementById(
+      'gilSprintDetailToggleStatic'
+    );
+
+  const label =
+    document.getElementById(
+      'gilSprintDetailToggleLabel'
+    );
+
+
+  if(button){
+
+    button.setAttribute(
+      'aria-expanded',
+      visible
+        ? 'true'
+        : 'false'
+    );
+
+  }
+
+
+  if(label){
+
+    label.textContent =
+      visible
+        ? 'Masquer détails sprint'
+        : 'Afficher détails sprint';
+
+  }
+
+
+  localStorage.setItem(
+    'gilSprintDetailVisibleV3B',
+    visible
+      ? '1'
+      : '0'
+  );
+
+}
+
+
+function toggleGilSprintDetailZone(){
+
+  const button =
+    document.getElementById(
+      'gilSprintDetailToggleStatic'
+    );
+
+  const visible =
+    button &&
+    button.getAttribute(
+      'aria-expanded'
+    ) === 'true';
+
+  applyGilSprintDetailState(
+    !visible
+  );
+
+}
+
+
+function initGilSprintDetailToggle(){
+
+  /*
+   * Supprimer l'ancien bouton V2
+   * s'il a été créé dynamiquement.
+   */
+  const oldButton =
+    document.getElementById(
+      'gilSprintDetailToggle'
+    );
+
+  if(oldButton){
+    oldButton.remove();
+  }
+
+
+  const saved =
+    localStorage.getItem(
+      'gilSprintDetailVisibleV3B'
+    );
+
+  /*
+   * Masqué par défaut.
+   */
+  applyGilSprintDetailState(
+    saved === '1'
+  );
+
+}
+
+
+if(
+  document.readyState === 'loading'
+){
+
+  document.addEventListener(
+    'DOMContentLoaded',
+    initGilSprintDetailToggle
+  );
+
+}else{
+
+  initGilSprintDetailToggle();
+
+}
 
 
 </script>
