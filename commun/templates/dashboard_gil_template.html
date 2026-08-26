@@ -5891,6 +5891,95 @@ details[open] > summary .arrimageTreeArrow::before{
 }
 
 
+
+
+/* ==========================================================
+   GIL_TOGGLE_SPRINT_DETAIL_ZONE_V2
+   Bouton dans le bandeau supérieur
+   ========================================================== */
+
+.gilSprintDetailHidden{
+  display:none !important;
+}
+
+#gilSprintDetailToggle{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:7px !important;
+
+  min-height:36px !important;
+  padding:8px 13px !important;
+
+  border:1px solid rgba(31,95,153,.40) !important;
+  border-radius:7px !important;
+
+  background:#fff !important;
+  color:#153454 !important;
+
+  font-size:12px !important;
+  font-weight:800 !important;
+  line-height:1 !important;
+
+  cursor:pointer !important;
+
+  box-shadow:
+    0 1px 2px rgba(15,23,42,.07) !important;
+
+  transition:
+    transform .15s ease,
+    box-shadow .15s ease,
+    border-color .15s ease,
+    background .15s ease !important;
+}
+
+#gilSprintDetailToggle:hover{
+  transform:translateY(-1px) !important;
+
+  border-color:#1f5f99 !important;
+  background:#f7fbff !important;
+
+  box-shadow:
+    0 4px 10px rgba(15,23,42,.13) !important;
+}
+
+#gilSprintDetailToggle:active{
+  transform:translateY(0) !important;
+}
+
+#gilSprintDetailToggle .gilSprintToggleIcon{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+
+  width:17px !important;
+  height:17px !important;
+
+  border-radius:4px !important;
+
+  background:#eaf2fb !important;
+
+  color:#153454 !important;
+
+  font-size:10px !important;
+  font-weight:900 !important;
+}
+
+#gilSprintDetailToggle[aria-expanded="true"]
+.gilSprintToggleIcon{
+  transform:rotate(180deg);
+}
+
+
+/* impression :
+   on ne veut pas du bouton dans le PDF */
+@media print{
+  #gilSprintDetailToggle{
+    display:none !important;
+  }
+}
+
+
 </style>
 
 </head>
@@ -9442,7 +9531,249 @@ function hardRefreshDashboard(){
   window.__GIL_REFRESH_TOKEN__ = new URLSearchParams(window.location.search).get("_gil_refresh") || "";
 })();
 
-    </script>
+
+
+/* ==========================================================
+   GIL_TOGGLE_SPRINT_DETAIL_ZONE_V2_JS
+
+   Pilotage de :
+   - Comparaison Sprint N-1 / Sprint actuel
+   - SIT/UAT par semaine, domaine et sous-domaine
+   - Sujets prioritaires suivis cette semaine
+   ========================================================== */
+
+(function(){
+
+  const STORAGE_KEY =
+    'gilSprintDetailZoneVisibleV2';
+
+  const TARGET_TITLES = [
+    'comparaison sprint n-1 / sprint actuel',
+    'sit/uat par semaine, domaine et sous-domaine',
+    'sujets prioritaires suivis cette semaine'
+  ];
+
+  function normalizeText(value){
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g,'')
+      .replace(/\s+/g,' ')
+      .trim()
+      .toLowerCase();
+  }
+
+  const normalizedTargets =
+    TARGET_TITLES.map(normalizeText);
+
+
+  function sectionHeading(section){
+
+    return section.querySelector(
+      ':scope > h2,'+
+      ':scope > .collapsibleTitle,'+
+      ':scope > .sectionTitle,'+
+      ':scope > header h2'
+    );
+  }
+
+
+  function findSprintDetailSections(){
+
+    const candidates =
+      Array.from(
+        document.querySelectorAll(
+          'section, .panel, .graphPanel'
+        )
+      );
+
+    return candidates.filter(section => {
+
+      const heading =
+        sectionHeading(section);
+
+      if(!heading){
+        return false;
+      }
+
+      const text =
+        normalizeText(
+          heading.textContent
+        );
+
+      return normalizedTargets.some(
+        target =>
+          text === target ||
+          text.includes(target)
+      );
+    });
+  }
+
+
+  function createToggleButton(){
+
+    let button =
+      document.getElementById(
+        'gilSprintDetailToggle'
+      );
+
+    if(button){
+      return button;
+    }
+
+    const actions =
+      document.querySelector(
+        '.top .actions'
+      );
+
+    if(!actions){
+      return null;
+    }
+
+    button =
+      document.createElement(
+        'button'
+      );
+
+    button.id =
+      'gilSprintDetailToggle';
+
+    button.type =
+      'button';
+
+    /*
+     * Ajout en dernier :
+     * après Excel / Confluence / JIRA / PDF.
+     */
+    actions.appendChild(button);
+
+    return button;
+  }
+
+
+  function installSprintDetailToggle(){
+
+    const sections =
+      findSprintDetailSections();
+
+    if(!sections.length){
+      return false;
+    }
+
+    const button =
+      createToggleButton();
+
+    if(!button){
+      return false;
+    }
+
+    /*
+     * Masqué par défaut.
+     * Si l'utilisateur avait déjà ouvert
+     * la zone, son choix est mémorisé.
+     */
+    let visible =
+      localStorage.getItem(
+        STORAGE_KEY
+      ) === '1';
+
+
+    function render(){
+
+      sections.forEach(section => {
+
+        section.classList.toggle(
+          'gilSprintDetailHidden',
+          !visible
+        );
+
+      });
+
+      button.setAttribute(
+        'aria-expanded',
+        visible ? 'true' : 'false'
+      );
+
+      button.innerHTML =
+        '<span class="gilSprintToggleIcon">▼</span>'+
+        (
+          visible
+            ? 'Masquer détails sprint'
+            : 'Afficher détails sprint'
+        );
+    }
+
+
+    button.onclick = function(){
+
+      visible = !visible;
+
+      localStorage.setItem(
+        STORAGE_KEY,
+        visible ? '1' : '0'
+      );
+
+      render();
+    };
+
+
+    render();
+
+    return true;
+  }
+
+
+  function bootSprintDetailToggle(){
+
+    /*
+     * Premier essai immédiat.
+     */
+    if(
+      installSprintDetailToggle()
+    ){
+      return;
+    }
+
+    /*
+     * Le dashboard peut construire
+     * certaines sections après chargement.
+     */
+    let attempts = 0;
+
+    const timer =
+      setInterval(() => {
+
+        attempts += 1;
+
+        if(
+          installSprintDetailToggle() ||
+          attempts >= 30
+        ){
+          clearInterval(timer);
+        }
+
+      },250);
+  }
+
+
+  if(
+    document.readyState === 'loading'
+  ){
+
+    document.addEventListener(
+      'DOMContentLoaded',
+      bootSprintDetailToggle
+    );
+
+  }else{
+
+    bootSprintDetailToggle();
+
+  }
+
+})();
+
+
+</script>
 
 </body>
 
