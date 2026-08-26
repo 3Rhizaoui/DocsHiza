@@ -4174,6 +4174,130 @@
   font-size:11px !important;
 }
 
+
+
+/* ==========================================================
+   GIL_TOP_ROW_FINAL_HEIGHT_FIX_V1
+   Hauteur réelle commune de toute la première ligne
+   ========================================================== */
+
+/*
+ * La hauteur est portée par la LIGNE de grille,
+ * et non plus seulement par les trois enfants.
+ */
+.arrimageStatusLayout{
+  grid-template-columns:
+    repeat(3,minmax(0,1fr)) !important;
+
+  grid-template-rows:
+    250px auto auto !important;
+
+  align-items:stretch !important;
+  column-gap:10px !important;
+}
+
+
+/* ----------------------------------------------------------
+   Les trois cadrans occupent exactement la même hauteur
+   ---------------------------------------------------------- */
+
+.arrimageStatusLayout > #healthGauge,
+.arrimagePieMain,
+.arrimageConstatStack{
+  height:250px !important;
+  min-height:250px !important;
+  max-height:250px !important;
+
+  align-self:stretch !important;
+}
+
+
+/*
+ * Le premier cadran du Constat doit lui aussi prendre
+ * toute la hauteur disponible du conteneur.
+ */
+.arrimageConstatStack{
+  display:block !important;
+}
+
+.arrimageConstatStack > .arrimageConstatCard:first-child{
+  box-sizing:border-box !important;
+
+  width:100% !important;
+  height:250px !important;
+  min-height:250px !important;
+  max-height:250px !important;
+
+  overflow:hidden !important;
+}
+
+
+/* ----------------------------------------------------------
+   Constat général : distribution verticale propre
+   ---------------------------------------------------------- */
+
+.arrimageConstatCard .arrimageConstatList{
+  margin:7px 0 0 !important;
+  padding-left:18px !important;
+}
+
+.arrimageConstatCard .arrimageConstatList li{
+  min-height:27px !important;
+  margin:0 0 3px !important;
+}
+
+
+/*
+ * Total + Bugs restent DANS le cadran.
+ */
+.arrimageConstatCard .arrimageConstatList li:nth-last-child(2){
+  margin-top:7px !important;
+  padding-top:7px !important;
+  border-top:1px solid #e2e8f0 !important;
+}
+
+.arrimageConstatCard .arrimageConstatList li:last-child{
+  margin-top:2px !important;
+}
+
+
+/* ----------------------------------------------------------
+   Accolades :
+   Livrés / En cours / Bloqués seulement.
+   Rejetés reste SANS accolade.
+   ---------------------------------------------------------- */
+
+.arrimageConstatEnvBrace{
+  margin-left:auto !important;
+  margin-right:8px !important;
+}
+
+
+/* ----------------------------------------------------------
+   Camembert : exploiter la nouvelle hauteur sans troncature
+   ---------------------------------------------------------- */
+
+.arrimagePieMain{
+  overflow:hidden !important;
+}
+
+.arrimagePieWrap{
+  height:195px !important;
+  min-height:195px !important;
+  max-height:195px !important;
+
+  align-items:center !important;
+}
+
+
+/* ----------------------------------------------------------
+   Compteur : centrage vertical dans la nouvelle hauteur
+   ---------------------------------------------------------- */
+
+.arrimageStatusLayout > #healthGauge{
+  overflow:hidden !important;
+}
+
 </style>
 
 </head>
