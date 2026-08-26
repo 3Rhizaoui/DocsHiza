@@ -3324,6 +3324,263 @@
 }
 
 /* GIL_ALIGN_STATUS_2X2_V1_END */
+
+
+/* ==========================================================
+   GIL_GLOBAL_CHART_3D_V1
+   Cohérence graphique 3D légère sur tout le rapport
+   ========================================================== */
+
+/* ---------- conteneurs graphiques ---------- */
+
+.graphPanel,
+.histBox,
+.arrimagePieCard{
+  position:relative;
+}
+
+.graphPanel,
+.histBox{
+  box-shadow:
+    0 4px 10px rgba(15,23,42,.07),
+    inset 0 1px 0 rgba(255,255,255,.85);
+}
+
+
+/* ==========================================================
+   1. COMPTEUR SANTÉ
+   ========================================================== */
+
+.speedGauge{
+  overflow:visible;
+  filter:
+    drop-shadow(0 5px 3px rgba(15,23,42,.18));
+}
+
+.speedGauge path{
+  filter:
+    drop-shadow(0 3px 1px rgba(15,23,42,.18));
+}
+
+.speedGauge line{
+  filter:
+    drop-shadow(2px 3px 2px rgba(15,23,42,.35));
+}
+
+.speedGauge circle{
+  filter:
+    drop-shadow(1px 3px 2px rgba(15,23,42,.35));
+}
+
+
+/* ==========================================================
+   2. CAMEMBERT ARRIMAGE
+   ========================================================== */
+
+.arrimagePieSvg{
+  overflow:visible;
+  filter:
+    drop-shadow(0 7px 5px rgba(15,23,42,.18));
+}
+
+.arrimagePieSvg path,
+.arrimagePieSvg circle{
+  transition:
+    transform .15s ease,
+    filter .15s ease;
+}
+
+.arrimagePieSvg path:hover,
+.arrimagePieSvg circle:hover{
+  filter:
+    brightness(1.05)
+    drop-shadow(0 3px 2px rgba(15,23,42,.24));
+}
+
+
+/* ==========================================================
+   3. HISTOGRAMMES VERTICAUX
+   ========================================================== */
+
+.stackedVBar{
+  position:relative;
+  border-radius:3px 3px 1px 1px;
+  box-shadow:
+    3px 4px 4px rgba(15,23,42,.16),
+    inset 1px 0 0 rgba(255,255,255,.28),
+    inset -2px 0 2px rgba(15,23,42,.12);
+}
+
+.stackedVBar > i{
+  position:relative;
+  box-shadow:
+    inset 2px 0 0 rgba(255,255,255,.20),
+    inset -3px 0 3px rgba(15,23,42,.12);
+}
+
+.stackedVBar > strong{
+  text-shadow:
+    0 1px 0 rgba(255,255,255,.8);
+}
+
+
+/* ==========================================================
+   4. BARRES HORIZONTALES / KPI
+   ========================================================== */
+
+.bar,
+.meter{
+  overflow:hidden;
+  border-radius:5px;
+  box-shadow:
+    inset 0 2px 3px rgba(15,23,42,.12),
+    0 1px 0 rgba(255,255,255,.9);
+}
+
+.bar i,
+.meter i{
+  position:relative;
+  border-radius:5px;
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,.22),
+    inset 0 -2px 2px rgba(15,23,42,.15),
+    2px 2px 3px rgba(15,23,42,.10);
+}
+
+
+/* ==========================================================
+   5. MINI HISTOGRAMMES
+   ========================================================== */
+
+.miniBar .bar i{
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,.25),
+    inset 0 -2px 2px rgba(15,23,42,.16),
+    2px 2px 3px rgba(15,23,42,.12);
+}
+
+
+/* ==========================================================
+   6. BAR CHARTS
+   ========================================================== */
+
+.barChart rect{
+  filter:
+    drop-shadow(3px 4px 2px rgba(15,23,42,.16));
+}
+
+
+/* ==========================================================
+   7. COURBES
+   On garde une 3D discrète pour ne pas nuire à la lecture.
+   ========================================================== */
+
+.lineChart path{
+  filter:
+    drop-shadow(1px 2px 1px rgba(15,23,42,.16));
+}
+
+.lineChart circle{
+  filter:
+    drop-shadow(1px 2px 1px rgba(15,23,42,.22));
+}
+
+
+/* ==========================================================
+   Impression : effet plus discret
+   ========================================================== */
+
+@media print{
+
+  .speedGauge,
+  .arrimagePieSvg,
+  .barChart rect,
+  .lineChart path,
+  .lineChart circle{
+    filter:none !important;
+  }
+
+  .stackedVBar,
+  .bar,
+  .meter,
+  .graphPanel,
+  .histBox{
+    box-shadow:none !important;
+  }
+}
+
+
+
+/* ==========================================================
+   GIL_ARRIMAGE_HEADER_REFINEMENT_V1
+   ========================================================== */
+
+.arrimagePieLegendValue{
+  display:inline-flex;
+  align-items:baseline;
+  gap:4px;
+  font-size:16px;
+  font-weight:800;
+}
+
+.arrimagePieLegendValue small{
+  font-size:11px;
+  font-weight:800;
+  white-space:nowrap;
+}
+
+.arrimageConstatEnvBrace{
+  display:inline-flex;
+  align-items:baseline;
+  gap:3px;
+  margin-left:4px;
+  font-size:11px;
+  font-weight:600;
+  white-space:nowrap;
+  opacity:.88;
+}
+
+.arrimageConstatEnvBrace b{
+  font-size:11px;
+}
+
+.arrimageConstatEnvSep{
+  opacity:.55;
+}
+
+.arrimagePieSvg path{
+  transition:
+    transform .16s ease,
+    filter .16s ease;
+}
+
+.arrimagePieSvg path:hover{
+  filter:
+    brightness(1.04)
+    drop-shadow(0 4px 3px rgba(15,23,42,.22));
+}
+
+
+
+/* GIL_STATUS_METRIC_REFINEMENT_V1 */
+
+.arrimageStatusMetric{
+  display:inline-flex;
+  align-items:baseline;
+  gap:4px;
+}
+
+.arrimageStatusMetric b{
+  font-size:15px;
+  font-weight:900;
+}
+
+.arrimageStatusMetric small{
+  font-size:10px;
+  font-weight:800;
+  white-space:nowrap;
+}
+
 </style>
 
 </head>
@@ -5386,12 +5643,43 @@ function arrimageSprintConstat(data){
       const bloques = seg('Bloqués');
       const rejetes = seg('Rejetés');
 
+      const envCount = (segment,environment) => {
+        const expected = String(
+          environment || ''
+        ).trim().toUpperCase();
+
+        /*
+         * Cohérence stricte avec arrimagePieData :
+         * segment.count = segment.items.length.
+         */
+        return (segment.items || []).filter(row => {
+          const env = String(
+            row && (
+              row.environnement ||
+              row.environment ||
+              row.env
+            ) || ''
+          ).trim().toUpperCase();
+
+          return env === expected;
+        }).length;
+      };
+
+      const envDetail = segment =>
+        '<span class="arrimageConstatEnvBrace">'+
+          '{ '+
+          '<span>SIT : <b>'+envCount(segment,'SIT')+'</b></span>'+
+          '<span class="arrimageConstatEnvSep"> | </span>'+
+          '<span>UAT : <b>'+envCount(segment,'UAT')+'</b></span>'+
+          ' }'+
+        '</span>';
+
       return '<h3>Constat général</h3>'+
         '<ul class="arrimageConstatList">'+
-          '<li class="arrOk"><b>'+arrimagePct(livres.count,pie.total)+' des flux d’arrimage sont livrés.</b></li>'+
-          '<li class="arrProgress"><b>'+encours.count+' flux sont en cours de traitement.</b></li>'+
-          '<li class="arrBlocked"><b>'+bloques.count+' flux sont bloqués.</b></li>'+
-          '<li class="arrRejected"><b>'+rejetes.count+' flux sont rejetés.</b></li>'+
+          '<li class="arrOk"><b>'+livres.count+' flux livrés</b> '+envDetail(livres)+'</li>'+
+          '<li class="arrProgress"><b>'+encours.count+' flux en cours</b> '+envDetail(encours)+'</li>'+
+          '<li class="arrBlocked"><b>'+bloques.count+' flux bloqués</b> '+envDetail(bloques)+'</li>'+
+          '<li class="arrRejected"><b>'+rejetes.count+' flux rejetés</b></li>'+
           '<li>Total : <b>'+pie.total+'</b> flux.</li>'+
           '<li>Bugs Octane liés : <b>'+pie.bugsOctane+'</b> — terminés : <b>'+pie.bugsOctaneTermines+'</b> — annulés : <b>'+pie.bugsOctaneAnnules+'</b>.</li>'+
         '</ul>';
@@ -5431,12 +5719,23 @@ function arrimageSprintConstat(data){
           ' onclick="showDetail(\'arrimagePieSegment\',\''+sid+'\')"'+
           ' style="cursor:pointer"';
 
+        const sliceMid = (a0 + a1) / 2;
+        const sliceRad = (sliceMid - 90) * Math.PI / 180;
+        const sliceExplode = full ? 0 : 4;
+        const sliceX = Math.cos(sliceRad) * sliceExplode;
+        const sliceY = Math.sin(sliceRad) * sliceExplode;
+        const sliceTransform =
+          ' transform="translate('+
+            sliceX.toFixed(1)+' '+
+            sliceY.toFixed(1)+
+          ')"';
+
         if(full){
           side += '<circle cx="'+cx+'" cy="'+(cy+depth)+'" r="'+r+'" fill="'+seg.color+'" opacity=".55"'+attrs+'></circle>';
           top += '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+seg.color+'" stroke="white" stroke-width="2"'+attrs+'></circle>';
         }else{
-          side += '<path d="'+pieArcPath(cx,cy+depth,r,a0,a1)+'" fill="'+seg.color+'" opacity=".55"'+attrs+'></path>';
-          top += '<path d="'+pieArcPath(cx,cy,r,a0,a1)+'" fill="'+seg.color+'" stroke="white" stroke-width="2"'+attrs+'></path>';
+          side += '<path d="'+pieArcPath(cx,cy+depth,r,a0,a1)+'" fill="'+seg.color+'" opacity=".55"'+sliceTransform+attrs+'></path>';
+          top += '<path d="'+pieArcPath(cx,cy,r,a0,a1)+'" fill="'+seg.color+'" stroke="white" stroke-width="2"'+sliceTransform+attrs+'></path>';
         }
 
         /*
@@ -5445,9 +5744,22 @@ function arrimageSprintConstat(data){
          */
         const mid = (a0 + a1) / 2;
         const rad = (mid - 90) * Math.PI / 180;
+
+        /*
+         * Effet "tranches de fromage" :
+         * léger décalage radial de chaque secteur.
+         */
+        const explodeX = sliceX;
+        const explodeY = sliceY;
+
         const labelRadius = full ? 0 : r * .58;
-        const lx = full ? cx : cx + Math.cos(rad) * labelRadius;
-        const ly = full ? cy : cy + Math.sin(rad) * labelRadius;
+        const lx = full
+          ? cx
+          : cx + Math.cos(rad) * labelRadius + explodeX;
+
+        const ly = full
+          ? cy
+          : cy + Math.sin(rad) * labelRadius + explodeY;
 
         labels +=
           '<text class="arrimagePiePct" x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'">'+
@@ -5460,7 +5772,12 @@ function arrimageSprintConstat(data){
       const legend = d.segments.map(seg =>
         '<div class="arrimagePieLegendRow">'+
           '<span><i style="background:'+seg.color+'"></i>'+esc(seg.label)+'</span>'+
-          '<b>'+seg.count+' · '+arrimagePct(seg.count,d.total)+'</b>'+
+          '<b class="arrimagePieLegendValue">'+
+            seg.count+
+            ' <small style="color:'+seg.color+'">('+
+              arrimagePct(seg.count,d.total)+
+            ')</small>'+
+          '</b>'+
         '</div>'
       ).join('');
 
@@ -5476,7 +5793,13 @@ function arrimageSprintConstat(data){
           ' onclick="showDetail(\'arrimagePieSegment\',\''+safeId(seg.label)+'\')">'+
           '<div class="arrimageStatusHead">'+
             '<i style="background:'+seg.color+'"></i>'+
-            '<span>'+esc(seg.label)+' — '+seg.count+' ('+arrimagePct(seg.count,d.total)+')</span>'+
+            '<span class="arrimageStatusMetric">'+
+              esc(seg.label)+
+              ' — <b>'+seg.count+'</b>'+
+              ' <small style="color:'+seg.color+'">('+
+                arrimagePct(seg.count,d.total)+
+              ')</small>'+
+            '</span>'+
           '</div>'+
           '<div class="arrimageCardBody">'+arrimageCardBreakdown(seg)+'</div>'+
           '<div class="arrimageCardFooter">Bugs Octane liés : '+seg.bugs.length+'</div>'+
