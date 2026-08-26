@@ -4748,6 +4748,315 @@
   display:none !important;
 }
 
+
+
+/* ==========================================================
+   GIL_TRUE_AUTO_EQUAL_ROWS_FINAL_V1
+
+   Principe :
+   - ligne 1 : Santé / Répartition / Constat général
+     hauteur = hauteur naturelle du plus grand des 3
+
+   - ligne 2 : Livrés / En cours
+     hauteur = hauteur naturelle du plus grand des 2
+
+   - ligne 3 interne aux statuts : Bloqués / Rejetés
+     hauteur = hauteur naturelle du plus grand des 2
+
+   AUCUNE hauteur fixe.
+   ========================================================== */
+
+
+/* ==========================================================
+   1. GRILLE PRINCIPALE
+   ========================================================== */
+
+.arrimageStatusLayout{
+  display:grid !important;
+
+  grid-template-columns:
+    repeat(3,minmax(0,1fr)) !important;
+
+  /*
+   * Chaque ligne prend automatiquement
+   * la hauteur de son contenu le plus grand.
+   */
+  grid-template-rows:
+    auto auto auto !important;
+
+  grid-auto-rows:auto !important;
+
+  column-gap:10px !important;
+  row-gap:10px !important;
+
+  align-items:stretch !important;
+}
+
+
+/* ==========================================================
+   2. IMPORTANT :
+   arrimageConstatStack ne doit PAS être un flex container.
+
+   Ses enfants doivent participer directement
+   à la grille principale.
+   ========================================================== */
+
+.arrimageConstatStack{
+  display:contents !important;
+
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+}
+
+
+/* ==========================================================
+   3. PREMIERE LIGNE
+   Santé / Répartition / Constat général
+   ========================================================== */
+
+.arrimageStatusLayout > #healthGauge{
+  grid-column:1 !important;
+  grid-row:1 !important;
+
+  height:auto !important;
+  min-height:215px !important;
+  max-height:none !important;
+
+  align-self:stretch !important;
+
+  overflow:visible !important;
+}
+
+
+.arrimagePieMain{
+  grid-column:2 !important;
+  grid-row:1 !important;
+
+  height:auto !important;
+  min-height:215px !important;
+  max-height:none !important;
+
+  align-self:stretch !important;
+
+  overflow:visible !important;
+}
+
+
+/*
+ * Premier enfant du stack = Constat général.
+ */
+.arrimageConstatStack
+> .arrimageConstatCard:first-child{
+
+  grid-column:3 !important;
+  grid-row:1 !important;
+
+  height:auto !important;
+  min-height:215px !important;
+  max-height:none !important;
+
+  align-self:stretch !important;
+
+  box-sizing:border-box !important;
+
+  overflow:visible !important;
+}
+
+
+/* ==========================================================
+   4. CONTENU DU CONSTAT GENERAL
+   ========================================================== */
+
+.arrimageConstatStack
+> .arrimageConstatCard:first-child
+.arrimageConstatList{
+
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+
+  overflow:visible !important;
+
+  margin-top:7px !important;
+}
+
+
+/*
+ * Chaque ligne reste dans le flux naturel.
+ */
+.arrimageConstatStack
+> .arrimageConstatCard:first-child
+.arrimageConstatList li{
+
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+
+  margin-bottom:6px !important;
+
+  line-height:1.2 !important;
+}
+
+
+/*
+ * Total + Bugs Octane restent à l'intérieur
+ * et peuvent agrandir naturellement la carte.
+ */
+.arrimageConstatStack
+> .arrimageConstatCard:first-child
+.arrimageConstatList li:nth-last-child(2){
+
+  margin-top:8px !important;
+  padding-top:7px !important;
+
+  border-top:1px solid #e2e8f0 !important;
+}
+
+
+.arrimageConstatStack
+> .arrimageConstatCard:first-child
+.arrimageConstatList li:last-child{
+
+  margin-bottom:4px !important;
+
+  white-space:normal !important;
+}
+
+
+/* ==========================================================
+   5. ACCOLADES
+   Livrés / En cours / Bloqués seulement
+   ========================================================== */
+
+.arrimageConstatEnvBrace{
+  margin-left:auto !important;
+
+  height:auto !important;
+  max-height:none !important;
+}
+
+
+/*
+ * Rejetés : jamais d'accolade.
+ */
+.arrRejected .arrimageConstatEnvBrace,
+.arrimageConstatList .arrRejected .arrimageConstatEnvBrace{
+  display:none !important;
+}
+
+
+/* ==========================================================
+   6. CAMEMBERT
+   Pas de hauteur fixe.
+   Le 3D reste intact.
+   ========================================================== */
+
+.arrimagePieWrap{
+  height:auto !important;
+  min-height:165px !important;
+  max-height:none !important;
+
+  flex:1 1 auto !important;
+
+  align-items:center !important;
+
+  overflow:visible !important;
+}
+
+
+.arrimagePieSvg{
+  height:auto !important;
+  max-height:205px !important;
+
+  width:auto !important;
+  max-width:100% !important;
+
+  overflow:visible !important;
+}
+
+
+/* ==========================================================
+   7. QUATRE CARTES STATUT
+   ========================================================== */
+
+.arrimageCardsGrid{
+  grid-column:1 / -1 !important;
+  grid-row:2 !important;
+
+  display:grid !important;
+
+  grid-template-columns:
+    repeat(2,minmax(0,1fr)) !important;
+
+  /*
+   * Chaque paire prend automatiquement
+   * la hauteur de sa carte la plus haute.
+   */
+  grid-template-rows:
+    auto auto !important;
+
+  grid-auto-rows:auto !important;
+
+  gap:10px !important;
+
+  align-items:stretch !important;
+}
+
+
+/*
+ * Suppression de toutes les contraintes fixes
+ * sur les 4 cartes.
+ */
+.arrimageCardsGrid > .arrimageStatusCard{
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+
+  align-self:stretch !important;
+
+  box-sizing:border-box !important;
+}
+
+
+/*
+ * Ligne 1 :
+ * Livrés / En cours
+ */
+.arrimageCardsGrid > .arrimageStatusCard:nth-child(1),
+.arrimageCardsGrid > .arrimageStatusCard:nth-child(2){
+  grid-row:1 !important;
+}
+
+
+/*
+ * Ligne 2 :
+ * Bloqués / Rejetés
+ */
+.arrimageCardsGrid > .arrimageStatusCard:nth-child(3),
+.arrimageCardsGrid > .arrimageStatusCard:nth-child(4){
+  grid-row:2 !important;
+}
+
+
+/* ==========================================================
+   8. CONSTAT DU SPRINT
+   reste après les 4 cartes
+   ========================================================== */
+
+.arrimageSprintConstatCard{
+  grid-column:1 / -1 !important;
+  grid-row:3 !important;
+
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+
+  margin:0 !important;
+
+  align-self:stretch !important;
+}
+
 </style>
 
 </head>
