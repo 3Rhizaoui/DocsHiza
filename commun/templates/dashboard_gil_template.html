@@ -5483,6 +5483,414 @@ details[open] > summary .arrimageTreeArrow::before{
   }
 }
 
+
+
+/* ==========================================================
+   GIL_SPRINT_PRIORITIES_PANEL_V2
+   Constat du sprint + Sujets prioritaires
+   ========================================================== */
+
+
+/*
+ * Nouvelle ligne commune.
+ *
+ * Le constat conserve la plus grande partie de l'espace.
+ * Le nouveau bloc occupe la zone vide à droite.
+ */
+.arrimageSprintBottomRow{
+  grid-column:1 / -1 !important;
+
+  display:grid !important;
+
+  grid-template-columns:
+    minmax(0,2fr)
+    minmax(280px,1fr) !important;
+
+  gap:10px !important;
+
+  width:100% !important;
+
+  align-items:stretch !important;
+
+  box-sizing:border-box !important;
+}
+
+
+/*
+ * On ne modifie PAS le contenu du constat.
+ * On lui permet simplement de remplir sa colonne.
+ */
+.arrimageSprintBottomRow >
+.arrimageSprintConstatCard{
+  width:100% !important;
+
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+
+  margin:0 !important;
+
+  box-sizing:border-box !important;
+
+  align-self:stretch !important;
+}
+
+
+/*
+ * Nouveau bloc à droite.
+ */
+.arrimageSprintPrioritiesCard{
+  width:100% !important;
+
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+
+  margin:0 !important;
+
+  padding:12px 14px !important;
+
+  box-sizing:border-box !important;
+
+  align-self:stretch !important;
+
+  overflow:visible !important;
+}
+
+
+.arrimageSprintPrioritiesInner{
+  width:100%;
+}
+
+
+.arrimageSprintPrioritiesCard h3{
+  margin:
+    0
+    0
+    14px
+    0 !important;
+
+  font-size:14px !important;
+  font-weight:800 !important;
+
+  color:#1e293b !important;
+}
+
+
+.arrimageSprintPrioritiesList{
+  margin:0 !important;
+
+  padding-left:20px !important;
+
+  display:grid !important;
+
+  gap:12px !important;
+
+  font-size:12px !important;
+  line-height:1.4 !important;
+
+  color:#334155 !important;
+}
+
+
+.arrimageSprintPrioritiesList li{
+  padding-left:2px !important;
+}
+
+
+/*
+ * Les deux cartes prennent automatiquement
+ * la hauteur de la plus grande.
+ */
+.arrimageSprintBottomRow >
+.arrimageConstatCard{
+  align-self:stretch !important;
+}
+
+
+/*
+ * Responsive :
+ * si l'écran devient trop étroit,
+ * les deux blocs repassent verticalement.
+ */
+@media (max-width:1050px){
+
+  .arrimageSprintBottomRow{
+    grid-template-columns:
+      minmax(0,1fr) !important;
+  }
+
+}
+
+
+
+
+/* ==========================================================
+   GIL_SPRINT_PRIORITIES_PANEL_V3
+   Maquette finale :
+   Constat du sprint 65% | Priorités 35%
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   Ligne commune
+   ---------------------------------------------------------- */
+
+.arrimageSprintBottomRow{
+  grid-column:1 / -1 !important;
+  grid-row:3 !important;
+
+  display:grid !important;
+
+  grid-template-columns:
+    minmax(0,1.95fr)
+    minmax(320px,1fr) !important;
+
+  gap:12px !important;
+
+  width:100% !important;
+
+  align-items:stretch !important;
+
+  box-sizing:border-box !important;
+}
+
+
+/* ----------------------------------------------------------
+   Constat du sprint
+   CONTENU INCHANGE
+   ---------------------------------------------------------- */
+
+.arrimageSprintBottomRow
+> .arrimageSprintConstatCard{
+  grid-column:auto !important;
+  grid-row:auto !important;
+
+  width:100% !important;
+
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+
+  margin:0 !important;
+
+  align-self:stretch !important;
+
+  box-sizing:border-box !important;
+
+  overflow:visible !important;
+}
+
+
+/* ----------------------------------------------------------
+   Carte priorités
+   ---------------------------------------------------------- */
+
+.arrimageSprintPrioritiesCard{
+  grid-column:auto !important;
+  grid-row:auto !important;
+
+  width:100% !important;
+
+  height:auto !important;
+  min-height:100% !important;
+  max-height:none !important;
+
+  margin:0 !important;
+
+  padding:14px 16px !important;
+
+  align-self:stretch !important;
+
+  box-sizing:border-box !important;
+
+  border:1px solid #dbe4ef !important;
+  border-radius:9px !important;
+
+  background:#fff !important;
+
+  box-shadow:
+    0 1px 3px rgba(15,23,42,.08) !important;
+
+  overflow:hidden !important;
+}
+
+
+/* ----------------------------------------------------------
+   Titre
+   ---------------------------------------------------------- */
+
+.arrimageSprintPrioritiesCard h3{
+  margin:0 0 18px !important;
+
+  padding:0 !important;
+
+  color:#0f2740 !important;
+
+  font-size:15px !important;
+  line-height:1.2 !important;
+
+  font-weight:900 !important;
+}
+
+
+/* ----------------------------------------------------------
+   Liste priorités
+   ---------------------------------------------------------- */
+
+.arrimagePriorityList{
+  display:flex !important;
+  flex-direction:column !important;
+
+  width:100% !important;
+}
+
+
+.arrimagePriorityItem{
+  display:grid !important;
+
+  grid-template-columns:
+    42px
+    minmax(0,1fr) !important;
+
+  gap:10px !important;
+
+  align-items:center !important;
+
+  min-height:58px !important;
+
+  padding:8px 4px !important;
+
+  border-bottom:
+    1px solid #e5eaf0 !important;
+
+  color:#172033 !important;
+
+  font-size:12px !important;
+  line-height:1.35 !important;
+
+  font-weight:800 !important;
+}
+
+
+.arrimagePriorityItem:last-child{
+  border-bottom:0 !important;
+}
+
+
+/* ----------------------------------------------------------
+   Icônes
+   ---------------------------------------------------------- */
+
+.arrimagePriorityIcon{
+  display:flex !important;
+
+  width:38px !important;
+  height:38px !important;
+
+  align-items:center !important;
+  justify-content:center !important;
+
+  font-size:25px !important;
+  line-height:1 !important;
+
+  filter:
+    drop-shadow(0 2px 1px rgba(15,23,42,.16));
+}
+
+
+/* compteur orange du flux en cours */
+
+.priorityCount{
+  color:#d97706 !important;
+  font-weight:900 !important;
+}
+
+
+/* ----------------------------------------------------------
+   Accent léger par priorité
+   ---------------------------------------------------------- */
+
+.priorityTarget{
+  color:#10294a !important;
+}
+
+.priorityFix{
+  color:#172033 !important;
+}
+
+.priorityDone{
+  color:#172033 !important;
+}
+
+.priorityRegression{
+  color:#172033 !important;
+}
+
+
+/* ----------------------------------------------------------
+   Le constat conserve exactement son contenu actuel
+   ---------------------------------------------------------- */
+
+.arrimageSprintBottomRow
+.arrimageSprintConstatCard
+.arrimageSprintStats,
+
+.arrimageSprintBottomRow
+.arrimageSprintConstatCard
+.arrimageSprintSections,
+
+.arrimageSprintBottomRow
+.arrimageSprintConstatCard
+.arrimageSprintBlock{
+  max-width:none !important;
+}
+
+
+/* ----------------------------------------------------------
+   Responsive
+   ---------------------------------------------------------- */
+
+@media(max-width:1100px){
+
+  .arrimageSprintBottomRow{
+    grid-template-columns:
+      minmax(0,1fr) !important;
+  }
+
+  .arrimageSprintPrioritiesCard{
+    min-height:0 !important;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   Impression / PDF
+   ---------------------------------------------------------- */
+
+@media print{
+
+  .arrimageSprintBottomRow{
+    grid-template-columns:
+      minmax(0,1.95fr)
+      minmax(250px,1fr) !important;
+
+    gap:6px !important;
+  }
+
+  .arrimagePriorityItem{
+    min-height:42px !important;
+    font-size:10px !important;
+  }
+
+  .arrimagePriorityIcon{
+    width:28px !important;
+    height:28px !important;
+    font-size:18px !important;
+  }
+}
+
+
 </style>
 
 </head>
@@ -7755,6 +8163,58 @@ function arrimageSprintConstat(data){
         '</ul>';
     }
 
+
+    /* ========================================================
+       GIL_SPRINT_PRIORITIES_PANEL_V2
+       Bloc indépendant - ne modifie pas le constat du sprint
+       ======================================================== */
+
+    function arrimageSprintPriorities(data){
+      const pie = arrimagePieData(data);
+
+      const seg = label =>
+        (pie.segments || []).find(
+          s => s.label === label
+        ) || {count:0};
+
+      const encours = seg('En cours');
+
+      return ''+
+        '<div class="arrimageSprintPrioritiesInner">'+
+
+          '<h3>Sujets prioritaires du sprint</h3>'+
+
+          '<div class="arrimagePriorityList">'+
+
+            '<div class="arrimagePriorityItem priorityTarget">'+
+              '<span class="arrimagePriorityIcon">&#127919;</span>'+
+              '<span>'+
+                'Finaliser les flux en cours '+
+                '<b class="priorityCount">('+
+                  encours.count+
+                ')</b>.'+
+              '</span>'+
+            '</div>'+
+
+            '<div class="arrimagePriorityItem priorityFix">'+
+              '<span class="arrimagePriorityIcon">&#128295;</span>'+
+              '<span>Corriger les anomalies bloquantes.</span>'+
+            '</div>'+
+
+            '<div class="arrimagePriorityItem priorityDone">'+
+              '<span class="arrimagePriorityIcon">&#9989;</span>'+
+              '<span>Clôturer et valider les livraisons.</span>'+
+            '</div>'+
+
+            '<div class="arrimagePriorityItem priorityRegression">'+
+              '<span class="arrimagePriorityIcon">&#128202;</span>'+
+              '<span>Préparer la régression et la recette.</span>'+
+            '</div>'+
+
+          '</div>'+
+        '</div>';
+    }
+
     function renderArrimagePie3d(data){
       const d = arrimagePieData(data);
 
@@ -7763,7 +8223,7 @@ function arrimageSprintConstat(data){
           '<h3>Répartition des flux d’arrimage</h3>'+
           '<div class="miniNote">Aucun flux d’arrimage disponible pour le périmètre courant.</div>'+
         '</div>'+
-        '<div class="arrimageConstatStack">'+'<div class="arrimageConstatCard">'+arrimageGeneralConstat(data)+'</div>'+'<div class="arrimageConstatCard arrimageSprintConstatCard">'+arrimageSprintConstat(data)+'</div>'+'</div>';
+        '<div class="arrimageConstatStack">'+'<div class="arrimageConstatCard">'+arrimageGeneralConstat(data)+'</div>'+'<div class="arrimageSprintBottomRow">'+'<div class="arrimageConstatCard arrimageSprintConstatCard">'+arrimageSprintConstat(data)+'</div>'+'<div class="arrimageConstatCard arrimageSprintPrioritiesCard">'+arrimageSprintPriorities(data)+'</div>'+'</div>'+'</div>';
       }
 
       const cx = 116, cy = 84, r = 68, depth = 20;
@@ -7886,7 +8346,7 @@ function arrimageSprintConstat(data){
             '<div class="arrimagePieLegendSimple">'+legend+'</div>'+
           '</div>'+
         '</div>'+
-        '<div class="arrimageConstatStack">'+'<div class="arrimageConstatCard">'+arrimageGeneralConstat(data)+'</div>'+'<div class="arrimageConstatCard arrimageSprintConstatCard">'+arrimageSprintConstat(data)+'</div>'+'</div>'+
+        '<div class="arrimageConstatStack">'+'<div class="arrimageConstatCard">'+arrimageGeneralConstat(data)+'</div>'+'<div class="arrimageSprintBottomRow">'+'<div class="arrimageConstatCard arrimageSprintConstatCard">'+arrimageSprintConstat(data)+'</div>'+'<div class="arrimageConstatCard arrimageSprintPrioritiesCard">'+arrimageSprintPriorities(data)+'</div>'+'</div>'+'</div>'+
         '<div class="arrimageCardsGrid">'+cards+'</div>';
     }
 
