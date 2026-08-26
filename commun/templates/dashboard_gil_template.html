@@ -3811,6 +3811,178 @@
   max-height:175px !important;
 }
 
+
+
+/* ==========================================================
+   GIL_TOP_3_EQUAL_COLUMNS_V1
+   Trois cadrans supérieurs de même largeur
+   ========================================================== */
+
+.arrimageStatusLayout{
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr)) !important;
+
+  column-gap:10px !important;
+}
+
+
+/* Même encombrement pour les 3 cartes */
+.arrimageStatusLayout > #healthGauge,
+.arrimagePieMain,
+.arrimageConstatStack{
+  width:100% !important;
+  min-width:0 !important;
+  max-width:none !important;
+}
+
+
+/* Même hauteur visuelle */
+.arrimageStatusLayout > #healthGauge,
+.arrimagePieMain,
+.arrimageConstatStack > .arrimageConstatCard:first-child{
+  height:175px !important;
+  min-height:175px !important;
+  max-height:175px !important;
+}
+
+
+
+/* ==========================================================
+   GIL_CONSTAT_BRACE_LAYOUT_V1
+   Présentation propre des détails SIT / UAT
+   ========================================================== */
+
+.arrimageConstatList li{
+  position:relative;
+}
+
+
+/*
+ * Bloc environnement affiché à droite du statut.
+ */
+.arrimageConstatEnvBrace{
+  position:relative !important;
+
+  display:inline-grid !important;
+
+  grid-template-columns:
+    12px
+    auto !important;
+
+  grid-template-rows:
+    auto
+    auto !important;
+
+  column-gap:6px !important;
+  row-gap:1px !important;
+
+  align-items:center !important;
+
+  margin-left:10px !important;
+
+  padding-left:2px !important;
+
+  font-size:11px !important;
+  line-height:1.15 !important;
+
+  font-weight:700 !important;
+
+  vertical-align:middle !important;
+
+  opacity:1 !important;
+}
+
+
+/*
+ * On masque les caractères { } actuels visuellement.
+ */
+.arrimageConstatEnvBrace{
+  color:transparent !important;
+}
+
+
+/*
+ * Les valeurs restent visibles.
+ */
+.arrimageConstatEnvBrace span{
+  color:#17212b !important;
+}
+
+
+/*
+ * Vraie accolade verticale.
+ */
+.arrimageConstatEnvBrace::before{
+  content:"{";
+
+  grid-column:1 !important;
+  grid-row:1 / 3 !important;
+
+  align-self:center !important;
+  justify-self:center !important;
+
+  color:#17212b !important;
+
+  font-family:Georgia, "Times New Roman", serif !important;
+  font-size:31px !important;
+  line-height:.8 !important;
+  font-weight:400 !important;
+
+  transform:scaleY(1.15) !important;
+}
+
+
+/*
+ * SIT en première ligne
+ */
+.arrimageConstatEnvBrace > span:nth-of-type(1){
+  grid-column:2 !important;
+  grid-row:1 !important;
+
+  white-space:nowrap !important;
+}
+
+
+/*
+ * Séparateur "|" inutile dans ce rendu.
+ */
+.arrimageConstatEnvBrace .arrimageConstatEnvSep{
+  display:none !important;
+}
+
+
+/*
+ * UAT en seconde ligne
+ */
+.arrimageConstatEnvBrace > span:nth-of-type(3){
+  grid-column:2 !important;
+  grid-row:2 !important;
+
+  white-space:nowrap !important;
+}
+
+
+/*
+ * Valeurs numériques légèrement renforcées.
+ */
+.arrimageConstatEnvBrace b{
+  font-size:11px !important;
+  font-weight:900 !important;
+}
+
+
+/*
+ * On garde les lignes compactes pour ne pas agrandir le cadran.
+ */
+.arrimageConstatList{
+  margin-top:6px !important;
+}
+
+.arrimageConstatList li{
+  margin-bottom:5px !important;
+  line-height:1.15 !important;
+}
+
 </style>
 
 </head>
