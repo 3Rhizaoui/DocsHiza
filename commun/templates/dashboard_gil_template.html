@@ -4298,6 +4298,456 @@
   overflow:hidden !important;
 }
 
+
+
+/* ==========================================================
+   GIL_TOP_ROW_HEIGHT_290_FINAL_V1
+   Hauteur finale commune des trois blocs supérieurs
+   ========================================================== */
+
+/* ----------------------------------------------------------
+   1. Ligne supérieure complète
+   ---------------------------------------------------------- */
+
+.arrimageStatusLayout{
+  grid-template-columns:
+    repeat(3,minmax(0,1fr)) !important;
+
+  grid-template-rows:
+    290px auto auto !important;
+
+  align-items:stretch !important;
+  column-gap:10px !important;
+}
+
+
+/* ----------------------------------------------------------
+   2. Trois blocs exactement de même hauteur
+   ---------------------------------------------------------- */
+
+.arrimageStatusLayout > #healthGauge,
+.arrimagePieMain,
+.arrimageConstatStack{
+  height:290px !important;
+  min-height:290px !important;
+  max-height:290px !important;
+
+  width:100% !important;
+
+  align-self:stretch !important;
+  box-sizing:border-box !important;
+}
+
+
+/* ==========================================================
+   3. SANTÉ DU SPRINT
+   ========================================================== */
+
+.arrimageStatusLayout > #healthGauge{
+  padding-top:44px !important;
+  padding-bottom:18px !important;
+
+  overflow:hidden !important;
+
+  align-content:center !important;
+}
+
+
+/* Le compteur reste compact et centré */
+.arrimageStatusLayout > #healthGauge .speedGauge{
+  width:165px !important;
+  max-width:165px !important;
+  max-height:135px !important;
+}
+
+
+/* ==========================================================
+   4. CAMEMBERT
+   ========================================================== */
+
+.arrimagePieMain{
+  padding:12px 14px !important;
+  overflow:hidden !important;
+}
+
+
+/*
+ * Plus de hauteur utile au graphique sans modifier
+ * les proportions des trois colonnes.
+ */
+.arrimagePieWrap{
+  height:235px !important;
+  min-height:235px !important;
+  max-height:235px !important;
+
+  grid-template-columns:
+    minmax(0,1fr)
+    minmax(135px,145px) !important;
+
+  gap:6px !important;
+
+  align-items:center !important;
+}
+
+
+/*
+ * Le SVG reste entièrement contenu dans son cadran.
+ */
+.arrimagePieSvg{
+  height:205px !important;
+  max-height:205px !important;
+
+  width:auto !important;
+  max-width:100% !important;
+
+  overflow:visible !important;
+}
+
+
+/* ==========================================================
+   5. CONSTAT GENERAL
+   ========================================================== */
+
+.arrimageConstatStack{
+  display:block !important;
+  overflow:hidden !important;
+}
+
+
+/*
+ * Première carte = Constat général.
+ */
+.arrimageConstatStack > .arrimageConstatCard:first-child{
+  width:100% !important;
+
+  height:290px !important;
+  min-height:290px !important;
+  max-height:290px !important;
+
+  box-sizing:border-box !important;
+
+  padding:12px 14px !important;
+
+  overflow:hidden !important;
+}
+
+
+/*
+ * Liste interne compacte mais suffisamment espacée.
+ */
+.arrimageConstatStack
+> .arrimageConstatCard:first-child
+.arrimageConstatList{
+
+  margin:8px 0 0 !important;
+  padding-left:18px !important;
+}
+
+
+/*
+ * Les quatre statuts.
+ */
+.arrimageConstatStack
+> .arrimageConstatCard:first-child
+.arrimageConstatList li{
+
+  min-height:31px !important;
+
+  margin:0 0 4px !important;
+
+  line-height:1.15 !important;
+
+  align-items:center !important;
+}
+
+
+/* ==========================================================
+   6. ACCOLADES SIT/UAT
+   ========================================================== */
+
+/*
+ * Toujours uniquement :
+ *   Livrés
+ *   En cours
+ *   Bloqués
+ *
+ * Rejetés n'a PAS d'accolade.
+ */
+.arrimageConstatEnvBrace{
+  margin-left:auto !important;
+  margin-right:8px !important;
+
+  min-width:82px !important;
+}
+
+
+/* ==========================================================
+   7. TOTAL + BUGS OCTANE
+   ========================================================== */
+
+/*
+ * Séparation claire après les quatre statuts.
+ */
+.arrimageConstatStack
+> .arrimageConstatCard:first-child
+.arrimageConstatList li:nth-last-child(2){
+
+  min-height:auto !important;
+
+  margin-top:8px !important;
+  margin-bottom:5px !important;
+
+  padding-top:8px !important;
+
+  border-top:1px solid #e2e8f0 !important;
+
+  font-size:11px !important;
+}
+
+
+/*
+ * Bugs Octane reste entièrement dans la carte.
+ */
+.arrimageConstatStack
+> .arrimageConstatCard:first-child
+.arrimageConstatList li:last-child{
+
+  min-height:auto !important;
+
+  margin:0 !important;
+
+  padding-bottom:2px !important;
+
+  font-size:11px !important;
+  line-height:1.25 !important;
+}
+
+
+/* ==========================================================
+   8. Sécurité :
+   Rejetés reste sans accolade
+   ========================================================== */
+
+.arrimageConstatList .arrRejected
+.arrimageConstatEnvBrace{
+  display:none !important;
+}
+
+
+
+/* ==========================================================
+   GIL_AUTO_EQUAL_HEIGHT_ROWS_V1
+   Hauteur automatique :
+   chaque ligne prend la hauteur de son bloc le plus grand
+   ========================================================== */
+
+
+/* ==========================================================
+   1. TROIS BLOCS DU HAUT
+   ========================================================== */
+
+.arrimageStatusLayout{
+  grid-template-columns:
+    repeat(3,minmax(0,1fr)) !important;
+
+  /*
+   * IMPORTANT :
+   * aucune hauteur fixe sur la première ligne.
+   * La ligne s'adapte au contenu le plus haut.
+   */
+  grid-template-rows:
+    auto auto auto !important;
+
+  align-items:stretch !important;
+
+  column-gap:10px !important;
+  row-gap:10px !important;
+}
+
+
+/*
+ * Les 3 enfants remplissent automatiquement
+ * toute la hauteur de la ligne.
+ */
+.arrimageStatusLayout > #healthGauge,
+.arrimagePieMain,
+.arrimageConstatStack{
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+
+  align-self:stretch !important;
+
+  box-sizing:border-box !important;
+}
+
+
+/* ==========================================================
+   2. SANTE DU SPRINT
+   ========================================================== */
+
+.arrimageStatusLayout > #healthGauge{
+  /*
+   * Hauteur minimale seulement pour conserver
+   * une présentation agréable quand le contenu est court.
+   */
+  min-height:215px !important;
+
+  overflow:hidden !important;
+}
+
+
+/* ==========================================================
+   3. CAMEMBERT
+   ========================================================== */
+
+.arrimagePieMain{
+  min-height:215px !important;
+
+  overflow:hidden !important;
+}
+
+
+/*
+ * Le contenu interne prend la place disponible
+ * mais ne force plus la hauteur de la carte.
+ */
+.arrimagePieWrap{
+  height:auto !important;
+  min-height:165px !important;
+  max-height:none !important;
+
+  flex:1 1 auto !important;
+
+  align-items:center !important;
+}
+
+
+.arrimagePieSvg{
+  height:auto !important;
+  max-height:205px !important;
+
+  width:auto !important;
+  max-width:100% !important;
+}
+
+
+/* ==========================================================
+   4. CONSTAT GENERAL
+   ========================================================== */
+
+.arrimageConstatStack{
+  display:flex !important;
+  flex-direction:column !important;
+
+  height:auto !important;
+  min-height:215px !important;
+  max-height:none !important;
+
+  overflow:visible !important;
+}
+
+
+/*
+ * Le constat détermine naturellement sa hauteur
+ * selon le nombre de lignes à afficher.
+ */
+.arrimageConstatStack > .arrimageConstatCard:first-child{
+  flex:1 1 auto !important;
+
+  height:auto !important;
+  min-height:215px !important;
+  max-height:none !important;
+
+  box-sizing:border-box !important;
+
+  overflow:visible !important;
+}
+
+
+/*
+ * Total / Bugs Octane restent dans le flux normal.
+ */
+.arrimageConstatList{
+  height:auto !important;
+  max-height:none !important;
+
+  overflow:visible !important;
+}
+
+
+/* ==========================================================
+   5. QUATRE CARTES DE STATUT
+   ========================================================== */
+
+.arrimageCardsGrid{
+  display:grid !important;
+
+  grid-template-columns:
+    repeat(2,minmax(0,1fr)) !important;
+
+  /*
+   * Chaque ligne s'ajuste indépendamment
+   * à la carte la plus haute de cette ligne.
+   */
+  grid-auto-rows:auto !important;
+
+  align-items:stretch !important;
+
+  gap:10px !important;
+}
+
+
+/*
+ * Toutes les cartes remplissent la hauteur de leur ligne.
+ */
+.arrimageStatusCard{
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+
+  align-self:stretch !important;
+
+  box-sizing:border-box !important;
+}
+
+
+/*
+ * Si une carte contient une longue liste,
+ * elle détermine la hauteur de sa ligne.
+ */
+.arrimageStatusCard > *{
+  max-height:none !important;
+}
+
+
+/* ==========================================================
+   6. ALIGNEMENT VISUEL INTERNE
+   ========================================================== */
+
+.arrimageStatusCard{
+  display:flex !important;
+  flex-direction:column !important;
+}
+
+
+/*
+ * Le corps de la carte prend l'espace disponible.
+ */
+.arrimageStatusCard .arrimageCardBody,
+.arrimageStatusCard .arrimageCardContent{
+  flex:1 1 auto !important;
+}
+
+
+/* ==========================================================
+   7. Rejetés : toujours sans accolade
+   ========================================================== */
+
+.arrRejected .arrimageConstatEnvBrace{
+  display:none !important;
+}
+
 </style>
 
 </head>
