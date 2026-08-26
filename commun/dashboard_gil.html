@@ -10539,6 +10539,168 @@ window.addEventListener(
 );
 
 
+
+
+/* ==========================================================
+   GIL_SPRINT_TOGGLE_CLEAN_FINAL_V6
+
+   Version unique et prioritaire.
+   Supprime les anciens handlers du bouton en le clonant.
+   ========================================================== */
+
+(function(){
+
+  const IDS = [
+    'gilSprintComparisonSection',
+    'gilSprintEnvironmentSection',
+    'gilSprintWeeklyPrioritiesSection'
+  ];
+
+  let visible = false;
+
+
+  function sections(){
+    return IDS
+      .map(id => document.getElementById(id))
+      .filter(Boolean);
+  }
+
+
+  function render(){
+
+    sections().forEach(section => {
+
+      section.hidden = !visible;
+
+      if(visible){
+        section.style.removeProperty('display');
+      }else{
+        section.style.setProperty(
+          'display',
+          'none',
+          'important'
+        );
+      }
+
+    });
+
+
+    const button =
+      document.getElementById(
+        'gilSprintDetailToggleStatic'
+      );
+
+    const label =
+      document.getElementById(
+        'gilSprintDetailToggleLabel'
+      );
+
+    if(button){
+      button.setAttribute(
+        'aria-expanded',
+        visible ? 'true' : 'false'
+      );
+    }
+
+    if(label){
+      label.textContent =
+        visible
+          ? 'Masquer détails sprint'
+          : 'Afficher détails sprint';
+    }
+  }
+
+
+  function toggle(event){
+
+    if(event){
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    visible = !visible;
+
+    render();
+
+    return false;
+  }
+
+
+  function install(){
+
+    const oldButton =
+      document.getElementById(
+        'gilSprintDetailToggleStatic'
+      );
+
+    if(!oldButton){
+      console.error(
+        'GIL V6 - bouton sprint introuvable'
+      );
+      return;
+    }
+
+
+    /*
+     * IMPORTANT :
+     * cloneNode supprime tous les listeners JS
+     * ajoutés par les anciens patches V2/V4/V5.
+     */
+    const button =
+      oldButton.cloneNode(true);
+
+    oldButton.replaceWith(button);
+
+
+    /*
+     * Supprime également le onclick HTML précédent.
+     */
+    button.removeAttribute('onclick');
+
+
+    /*
+     * Un seul handler devient actif.
+     */
+    button.onclick = toggle;
+
+
+    /*
+     * Etat initial volontairement fermé.
+     */
+    visible = false;
+
+    render();
+
+
+    console.log(
+      'GIL V6 - toggle détails sprint installé'
+    );
+  }
+
+
+  /*
+   * On attend window.load pour passer APRES
+   * les anciens initialiseurs V2 / V4 / V5.
+   */
+  window.addEventListener(
+    'load',
+    function(){
+
+      /*
+       * Petit délai pour être certain que les
+       * anciens scripts ont terminé leur initialisation.
+       */
+      setTimeout(
+        install,
+        100
+      );
+
+    }
+  );
+
+})();
+
+
 </script>
 
 </body>
