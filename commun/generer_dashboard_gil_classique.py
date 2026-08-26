@@ -9,8 +9,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "dashboard_gil_data.json"
 TEMPLATE_DATA = ROOT / "rapport_gil_v6_w28_data.json"
+
+# DASHBOARD_TEMPLATE_SOURCE_V1
+# Le template est désormais la source de vérité du HTML.
+TEMPLATE_HTML = ROOT / "templates" / "dashboard_gil_template.html"
 HTML = ROOT / "dashboard_gil.html"
-GENERATOR_VERSION = "2026.08.11.2"
+
+GENERATOR_VERSION = "2026.08.26.1"
 
 print(f"Generateur dashboard GIL - version {GENERATOR_VERSION}")
 
@@ -20,13 +25,22 @@ def load_payload_template():
     if TEMPLATE_DATA.exists():
         return json.loads(TEMPLATE_DATA.read_text(encoding="utf-8-sig"))
 
-    if not HTML.exists():
+    html_source = (
+        TEMPLATE_HTML
+        if TEMPLATE_HTML.exists()
+        else HTML
+    )
+
+    if not html_source.exists():
         raise SystemExit(
-            "Modele introuvable : copiez dashboard_gil.html dans le meme "
-            "dossier que ce script."
+            "Modele HTML introuvable : "
+            "templates/dashboard_gil_template.html "
+            "et dashboard_gil.html sont absents."
         )
 
-    html = HTML.read_text(encoding="utf-8")
+    html = html_source.read_text(
+        encoding="utf-8"
+    )
     match = re.search(
         r"const fallbackData\s*=\s*([\s\S]*?);\s*let currentData\s*=\s*fallbackData\s*;",
         html,
@@ -919,9 +933,35 @@ payload["prioritesHebdo"] = [{
 } for r in bad]
 
 TEMPLATE_DATA.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-html = HTML.read_text(encoding="utf-8")
-replacement = "const fallbackData = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n    let currentData = fallbackData;"
-html, count = re.subn(r"const fallbackData = [\s\S]*?;\s*let currentData = fallbackData;", replacement, html, count=1)
+if not TEMPLATE_HTML.exists():
+    raise SystemExit(
+        "Template HTML introuvable : "
+        f"{TEMPLATE_HTML}"
+    )
+
+# Toujours repartir du template courant.
+# Ainsi toutes les évolutions UI/JS/CSS sont propagées
+# dans dashboard_gil.html à chaque génération.
+html = TEMPLATE_HTML.read_text(
+    encoding="utf-8"
+)
+
+replacement = (
+    "const fallbackData = "
+    + json.dumps(
+        payload,
+        ensure_ascii=False,
+        separators=(",", ":")
+    )
+    + ";\n    let currentData = fallbackData;"
+)
+
+html, count = re.subn(
+    r"const fallbackData = [\s\S]*?;\s*let currentData = fallbackData;",
+    replacement,
+    html,
+    count=1
+)
 if count != 1:
     raise SystemExit("Impossible d'injecter les données dans le dashboard classique.")
 HTML.write_text(html, encoding="utf-8")
