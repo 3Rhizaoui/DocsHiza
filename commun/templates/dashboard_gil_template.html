@@ -8523,7 +8523,7 @@ function arrimageSprintConstat(data){
           ' onmouseenter="chartTip(event,this.dataset.tip)"'+
           ' onmousemove="moveChartTip(event)"'+
           ' onmouseleave="hideChartTip()"'+
-          ' onclick="showDetail(\'arrimagePieSegment\',\''+sid+'\')"'+
+          ''+
           ' style="cursor:pointer"';
 
         const sliceMid = (a0 + a1) / 2;
@@ -10698,6 +10698,36 @@ window.addEventListener(
   );
 
 })();
+
+
+
+
+/* ==========================================================
+   GIL_TREE_NO_DETAIL_NAV_V1
+   L'arborescence Domaine > Sous-domaine > Flux
+   reste sur la page courante.
+   ========================================================== */
+
+document.addEventListener('click', function(event){
+
+  const summary = event.target.closest(
+    '.arrimageTreeDomain > summary,'+
+    '.arrimageTreeSubdomain > summary'
+  );
+
+  if(!summary){
+    return;
+  }
+
+  /*
+   * On laisse le comportement natif de <details>/<summary>
+   * ouvrir/replier l'arborescence.
+   * On bloque seulement la propagation vers un parent
+   * qui pourrait ouvrir la page de détail.
+   */
+  event.stopPropagation();
+
+}, true);
 
 
 </script>
