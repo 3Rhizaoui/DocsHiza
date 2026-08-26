@@ -6158,6 +6158,317 @@ details[open] > summary .arrimageTreeArrow::before{
 }
 
 
+
+
+/* ==========================================================
+   GIL_PRINT_SMART_COMPACT_V1
+   Même structure que l'écran, mais sans espaces inutiles.
+   ========================================================== */
+
+@media print{
+
+  @page{
+    size:A4 landscape;
+    margin:6mm;
+  }
+
+  html,
+  body{
+    width:100% !important;
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+
+    margin:0 !important;
+    padding:0 !important;
+
+    background:#fff !important;
+
+    overflow:visible !important;
+  }
+
+
+  /* --------------------------------------------------------
+     Structure générale
+     -------------------------------------------------------- */
+
+  main,
+  #dashboardView,
+  .stack,
+  .arrimageStatusLayout,
+  .arrimageSprintBottomRow{
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+
+    margin-top:0 !important;
+    margin-bottom:6px !important;
+
+    padding-top:0 !important;
+    padding-bottom:0 !important;
+
+    overflow:visible !important;
+  }
+
+
+  /* --------------------------------------------------------
+     Les cartes prennent uniquement la hauteur nécessaire
+     -------------------------------------------------------- */
+
+  .panel,
+  section,
+  .graphPanel,
+  .histBox,
+  .arrimagePieCard,
+  .arrimageConstatCard,
+  .arrimageStatusCard,
+  .arrimageSprintPrioritiesCard,
+  #healthGauge{
+
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+
+    margin-top:0 !important;
+    margin-bottom:6px !important;
+
+    overflow:visible !important;
+
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+
+
+  /* --------------------------------------------------------
+     Première ligne :
+     Santé / Répartition / Constat
+     -------------------------------------------------------- */
+
+  .arrimageStatusLayout{
+    display:grid !important;
+
+    grid-template-columns:
+      repeat(3,minmax(0,1fr)) !important;
+
+    grid-template-rows:auto !important;
+
+    align-items:stretch !important;
+
+    gap:6px !important;
+  }
+
+  .arrimageStatusLayout > #healthGauge,
+  .arrimagePieMain,
+  .arrimageConstatStack{
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+
+    align-self:stretch !important;
+  }
+
+
+  /* --------------------------------------------------------
+     Camembert
+     -------------------------------------------------------- */
+
+  .arrimagePieWrap{
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+
+    margin:0 !important;
+    padding:0 !important;
+
+    align-items:center !important;
+  }
+
+  .arrimagePieSvg{
+    height:auto !important;
+    max-height:150px !important;
+  }
+
+
+  /* --------------------------------------------------------
+     Compteur sprint
+     -------------------------------------------------------- */
+
+  .speedGauge{
+    margin-top:0 !important;
+    margin-bottom:0 !important;
+
+    max-height:120px !important;
+  }
+
+  .speedText{
+    margin-top:-6px !important;
+    margin-bottom:0 !important;
+  }
+
+
+  /* --------------------------------------------------------
+     4 cartes statuts
+     -------------------------------------------------------- */
+
+  .arrimageStatusCards,
+  .arrimageStatusCardsGrid,
+  .arrimageStatusCardsRow{
+    display:grid !important;
+
+    grid-template-columns:
+      repeat(4,minmax(0,1fr)) !important;
+
+    align-items:stretch !important;
+
+    gap:6px !important;
+
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+  }
+
+
+  .arrimageStatusCard{
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+  }
+
+
+  /* --------------------------------------------------------
+     Arborescences : pas de scroll interne dans PDF
+     -------------------------------------------------------- */
+
+  .arrimageTree,
+  .arrimageTreeDomainBody,
+  .arrimageTreeFluxList,
+  .arrimageCardBody,
+  .arrimageStatusCardBody{
+
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+
+    overflow:visible !important;
+  }
+
+
+  /* --------------------------------------------------------
+     Constat sprint + priorités
+     -------------------------------------------------------- */
+
+  .arrimageSprintBottomRow{
+    display:grid !important;
+
+    grid-template-columns:
+      minmax(0,1.95fr)
+      minmax(250px,1fr) !important;
+
+    gap:6px !important;
+
+    align-items:stretch !important;
+  }
+
+  .arrimageSprintConstatCard,
+  .arrimageSprintPrioritiesCard{
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+
+    overflow:visible !important;
+  }
+
+
+  /* --------------------------------------------------------
+     Titres / contenu :
+     réduire uniquement les respirations excessives
+     -------------------------------------------------------- */
+
+  h1,
+  h2,
+  h3,
+  p{
+    page-break-after:avoid;
+  }
+
+  .panelBody,
+  .chartBox,
+  .arrimageConstatCard,
+  .arrimagePieMain,
+  .arrimageStatusCard,
+  .arrimageSprintPrioritiesCard{
+
+    padding-top:7px !important;
+    padding-bottom:7px !important;
+  }
+
+
+  /* --------------------------------------------------------
+     Sections suivantes :
+     conserver l'ordre normal sans grand blanc
+     -------------------------------------------------------- */
+
+  section{
+    margin-top:0 !important;
+    margin-bottom:6px !important;
+
+    break-before:auto !important;
+    page-break-before:auto !important;
+  }
+
+
+  /* --------------------------------------------------------
+     Tableaux
+     -------------------------------------------------------- */
+
+  table{
+    page-break-inside:auto !important;
+  }
+
+  tr{
+    page-break-inside:avoid !important;
+    break-inside:avoid !important;
+  }
+
+  thead{
+    display:table-header-group !important;
+  }
+
+
+  /* --------------------------------------------------------
+     Supprimer tous les scrolls internes
+     -------------------------------------------------------- */
+
+  [style*="overflow"],
+  [class*="scroll"]{
+    max-height:none !important;
+  }
+
+
+  /* --------------------------------------------------------
+     Ne jamais afficher les contrôles d'action dans le PDF
+     -------------------------------------------------------- */
+
+  .actions,
+  .back,
+  #gilSprintDetailToggleStatic,
+  .chartTooltip{
+    display:none !important;
+  }
+
+
+  /* --------------------------------------------------------
+     Conserver les couleurs / ombres légères
+     -------------------------------------------------------- */
+
+  *{
+    -webkit-print-color-adjust:exact !important;
+    print-color-adjust:exact !important;
+  }
+
+}
+
+
 </style>
 
 </head>
