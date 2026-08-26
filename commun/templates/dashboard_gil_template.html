@@ -7278,7 +7278,7 @@ details[open] > summary .arrimageTreeArrow::before{
 
           return (
             '<details class="arrimageTreeDomain">'+
-              '<summary>'+
+              '<summary onclick="event.stopPropagation()">'+
                 '<span class="arrimageTreeArrow"></span>'+
                 '<span class="arrimageTreeLabel">'+
                   esc(domain)+
@@ -7301,7 +7301,7 @@ details[open] > summary .arrimageTreeArrow::before{
 
                   return (
                     '<details class="arrimageTreeSubdomain">'+
-                      '<summary>'+
+                      '<summary onclick="event.stopPropagation()">'+
                         '<span class="arrimageTreeArrow"></span>'+
                         '<span class="arrimageTreeLabel">'+
                           esc(subdomain)+
@@ -7358,7 +7358,12 @@ details[open] > summary .arrimageTreeArrow::before{
       );
     }
 
-    /* GIL_SPRINT_CONSTAT_V1_JS_START */
+    
+/* GIL_ARRIMAGE_TREE_STOP_PARENT_NAV_V2
+   Les summary ouvrent/replient l'arbre sans déclencher
+   la navigation de la carte parente.
+*/
+/* GIL_SPRINT_CONSTAT_V1_JS_START */
 
 function arrimageSprintGrouped(items, refFn){
   const map = {};
