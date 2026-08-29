@@ -1285,6 +1285,92 @@ body{
    ========================================================== */
 
 
+
+
+/* ==========================================================
+   GIL_HOME_PROJECT_REFRESH_V2
+   Rafraîchissement des données du projet depuis la Home
+   ========================================================== */
+
+.gilProjectRefresh{
+  margin-top:16px;
+}
+
+.gilProjectRefreshButton{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+
+  min-height:40px;
+
+  padding:9px 16px;
+
+  border:0;
+  border-radius:8px;
+
+  background:#0865e8;
+  color:#fff;
+
+  font-family:inherit;
+  font-size:13px;
+  font-weight:750;
+
+  cursor:pointer;
+
+  box-shadow:
+    0 4px 10px
+    rgba(8,101,232,.18);
+}
+
+.gilProjectRefreshButton:hover{
+  transform:translateY(-1px);
+}
+
+.gilProjectRefreshButton:disabled{
+  cursor:wait;
+  opacity:.65;
+  transform:none;
+}
+
+.gilProjectRefreshIcon{
+  font-size:18px;
+  line-height:1;
+}
+
+.gilProjectRefreshStatus{
+  min-height:16px;
+
+  margin-top:7px;
+
+  color:#66758d;
+
+  font-size:12px;
+  line-height:1.4;
+}
+
+
+
+
+/* ==========================================================
+   GIL_DEFAULT_ZOOM_75_V1
+   Affichage portail par défaut à 75 %
+   ========================================================== */
+
+html{
+  zoom:75%;
+}
+
+/* Firefox ne gère pas zoom de la même façon */
+@supports not (zoom: 1){
+  body{
+    transform:scale(.75);
+    transform-origin:top left;
+    width:133.333333%;
+  }
+}
+
+
 </style>
 </head>
 
@@ -1432,13 +1518,13 @@ body{
         <ul class="gilCardList">
 
           <li>
-            <a href="rapport_general_gil.html">
+            <a href="reporting/general/index.html">
               Rapport général GIL (KPI)
             </a>
           </li>
 
           <li>
-            <a href="reporting_sprint.html">
+            <a href="reporting/sprint/index.html">
               Reporting par Sprint
             </a>
           </li>
@@ -1630,6 +1716,33 @@ body{
         Confluence
       </div>
 
+      <!-- GIL_HOME_PROJECT_REFRESH_V2 -->
+      <div class="gilProjectRefresh">
+
+        <button
+          id="gilRefreshProjectButton"
+          class="gilProjectRefreshButton"
+          type="button"
+          onclick="runLocalAction('jira')"
+        >
+          <span
+            class="gilProjectRefreshIcon"
+            aria-hidden="true"
+          >↻</span>
+
+          <span id="gilRefreshProjectLabel">
+            Rafraîchir les données du projet
+          </span>
+        </button>
+
+        <div
+          id="gilRefreshProjectStatus"
+          class="gilProjectRefreshStatus"
+          aria-live="polite"
+        ></div>
+
+      </div>
+
     </article>
 
 
@@ -1637,5 +1750,8 @@ body{
 
 </div>
 
+
+  <!-- Actions communes du portail GIL -->
+  <script src="commun/js/actions.js"></script>
 </body>
 </html>

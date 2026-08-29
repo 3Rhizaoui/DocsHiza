@@ -582,7 +582,7 @@ echo Objectif :
 
 
 
-echo   - publier commun\dashboard_gil.html
+echo   - publier les donnees GIL puis rafraichir commun\portal\
 
 
 
@@ -1132,7 +1132,7 @@ echo Ouverture dashboard actualise :
 
 
 
-echo   http://127.0.0.1:8765/dashboard_gil.html?_gil_refresh=%GIL_TS%
+echo   http://127.0.0.1:8765/portal/?_gil_refresh=%GIL_TS%
 
 
 
@@ -1140,7 +1140,7 @@ echo   http://127.0.0.1:8765/dashboard_gil.html?_gil_refresh=%GIL_TS%
 
 
 
-start "" "http://127.0.0.1:8765/dashboard_gil.html?_gil_refresh=%GIL_TS%"
+start "" "http://127.0.0.1:8765/portal/?_gil_refresh=%GIL_TS%"
 
 
 

@@ -14,7 +14,7 @@ echo Dossier projet :
 echo   %CD%
 echo.
 echo Le navigateur va ouvrir :
-echo   http://127.0.0.1:8765/dashboard_gil.html
+echo   http://127.0.0.1:8765/portal/
 echo.
 echo Ensuite :
 echo   1. Cliquer sur Importer JIRA

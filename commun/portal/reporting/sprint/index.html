@@ -8,7 +8,7 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <title>Dashboard GIL - Pilotage par Sprint</title>
+  <title>GIL - Reporting par Sprint</title>
 
   <style>
 
@@ -6950,175 +6950,52 @@ body{
 
 
 /* ==========================================================
-   GIL_HEALTH_TITLE_OVERLAP_FIX_V1
-   Corrige le chevauchement entre le titre KPI et le soleil.
+   GIL_REPORTING_SPRINT_SIMPLE_HIDE_V10
+
+   Le dashboard complet est chargé normalement.
+   On masque seulement la première partie après initialisation.
    ========================================================== */
 
-/* La carte garde suffisamment de place pour son titre */
-.arrimageStatusLayout > #healthGauge{
-  position:relative !important;
-  padding-top:58px !important;
+/* bouton détails inutile dans cette page */
+#gilSprintDetailToggleStatic{
+  display:none !important;
 }
 
-/* Titre KPI */
-#healthGauge .gilKpiHealthTitle,
-#healthGauge > .gilKpiTitle{
-  position:absolute !important;
-
-  top:14px !important;
-  left:16px !important;
-  right:16px !important;
-
-  z-index:5 !important;
-
-  margin:0 !important;
-
-  line-height:1.25 !important;
+/* les 3 zones Sprint restent toujours visibles */
+#gilSprintComparisonSection,
+#gilSprintEnvironmentSection,
+#gilSprintWeeklyPrioritiesSection{
+  display:block !important;
+  visibility:visible !important;
+  opacity:1 !important;
+  max-height:none !important;
+  overflow:visible !important;
 }
 
-/* Le contenu visuel du compteur descend légèrement */
-#healthGauge .gaugeWrap,
-#healthGauge .healthGaugeWrap,
-#healthGauge svg,
-#healthGauge canvas{
-  position:relative !important;
-  z-index:1 !important;
-}
-
-/* Soleil / indicateur supérieur */
-#healthGauge .healthSun,
-#healthGauge .gilHealthSun,
-#healthGauge .sun{
-  top:54px !important;
-}
-
-/* Impression */
-@media print{
-
-  .arrimageStatusLayout > #healthGauge{
-    padding-top:52px !important;
-  }
-
+#gilSprintComparisonSection[hidden],
+#gilSprintEnvironmentSection[hidden],
+#gilSprintWeeklyPrioritiesSection[hidden]{
+  display:block !important;
 }
 
 
 
 
 /* ==========================================================
-   GIL_HEALTH_WEATHER_POSITION_FIX_V2
-   Séparation titre / indicateur météo
+   GIL_DEFAULT_ZOOM_75_V1
+   Affichage portail par défaut à 75 %
    ========================================================== */
 
-/*
- * La carte devient la référence de positionnement.
- */
-.arrimageStatusLayout > #healthGauge{
-  position:relative !important;
+html{
+  zoom:75%;
 }
 
-
-/*
- * Titre :
- * espace réservé à droite pour que le soleil
- * ne puisse jamais venir dessus.
- */
-#healthGauge .gilKpiHealthTitle{
-  position:absolute !important;
-
-  top:14px !important;
-  left:16px !important;
-  right:60px !important;
-
-  width:auto !important;
-
-  margin:0 !important;
-  padding:0 !important;
-
-  z-index:10 !important;
-
-  white-space:normal !important;
-  line-height:1.25 !important;
-}
-
-
-/*
- * VRAI élément soleil / météo.
- * Il est placé complètement à droite du titre.
- */
-#healthGauge .healthWeatherIndicator{
-  position:absolute !important;
-
-  top:10px !important;
-  right:16px !important;
-  left:auto !important;
-
-  margin:0 !important;
-
-  width:34px !important;
-  height:34px !important;
-
-  display:flex !important;
-  align-items:center !important;
-  justify-content:center !important;
-
-  font-size:27px !important;
-  line-height:1 !important;
-
-  transform:none !important;
-
-  z-index:11 !important;
-}
-
-
-/*
- * Réserver la première ligne au titre + météo.
- */
-.arrimageStatusLayout > #healthGauge{
-  padding-top:58px !important;
-}
-
-
-/*
- * Le reste de la jauge reste sous le titre.
- */
-#healthGauge .speedGauge,
-#healthGauge .speedText,
-#healthGauge .healthLegend{
-  position:relative !important;
-  z-index:1 !important;
-}
-
-
-@media print{
-
-  #healthGauge .gilKpiHealthTitle{
-    right:52px !important;
+@supports not (zoom: 1){
+  body{
+    transform:scale(.75);
+    transform-origin:top left;
+    width:133.333333%;
   }
-
-  #healthGauge .healthWeatherIndicator{
-    top:8px !important;
-    right:12px !important;
-    font-size:23px !important;
-  }
-
-}
-
-
-
-
-/* GIL_WEATHER_INLINE_POSITION_V3 */
-
-/*
- * Le titre réserve explicitement la partie droite
- * pour l'indicateur météo.
- */
-.arrimageStatusLayout > #healthGauge > .gilKpiHealthTitle{
-  display:block !important;
-  width:calc(100% - 80px) !important;
-  max-width:calc(100% - 80px) !important;
-  padding-right:0 !important;
-  margin-right:80px !important;
-  box-sizing:border-box !important;
 }
 
 
@@ -7156,7 +7033,7 @@ body{
 
 </div></header>
 
-  <a class="gilPortalBack" href="index.html">← Retour à l’accueil GIL</a>
+  <a class="gilPortalBack" href="../../index.html">← Retour à l’accueil GIL</a>
 
 
 <!-- ========================================================
@@ -7172,7 +7049,7 @@ body{
 
     <img
       class="gilGeneralReportLogo"
-      src="assets/gil_logo.png"
+      src="../../assets/gil_logo.png"
       alt="GIL - Group Integration Layer"
     >
 
@@ -7182,12 +7059,12 @@ body{
   <div class="gilGeneralReportHeading">
 
     <h1>
-      Rapport général GIL (KPI)
+      Reporting par Sprint
     </h1>
 
     <p>
-      Pilotage, Intégration et Qualité d'arrimage des flux entre
-      ESTREEM, GIL et les entités BNP Paribas
+      Suivi comparatif des Sprints, évolution des demandes d’arrimage
+      entre Sprint N-1 et Sprint actuel
     </p>
 
   </div>
@@ -7238,7 +7115,7 @@ body{
         <div id="arrimageOctaneHistograms" class="histGrid arrimageOctaneHistGrid"></div>
       </section>
 
-      <section id="gilSprintComparisonSection"><h2 class="gilKpiTitle" data-gil-kpi="evolution" tabindex="0">Évolution inter-sprints <span class="gilKpiInfoIcon" aria-hidden="true">ⓘ</span></h2><div class="trendLayout"><div id="weeklyChart" class="chartBox"></div><table id="weeklyTrend"></table></div></section>
+      <section id="gilSprintComparisonSection"><h2 class="gilKpiTitle" data-gil-kpi="evolution" tabindex="0">Comparaison Sprint N-1 / Sprint actuel <span class="gilKpiInfoIcon" aria-hidden="true">ⓘ</span></h2><div class="trendLayout"><div id="weeklyChart" class="chartBox"></div><table id="weeklyTrend"></table></div></section>
 
       <section id="gilSprintEnvironmentSection"><h2 class="gilKpiTitle" data-gil-kpi="sitUat" tabindex="0">Avancement SIT/UAT par semaine, domaine et sous-domaine <span class="gilKpiInfoIcon" aria-hidden="true">ⓘ</span></h2><table id="environmentBreakdown"></table></section>
 
@@ -7557,7 +7434,7 @@ body{
 
         document.getElementById('healthGauge').innerHTML =
           '<div class="gilKpiHealthTitle gilKpiTitle" data-gil-kpi="arrimageGlobal">Statut global des flux d’arrimage <span class="gilKpiInfoIcon" aria-hidden="true">ⓘ</span></div>'+
-          '<div class="healthWeatherIndicator" aria-hidden="true" style="position:absolute !important; top:14px !important; right:18px !important; left:auto !important; margin:0 !important; transform:none !important; z-index:20 !important; font-size:26px !important; line-height:1 !important;">'+healthWeather+'</div>'+
+          '<div class="healthWeatherIndicator" aria-hidden="true">'+healthWeather+'</div>'+
           speedGauge(score, scoreLevel, data.sprintCourant||'Sprint');
       }
       const arrimagePieEl = document.getElementById('arrimagePie3d'); if(arrimagePieEl) arrimagePieEl.innerHTML = renderArrimagePie3d(data);
@@ -11982,6 +11859,122 @@ document.addEventListener('click', function(event){
 
 
 </script>
+
+
+
+<!-- GIL_REPORTING_SPRINT_SIMPLE_HIDE_V10 -->
+<script>
+(function(){
+
+  function hideGeneralPart(){
+
+    const comparison =
+      document.getElementById('gilSprintComparisonSection');
+
+    const environment =
+      document.getElementById('gilSprintEnvironmentSection');
+
+    const priorities =
+      document.getElementById('gilSprintWeeklyPrioritiesSection');
+
+    if(!comparison || !environment || !priorities){
+      console.error('[GIL Sprint V10] sections Sprint introuvables');
+      return;
+    }
+
+    /*
+     * Ouvrir les détails Sprint.
+     */
+    [comparison, environment, priorities].forEach(el => {
+      el.hidden = false;
+      el.removeAttribute('hidden');
+      el.style.setProperty('display', 'block', 'important');
+      el.style.setProperty('visibility', 'visible', 'important');
+    });
+
+    /*
+     * Masquer tout ce qui est avant la comparaison
+     * dans le même conteneur principal.
+     */
+    let parent = comparison.parentElement;
+
+    if(parent){
+      Array.from(parent.children).forEach(child => {
+        if(
+          child !== comparison &&
+          child !== environment &&
+          child !== priorities
+        ){
+          child.style.setProperty(
+            'display',
+            'none',
+            'important'
+          );
+        }
+      });
+    }
+
+    /*
+     * Si les priorités sont dans un autre stack,
+     * masquer ses frères mais conserver la section.
+     */
+    const prioritiesParent = priorities.parentElement;
+
+    if(prioritiesParent && prioritiesParent !== parent){
+      Array.from(prioritiesParent.children).forEach(child => {
+        if(child !== priorities){
+          child.style.setProperty(
+            'display',
+            'none',
+            'important'
+          );
+        }
+      });
+    }
+
+    /*
+     * Masquer les autres blocs directs du dashboard
+     * qui ne contiennent pas nos sections Sprint.
+     */
+    const root = document.getElementById('dashboardView');
+
+    if(root){
+      Array.from(root.children).forEach(child => {
+
+        const containsWanted =
+          child.contains(comparison) ||
+          child.contains(environment) ||
+          child.contains(priorities);
+
+        if(!containsWanted){
+          child.style.setProperty(
+            'display',
+            'none',
+            'important'
+          );
+        }
+
+      });
+    }
+
+    window.dispatchEvent(new Event('resize'));
+
+    console.log('[GIL Sprint V10] première partie masquée');
+  }
+
+  /*
+   * On laisse d'abord le dashboard original se construire.
+   */
+  window.addEventListener('load', function(){
+
+    setTimeout(hideGeneralPart, 700);
+    setTimeout(hideGeneralPart, 1400);
+
+  });
+
+})();
+</script>
+
 
 </body>
 
