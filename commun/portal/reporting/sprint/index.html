@@ -7145,11 +7145,67 @@ html{
 
    async function loadData(){
 
-     let data = fallbackData;
+      let data =
+        fallbackData;
 
-      /* JIRA stable : chargement externe rapport_gil_v6_data.json désactivé ; fallbackData embarqué utilisé */
+      try {
+
+        const response =
+          await fetch(
+            "../../commun/data/gil_project.json"
+            + "?t="
+            + Date.now(),
+            {
+              cache:"no-store"
+            }
+          );
+
+        if(response.ok){
+
+          const portalData =
+            await response.json();
+
+          if(
+            portalData
+            &&
+            typeof portalData === "object"
+          ){
+            data = portalData;
+          }
+
+        }else{
+
+          console.warn(
+            "[GIL Portal] gil_project.json HTTP",
+            response.status
+          );
+        }
+
+      } catch (error) {
+
+        console.warn(
+          "[GIL Portal] "
+          + "gil_project.json indisponible, "
+          + "fallbackData conservé.",
+          error
+        );
+      }
 
       currentData = data;
+
+      window.__GIL_FINAL_PAYLOAD__ =
+        data;
+
+      window.currentData =
+        data;
+
+      window.comparaisonOfficielleJira =
+        data.comparaisonSprints
+        || [];
+
+      window.diagnosticSprintsJira =
+        data.diagnosticSprintsJira
+        || {};
 
       render(data);
 

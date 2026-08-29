@@ -1124,6 +1124,18 @@ echo.
 
 
 
+rem GIL_PORTAL_PUBLICATION_V1
+echo.
+echo ============================================================
+echo [PORTAL] PUBLICATION DES DONNEES CENTRALISEES
+echo ============================================================
+python "%PROJECT_DIR%\commun\portal\commun\scripts\publier_portal.py"
+if errorlevel 1 (
+  echo [PORTAL][WARN] Publication Portal impossible.
+) else (
+  echo [PORTAL][OK] Donnees Portal publiees.
+)
+echo.
 echo Ouverture dashboard actualise :
 
 
