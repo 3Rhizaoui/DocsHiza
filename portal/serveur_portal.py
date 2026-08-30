@@ -308,6 +308,11 @@ class Handler(SimpleHTTPRequestHandler):
                 command=str(JIRA_PIPELINE),
             )
 
+            pipeline_command = (
+                f'"{sys.executable}" '
+                f'"{JIRA_PIPELINE}"'
+            )
+
             subprocess.Popen(
                 [
                     "cmd.exe",
@@ -316,8 +321,7 @@ class Handler(SimpleHTTPRequestHandler):
                     "GIL Portal - Pipeline JIRA",
                     "cmd.exe",
                     "/k",
-                    sys.executable,
-                    str(JIRA_PIPELINE),
+                    pipeline_command,
                 ],
                 cwd=str(PROJECT),
             )
