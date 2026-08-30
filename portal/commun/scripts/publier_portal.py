@@ -1,5 +1,9 @@
 from pathlib import Path
 from gil_logging import log_event, log_exception
+from extraction.jira.gil_paths import (
+    PAYLOAD_DASHBOARD_FINAL,
+    DASHBOARD_GIL_DATA,
+)
 from datetime import datetime
 import json
 import os
@@ -40,15 +44,8 @@ DATA_DIR.mkdir(
 
 
 SOURCE_CANDIDATES = [
-
-    PROJECT.parent
-    / "jira"
-    / "presentation"
-    / "payload_dashboard_final.json",
-
-    PROJECT.parent
-    / "jira"
-    / "dashboard_gil_data.json",
+    PAYLOAD_DASHBOARD_FINAL,
+    DASHBOARD_GIL_DATA,
 ]
 
 
