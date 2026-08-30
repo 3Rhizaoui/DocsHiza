@@ -308,22 +308,19 @@ class Handler(SimpleHTTPRequestHandler):
                 command=str(JIRA_PIPELINE),
             )
 
-            pipeline_command = (
-                f'"{sys.executable}" '
-                f'"{JIRA_PIPELINE}"'
+            creationflags = getattr(
+                subprocess,
+                "CREATE_NEW_CONSOLE",
+                0,
             )
 
             subprocess.Popen(
                 [
-                    "cmd.exe",
-                    "/c",
-                    "start",
-                    "GIL Portal - Pipeline JIRA",
-                    "cmd.exe",
-                    "/k",
-                    pipeline_command,
+                    sys.executable,
+                    str(JIRA_PIPELINE),
                 ],
                 cwd=str(PROJECT),
+                creationflags=creationflags,
             )
 
             self.send_response(202)
