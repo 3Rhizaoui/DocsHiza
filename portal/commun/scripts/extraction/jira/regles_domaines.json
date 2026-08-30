@@ -1,0 +1,31 @@
+{
+  "champs": {
+    "domaine": "",
+    "sous_domaine": "",
+    "epic_link": "customfield_10014",
+    "sprint": "",
+    "severite": "",
+    "environnement": ""
+  },
+  "types": {
+    "epic": ["Epic"],
+    "bug": ["Bug", "Defect", "Anomalie"],
+    "tache": ["Story", "Task", "Sub-task", "T\u00e2che", "Sous-t\u00e2che"]
+  },
+  "statuts_resolus": ["Done", "Closed", "Resolved", "Termin\u00e9", "R\u00e9solu", "Corrig\u00e9", "Valid\u00e9"],
+  "mappings": [
+    {"contient": ["acquisition", "acquiring"], "domaine": "Acquisition", "sous_domaine": ""},
+    {"contient": ["issuing", "emission", "\u00e9mission"], "domaine": "Issuing", "sous_domaine": ""},
+    {"contient": ["onboarding"], "domaine": "", "sous_domaine": "Onboarding"},
+    {"contient": ["authoriz", "autorisation"], "domaine": "", "sous_domaine": "Authorize"},
+    {"contient": ["contest", "litige"], "domaine": "", "sous_domaine": "Contestation"},
+    {"contient": ["credit com", "cr\u00e9dit com", "commercant", "commer\u00e7ant"], "domaine": "", "sous_domaine": "Cr\u00e9dit commer\u00e7ant"},
+    {"contient": ["ged"], "domaine": "", "sous_domaine": "GED"}
+  ],
+  "valeurs_par_defaut": {
+    "domaine": "\u00c0 qualifier",
+    "sous_domaine": "\u00c0 qualifier",
+    "environnement": "SIT",
+    "sprint": "Sprint courant"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "gil-portal-pages-v1",
+  "home": {
+    "id": "home",
+    "title": "Accueil",
+    "path": "index.html",
+    "data": "commun/data/gil_home.json"
+  },
+  "reporting": [
+    {
+      "id": "reporting-general",
+      "title": "Rapport général GIL",
+      "path": "reporting/general/index.html",
+      "data": "commun/data/gil_reporting_general.json",
+      "enabled": true
+    },
+    {
+      "id": "reporting-sprint",
+      "title": "Reporting par Sprint",
+      "path": "reporting/sprint/index.html",
+      "data": "commun/data/gil_reporting_sprint.json",
+      "enabled": true
+    }
+  ],
+  "qualite": []
+}

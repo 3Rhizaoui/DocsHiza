@@ -1129,7 +1129,7 @@ echo.
 echo ============================================================
 echo [PORTAL] PUBLICATION DES DONNEES CENTRALISEES
 echo ============================================================
-python "%PROJECT_DIR%\commun\portal\commun\scripts\publier_portal.py"
+python "%PROJECT_DIR%\portal\commun\scripts\publier_portal.py"
 if errorlevel 1 (
   echo [PORTAL][WARN] Publication Portal impossible.
 ) else (

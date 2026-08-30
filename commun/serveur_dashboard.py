@@ -12,8 +12,7 @@ PROJECT = ROOT.parent
 PORT = 8765
 
 ACTIONS = {
-    "excel": PROJECT / "excel" / "Importer_Excel.cmd",
-    "confluence": PROJECT / "confluence" / "Importer_Confluence.cmd",
+
     "jira": PROJECT / "jira" / "Importer_JIRA.cmd",
     "sync": PROJECT / "Synchroniser_Tout.cmd",
     "archive": PROJECT / "Archiver_Sprint.cmd",
@@ -85,7 +84,7 @@ exit /b %RC%
 
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=str(ROOT), **kwargs)
+        super().__init__(*args, directory=str(PROJECT), **kwargs)
 
     def end_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
