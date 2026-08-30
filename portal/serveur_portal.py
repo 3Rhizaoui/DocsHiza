@@ -93,10 +93,11 @@ def write_log(
 
 
 
-JIRA_IMPORT = (
-    PROJECT
-    / "jira"
-    / "Importer_JIRA.cmd"
+JIRA_PIPELINE = (
+    PORTAL
+    / "commun"
+    / "scripts"
+    / "pipeline.py"
 )
 
 
@@ -273,7 +274,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_error(404)
             return
 
-        if not JIRA_IMPORT.exists():
+        if not JIRA_PIPELINE.exists():
 
             self.send_response(500)
             self.send_header(
@@ -284,8 +285,8 @@ class Handler(SimpleHTTPRequestHandler):
 
             self.wfile.write(
                 (
-                    "Importer_JIRA.cmd introuvable :\n"
-                    + str(JIRA_IMPORT)
+                    "Pipeline JIRA Portal introuvable :\n"
+                    + str(JIRA_PIPELINE)
                 ).encode("utf-8")
             )
             return
@@ -297,14 +298,14 @@ class Handler(SimpleHTTPRequestHandler):
                 "INFO",
                 "JIRA_PIPELINE_REQUESTED",
                 endpoint="/action/jira",
-                command=str(JIRA_IMPORT),
+                command=str(JIRA_PIPELINE),
             )
 
             write_log(
                 "jira",
                 "INFO",
-                "JIRA_IMPORT_START",
-                command=str(JIRA_IMPORT),
+                "JIRA_PIPELINE_START",
+                command=str(JIRA_PIPELINE),
             )
 
             subprocess.Popen(
@@ -312,13 +313,13 @@ class Handler(SimpleHTTPRequestHandler):
                     "cmd.exe",
                     "/c",
                     "start",
-                    "Dashboard GIL - action jira",
+                    "GIL Portal - Pipeline JIRA",
                     "cmd.exe",
                     "/k",
-                    "call",
-                    str(JIRA_IMPORT),
+                    sys.executable,
+                    str(JIRA_PIPELINE),
                 ],
-                cwd=str(JIRA_IMPORT.parent),
+                cwd=str(PROJECT),
             )
 
             self.send_response(202)
@@ -330,7 +331,7 @@ class Handler(SimpleHTTPRequestHandler):
 
             self.wfile.write(
                 (
-                    "Pipeline JIRA lancé.\n"
+                    "Pipeline JIRA Portal lancé.\n"
                     "Connecte-toi au SSO Jira puis "
                     "continue dans la fenêtre CMD."
                 ).encode("utf-8")
@@ -341,14 +342,14 @@ class Handler(SimpleHTTPRequestHandler):
             write_log(
                 "errors",
                 "ERROR",
-                "JIRA_LAUNCH_ERROR",
+                "JIRA_PIPELINE_LAUNCH_ERROR",
                 error=str(exc),
             )
 
             write_log(
                 "jira",
                 "ERROR",
-                "JIRA_IMPORT_LAUNCH_ERROR",
+                "JIRA_PIPELINE_LAUNCH_ERROR",
                 error=str(exc),
             )
 
@@ -361,7 +362,7 @@ class Handler(SimpleHTTPRequestHandler):
 
             self.wfile.write(
                 (
-                    "Erreur lancement JIRA : "
+                    "Erreur lancement pipeline JIRA Portal : "
                     + str(exc)
                 ).encode("utf-8")
             )
@@ -391,9 +392,9 @@ if __name__ == "__main__":
         PORTAL,
     )
     print(
-        "Import JIRA :",
-        JIRA_IMPORT,
-        "OK" if JIRA_IMPORT.exists() else "ABSENT",
+        "Pipeline JIRA :",
+        JIRA_PIPELINE,
+        "OK" if JIRA_PIPELINE.exists() else "ABSENT",
     )
     print()
 

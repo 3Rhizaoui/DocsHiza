@@ -3,13 +3,15 @@ import datetime as dt
 import json
 import re
 
-ROOT = Path(__file__).resolve().parents[1]
-JIRA = ROOT / "jira"
+from gil_paths import (
+    SPRINT_PRECEDENT,
+    SPRINT_COURANT,
+    COMPARAISON_SPRINTS,
+)
 
-PREV = JIRA / "sprints" / "sprint_precedent.json"
-CUR = JIRA / "sprints" / "sprint_courant.json"
-OUT = JIRA / "presentation" / "comparaison_sprints.json"
-OUT_ALIAS = JIRA / "comparaison_sprints.json"
+PREV = SPRINT_PRECEDENT
+CUR = SPRINT_COURANT
+OUT = COMPARAISON_SPRINTS
 
 
 def load(path: Path):
@@ -358,7 +360,6 @@ def main():
             )
 
     write(OUT, rows)
-    write(OUT_ALIAS, rows)
 
     print("[OK] Comparaison dashboard compatible HTML produite :")
     print(" -", OUT)

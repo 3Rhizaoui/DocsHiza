@@ -4,10 +4,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
-BRUT = ROOT / "jira_brut.json"
-DIAG = ROOT / "jira_diagnostic.json"
-OUT = ROOT / "sprints_dashboard.json"
+from gil_paths import (
+    JIRA_BRUT,
+    JIRA_DIAGNOSTIC,
+    SPRINTS_DASHBOARD,
+)
+
+BRUT = JIRA_BRUT
+DIAG = JIRA_DIAGNOSTIC
+OUT = SPRINTS_DASHBOARD
 
 
 def load_json(path: Path):

@@ -8,15 +8,16 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+from gil_paths import (
+    PAYLOAD_DASHBOARD_FINAL,
+    COMPARAISON_SPRINTS,
+)
 
-PAYLOAD = ROOT / "jira" / "presentation" / "payload_dashboard_final.json"
-COMPARAISON = ROOT / "jira" / "presentation" / "comparaison_sprints.json"
+PAYLOAD = PAYLOAD_DASHBOARD_FINAL
+COMPARAISON = COMPARAISON_SPRINTS
 
 OUTPUTS = [
     PAYLOAD,
-    ROOT / "jira" / "dashboard_gil_data.json",
-    ROOT / "commun" / "dashboard_gil_data.json",
 ]
 
 GENERIC = {

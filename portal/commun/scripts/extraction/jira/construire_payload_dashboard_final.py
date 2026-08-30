@@ -1,23 +1,23 @@
 from pathlib import Path
-import base64
 import copy
 import datetime as dt
 import json
 import re
 import unicodedata
 
-ROOT = Path(__file__).resolve().parents[1]
-COMMUN = ROOT / "commun"
-JIRA = ROOT / "jira"
+from gil_paths import (
+    PAYLOAD_BASE,
+    DASHBOARD_GIL_DATA,
+    COMPARAISON_SPRINTS,
+    SPRINT_COURANT,
+    SPRINT_PRECEDENT,
+    PAYLOAD_DASHBOARD_FINAL,
+    ensure_runtime_dirs,
+)
 
-TEMPLATE_HTML = COMMUN / "templates" / "dashboard_gil_template.html"
-
-SOURCE_DASHBOARD = JIRA / "dashboard_gil_data.json"
-COMPARAISON = JIRA / "presentation" / "comparaison_sprints.json"
-SPRINT_COURANT = JIRA / "sprints" / "sprint_courant.json"
-SPRINT_PRECEDENT = JIRA / "sprints" / "sprint_precedent.json"
-
-OUT = JIRA / "presentation" / "payload_dashboard_final.json"
+SOURCE_DASHBOARD = DASHBOARD_GIL_DATA
+COMPARAISON = COMPARAISON_SPRINTS
+OUT = PAYLOAD_DASHBOARD_FINAL
 
 
 def fail(message):
@@ -29,24 +29,6 @@ def read_json(path, default=None):
         return default
     return json.loads(path.read_text(encoding="utf-8", errors="replace"))
 
-
-def extract_template_shell(path):
-    html = path.read_text(encoding="utf-8", errors="replace")
-
-    m = re.search(r'const\s+fallbackData\s*=\s*JSON\.parse\(atob\("([^"]+)"\)\)', html, re.S)
-    if m:
-        return json.loads(base64.b64decode(m.group(1)).decode("utf-8"))
-
-    for pattern in [
-        r"const\s+fallbackData\s*=\s*([\s\S]*?);\s*let\s+currentData",
-        r"const\s+fallbackData\s*=\s*([\s\S]*?);\s*var\s+currentData",
-        r"const\s+fallbackData\s*=\s*([\s\S]*?);\s*window",
-    ]:
-        m = re.search(pattern, html, re.S)
-        if m:
-            return json.loads(m.group(1))
-
-    fail("fallbackData introuvable dans le template")
 
 
 def clean_label(value, fallback=""):
@@ -1061,7 +1043,22 @@ def main():
         if not path.exists():
             fail(f"Source Jira intermédiaire absente : {path}")
 
-    shell = extract_template_shell(TEMPLATE_HTML)
+    ensure_runtime_dirs()
+
+    if not PAYLOAD_BASE.exists():
+        fail(
+            f"Payload de base absent : {PAYLOAD_BASE}"
+        )
+
+    shell = read_json(
+        PAYLOAD_BASE,
+        {}
+    )
+
+    if not isinstance(shell, dict) or not shell:
+        fail(
+            f"Payload de base invalide : {PAYLOAD_BASE}"
+        )
 
     source = read_json(SOURCE_DASHBOARD, {})
 

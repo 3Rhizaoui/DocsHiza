@@ -3,14 +3,18 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
-PROJECT = ROOT.parent
+from gil_paths import (
+    JIRA_DIAGNOSTIC,
+    JIRA_BRUT,
+    DASHBOARD_GIL_DATA,
+    SPRINTS_DASHBOARD,
+    COMPARAISON_SPRINTS,
+    PAYLOAD_DASHBOARD_FINAL,
+)
 
-DIAG = ROOT / "jira_diagnostic.json"
-BRUT = ROOT / "jira_brut.json"
-SOURCE = ROOT / "dashboard_gil_data.json"
-HTML = PROJECT / "commun" / "dashboard_gil.html"
-SPRINTS_DASHBOARD = ROOT / "sprints_dashboard.json"
+DIAG = JIRA_DIAGNOSTIC
+BRUT = JIRA_BRUT
+SOURCE = DASHBOARD_GIL_DATA
 
 
 def load_json(path: Path):
@@ -39,8 +43,21 @@ print("============================================================")
 
 print()
 print("Fichiers produits :")
-for path in [BRUT, DIAG, SPRINTS_DASHBOARD, SOURCE, HTML]:
-    print(f" - {path.name:<28} {'OK' if path.exists() else 'ABSENT'}")
+
+FILES = [
+    BRUT,
+    DIAG,
+    SPRINTS_DASHBOARD,
+    SOURCE,
+    COMPARAISON_SPRINTS,
+    PAYLOAD_DASHBOARD_FINAL,
+]
+
+for path in FILES:
+    print(
+        f" - {path.name:<28} "
+        f"{'OK' if path.exists() else 'ABSENT'}"
+    )
 
 print()
 print("Diagnostic JIRA :")
@@ -117,21 +134,41 @@ print(" - flux             :", len(flux))
 print(" - anomalies        :", len(anomalies))
 
 print()
-print("Publication HTML :")
-if HTML.exists():
-    html = HTML.read_text(encoding="utf-8", errors="replace")
-    print(" - runLocalAction   :", "OK" if "function runLocalAction" in html else "ABSENT")
-    print(" - fallbackData     :", "OK" if "const fallbackData" in html else "ABSENT")
-    print(" - fetch externe    :", "KO" if "fetch('rapport_gil_v6_data.json'" in html or 'fetch(\"rapport_gil_v6_data.json' in html else "OK désactivé")
-    print(" - détail calcul    :", "OK" if "statutSprintCalcul" in html else "ABSENT")
-else:
-    print(" - HTML absent")
+print("Contrôle publication Portal :")
+
+required = [
+    SOURCE,
+    SPRINTS_DASHBOARD,
+    COMPARAISON_SPRINTS,
+    PAYLOAD_DASHBOARD_FINAL,
+]
+
+for path in required:
+    print(
+        f" - {path.name:<28} "
+        f"{'OK' if path.exists() else 'ABSENT'}"
+    )
 
 print()
 print("Résumé :")
-if SOURCE.exists() and HTML.exists():
+missing = [
+    path
+    for path in required
+    if not path.exists()
+]
+
+if SOURCE.exists() and not missing:
     print(" - import exploitable : OUI")
 else:
     print(" - import exploitable : NON")
+
+    if missing:
+        print(
+            " - fichiers manquants :",
+            ", ".join(
+                path.name
+                for path in missing
+            ),
+        )
 
 print("============================================================")

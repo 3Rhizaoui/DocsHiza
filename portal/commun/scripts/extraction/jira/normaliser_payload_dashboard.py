@@ -4,8 +4,12 @@ import unicodedata
 from pathlib import Path
 from copy import deepcopy
 
-ROOT = Path(__file__).resolve().parents[1]
-PAYLOAD = ROOT / "jira" / "presentation" / "payload_dashboard_final.json"
+from gil_paths import (
+    PAYLOAD_DASHBOARD_FINAL,
+    COMPARAISON_SPRINTS,
+)
+
+PAYLOAD = PAYLOAD_DASHBOARD_FINAL
 
 GENERIC = {
     "",
@@ -280,7 +284,7 @@ def main():
         return any(re.search(r"\b[A-Z][A-Z0-9_]+-\d+\b", v) for v in vals)
 
     def load_comparaison_sprints():
-        path = ROOT / "jira" / "presentation" / "comparaison_sprints.json"
+        path = COMPARAISON_SPRINTS
         if not path.exists():
             return []
         try:

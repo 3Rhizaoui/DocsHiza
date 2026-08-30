@@ -2,15 +2,16 @@ import json
 import re
 from pathlib import Path
 
-JIRA = Path(__file__).resolve().parent
-ROOT = JIRA.parent
+from gil_paths import (
+    PAYLOAD_DASHBOARD_FINAL,
+    COMPARAISON_SPRINTS,
+    SPRINT_COURANT,
+    SPRINT_PRECEDENT,
+    JIRA_BRUT,
+)
 
-PAYLOAD = JIRA / "presentation" / "payload_dashboard_final.json"
-COMPARAISON = JIRA / "presentation" / "comparaison_sprints.json"
-SPRINT_COURANT = JIRA / "sprints" / "sprint_courant.json"
-SPRINT_PRECEDENT = JIRA / "sprints" / "sprint_precedent.json"
-JIRA_BRUT = JIRA / "jira_brut.json"
-COMMUN_DATA = ROOT / "commun" / "dashboard_gil_data.json"
+PAYLOAD = PAYLOAD_DASHBOARD_FINAL
+COMPARAISON = COMPARAISON_SPRINTS
 
 EMPTY = {
     "",
@@ -356,8 +357,6 @@ def enrich_payload():
 
     write_json(PAYLOAD, payload)
 
-    if COMMUN_DATA.exists():
-        write_json(COMMUN_DATA, payload)
 
     print("[OK] Payload comparaison enrichi depuis comparaison_sprints.json")
     print("[OK] Tickets indexés :", len(ticket_index))

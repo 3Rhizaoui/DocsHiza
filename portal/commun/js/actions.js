@@ -67,8 +67,9 @@ async function runLocalAction(action) {
     }
 
     /*
-     * Le processus Importer_JIRA.cmd existant
-     * réouvre /?_gil_refresh=... après publication.
+     * Le pipeline JIRA autonome du Portal
+     * publie les nouvelles données puis réouvre
+     * le Portal avec _gil_refresh.
      */
     alert(text);
 

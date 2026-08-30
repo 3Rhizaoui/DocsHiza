@@ -2,13 +2,16 @@ from pathlib import Path
 import json
 import sys
 
-ROOT = Path(__file__).resolve().parents[1]
-JIRA = ROOT / "jira"
+from gil_paths import (
+    SPRINT_PRECEDENT,
+    SPRINT_COURANT,
+    COMPARAISON_SPRINTS,
+)
 
 FILES = {
-    "sprint_precedent": JIRA / "sprints" / "sprint_precedent.json",
-    "sprint_courant": JIRA / "sprints" / "sprint_courant.json",
-    "comparaison": JIRA / "presentation" / "comparaison_sprints.json",
+    "sprint_precedent": SPRINT_PRECEDENT,
+    "sprint_courant": SPRINT_COURANT,
+    "comparaison": COMPARAISON_SPRINTS,
 }
 
 

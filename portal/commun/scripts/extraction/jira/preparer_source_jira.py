@@ -11,7 +11,13 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 
-ROOT = Path(__file__).resolve().parent
+from gil_paths import (
+    SCRIPT_DIR,
+    JIRA_BRUT,
+    DASHBOARD_GIL_DATA,
+)
+
+RULES_FILE = SCRIPT_DIR / "regles_domaines.json"
 
 
 def text(value):
@@ -492,19 +498,19 @@ def main():
 
     parser.add_argument(
         "--input",
-        default=ROOT / "jira_brut.json",
+        default=JIRA_BRUT,
         type=Path
     )
 
     parser.add_argument(
         "--rules",
-        default=ROOT / "regles_domaines.json",
+        default=RULES_FILE,
         type=Path
     )
 
     parser.add_argument(
         "--output",
-        default=ROOT / "dashboard_gil_data.json",
+        default=DASHBOARD_GIL_DATA,
         type=Path
     )
 

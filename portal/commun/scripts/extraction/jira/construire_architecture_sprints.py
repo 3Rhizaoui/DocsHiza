@@ -4,25 +4,21 @@ import datetime as dt
 import json
 import re
 
-ROOT = Path(__file__).resolve().parents[1]
-JIRA = ROOT / "jira"
+from gil_paths import (
+    JIRA_BRUT,
+    SPRINTS_DASHBOARD,
+    SPRINT_COURANT,
+    SPRINT_PRECEDENT,
+    COMPARAISON_SPRINTS,
+    KPIS_SPRINT,
+    ARCHITECTURE_SPRINTS_DIAGNOSTIC,
+)
 
-JIRA_BRUT = JIRA / "jira_brut.json"
-SPRINTS_DASHBOARD = JIRA / "sprints_dashboard.json"
-
-OUT_SPRINTS = JIRA / "sprints"
-OUT_PRESENTATION = JIRA / "presentation"
-
-OUT_PREV = OUT_SPRINTS / "sprint_precedent.json"
-OUT_CUR = OUT_SPRINTS / "sprint_courant.json"
-OUT_COMP = OUT_PRESENTATION / "comparaison_sprints.json"
-OUT_KPIS = OUT_PRESENTATION / "kpis_sprint.json"
-OUT_DIAG = JIRA / "architecture_sprints_diagnostic.json"
-
-# Alias lisibles à la racine jira/ pour usage manuel ou anciens scripts
-OUT_PREV_ALIAS = JIRA / "sprint_precedent.json"
-OUT_CUR_ALIAS = JIRA / "sprint_courant.json"
-OUT_COMP_ALIAS = JIRA / "comparaison_sprints.json"
+OUT_PREV = SPRINT_PRECEDENT
+OUT_CUR = SPRINT_COURANT
+OUT_COMP = COMPARAISON_SPRINTS
+OUT_KPIS = KPIS_SPRINT
+OUT_DIAG = ARCHITECTURE_SPRINTS_DIAGNOSTIC
 
 
 def read_json(path: Path, default):
@@ -481,9 +477,6 @@ def main():
     write_json(OUT_KPIS, kpis)
     write_json(OUT_DIAG, diagnostic)
 
-    write_json(OUT_PREV_ALIAS, previous_doc)
-    write_json(OUT_CUR_ALIAS, current_doc)
-    write_json(OUT_COMP_ALIAS, comparison)
 
     print("[OK] Architecture JSON sprint produite")
     print(" -", OUT_PREV)
