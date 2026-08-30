@@ -1144,7 +1144,7 @@ echo Ouverture dashboard actualise :
 
 
 
-echo   http://127.0.0.1:8765/portal/?_gil_refresh=%GIL_TS%
+echo   http://127.0.0.1:8765/?_gil_refresh=%GIL_TS%
 
 
 
@@ -1152,7 +1152,7 @@ echo   http://127.0.0.1:8765/portal/?_gil_refresh=%GIL_TS%
 
 
 
-start "" "http://127.0.0.1:8765/portal/?_gil_refresh=%GIL_TS%"
+start "" "http://127.0.0.1:8765/?_gil_refresh=%GIL_TS%"
 
 
 

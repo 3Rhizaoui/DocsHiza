@@ -12,7 +12,7 @@ HERE = Path(__file__).resolve()
 PORTAL = HERE.parents[2]
 PROJECT = PORTAL.parent
 
-LOG_ROOT = PROJECT / "logs"
+LOG_ROOT = PORTAL / "logs"
 
 
 LEVELS = {

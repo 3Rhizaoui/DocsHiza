@@ -44,7 +44,7 @@ async function runLocalAction(action) {
      *
      * URL relative :
      * fonctionne depuis
-     * http://127.0.0.1:8765/portal/
+     * http://127.0.0.1:8765/
      */
     const response = await fetch(
       "/action/" + action,
@@ -68,7 +68,7 @@ async function runLocalAction(action) {
 
     /*
      * Le processus Importer_JIRA.cmd existant
-     * réouvre /portal/?_gil_refresh=... après publication.
+     * réouvre /?_gil_refresh=... après publication.
      */
     alert(text);
 

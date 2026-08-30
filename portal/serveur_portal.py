@@ -15,7 +15,7 @@ PORTAL = Path(__file__).resolve().parent
 PROJECT = PORTAL.parent
 
 
-LOG_ROOT = PROJECT / "logs"
+LOG_ROOT = PORTAL / "logs"
 
 for _folder in [
     "server",
