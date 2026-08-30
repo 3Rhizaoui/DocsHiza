@@ -8,6 +8,8 @@ import unicodedata
 from gil_paths import (
     PAYLOAD_BASE,
     DASHBOARD_GIL_DATA,
+    JIRA_BRUT,
+    SPRINTS_DASHBOARD,
     COMPARAISON_SPRINTS,
     SPRINT_COURANT,
     SPRINT_PRECEDENT,
@@ -993,8 +995,8 @@ def build_diagnostic_sprints_jira(courant, precedent, comparaison_rows):
     def as_dict(value):
         return value if isinstance(value, dict) else {}
 
-    jira_brut = as_dict(read_json(JIRA / "jira_brut.json", {}) or {})
-    sprints_dashboard = as_dict(read_json(JIRA / "sprints_dashboard.json", {}) or {})
+    jira_brut = as_dict(read_json(JIRA_BRUT, {}) or {})
+    sprints_dashboard = as_dict(read_json(SPRINTS_DASHBOARD, {}) or {})
 
     diag = {}
 
@@ -1279,7 +1281,7 @@ def main():
     # ============================================================
 
     jira_brut_active = read_json(
-        JIRA / "jira_brut.json",
+        JIRA_BRUT,
         {}
     ) or {}
 
