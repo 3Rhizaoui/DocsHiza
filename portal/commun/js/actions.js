@@ -87,7 +87,7 @@ async function runLocalAction(action) {
 
     alert(
       "Serveur local indisponible ou action impossible.\n\n" +
-      "Lance Lancer_Dashboard.cmd puis réessaie.\n\n" +
+      "Lance portal/Lancer_Portal.cmd puis réessaie.\n\n" +
       error
     );
 

@@ -10983,7 +10983,7 @@ async function runLocalAction(action){
 
   try {
 
-    const response = await fetch('http://127.0.0.1:8765/action/' + action, { method: 'POST' });
+    const response = await fetch('/action/' + action, { method: 'POST' });
 
     const text = await response.text();
 
@@ -10991,7 +10991,7 @@ async function runLocalAction(action){
 
   } catch (e) {
 
-    alert("Serveur local indisponible. Lance Lancer_Dashboard.cmd puis réessaie.\n\n" + e);
+    alert("Serveur local indisponible. Lance portal/Lancer_Portal.cmd puis réessaie.\n\n" + e);
 
   }
 
@@ -12061,6 +12061,8 @@ document.addEventListener('click', function(event){
 
 
 <script src="general.js"></script>
+
+  <script src="../../commun/js/logger.js"></script>
 </body>
 
 </html>

@@ -1,4 +1,5 @@
 from pathlib import Path
+from gil_logging import log_event, log_exception
 from datetime import datetime
 import json
 import os
@@ -77,6 +78,13 @@ if SOURCE is None:
 print(
     "[PORTAL] Source :",
     SOURCE
+)
+
+log_event(
+    "publication",
+    "INFO",
+    "PORTAL_SOURCE_SELECTED",
+    source=str(SOURCE),
 )
 
 
@@ -522,9 +530,33 @@ print(
     project_out
 )
 
+log_event(
+    "publication",
+    "INFO",
+    "GIL_PROJECT_WRITTEN",
+    path=str(project_out),
+    size=(
+        project_out.stat().st_size
+        if project_out.exists()
+        else 0
+    ),
+)
+
 print(
     "[PORTAL][OK] Home :",
     home_out
+)
+
+log_event(
+    "publication",
+    "INFO",
+    "GIL_HOME_WRITTEN",
+    path=str(home_out),
+    size=(
+        home_out.stat().st_size
+        if home_out.exists()
+        else 0
+    ),
 )
 
 print(
@@ -537,4 +569,24 @@ print(
     in_progress,
     "| sprint=",
     sprint_current,
+)
+
+
+log_event(
+    "publication",
+    "INFO",
+    "PORTAL_KPI_PUBLISHED",
+    total=total,
+    delivered=delivered,
+    in_progress=in_progress,
+    sprint=sprint_current,
+)
+
+
+log_event(
+    "publication",
+    "INFO",
+    "PUBLICATION_SUCCESS",
+    project_path=str(project_out),
+    home_path=str(home_out),
 )
