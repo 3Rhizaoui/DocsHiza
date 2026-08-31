@@ -5,6 +5,7 @@ import json
 import re
 import unicodedata
 
+from regles_metier import is_arrimage_epic
 from gil_paths import (
     PAYLOAD_BASE,
     DASHBOARD_GIL_DATA,
@@ -1608,7 +1609,7 @@ def main():
             "epique",
         }
 
-        if is_epic and "arrimage" in summary:
+        if is_epic and is_arrimage_epic(ticket):
             arrimage_sprint.append(
                 sprint_minimal_ticket(ticket)
             )
