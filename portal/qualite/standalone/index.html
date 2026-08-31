@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>GIL - Tests Standalone</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f4f6f8;
+      color: #1f2933;
+    }
+
+    /* ==========================================================
+       GIL STANDALONE - IDENTITE VISUELLE PORTAL
+       Alignée sur le Rapport général GIL
+       ========================================================== */
+
+    .gilPortalBack {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      width: max-content;
+
+      margin:
+        12px
+        22px
+        14px;
+
+      padding:
+        9px
+        13px;
+
+      border:
+        1px solid
+        #b9c8d8;
+
+      border-radius: 7px;
+
+      background: #fff;
+
+      color: #174d7b;
+
+      font-size: 13px;
+      font-weight: 800;
+
+      text-decoration: none;
+    }
+
+    .gilPortalBack:hover {
+      background: #f4f8fc;
+    }
+
+
+    .gilStandaloneHeader {
+      display: grid;
+
+      grid-template-columns:
+        minmax(250px, .55fr)
+        minmax(500px, 1.35fr)
+        auto;
+
+      align-items: center;
+
+      gap: 30px;
+
+      width: calc(100% - 44px);
+
+      margin:
+        14px
+        22px
+        16px;
+
+      padding:
+        22px
+        30px;
+
+      border-radius: 10px;
+
+      color: #fff;
+
+      background:
+        linear-gradient(
+          110deg,
+          #28679c 0%,
+          #28679c 65%,
+          #24608f 100%
+        );
+
+      box-shadow:
+        0 5px 16px
+        rgba(15,39,71,.12);
+    }
+
+
+    .gilStandaloneLogoWrap {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .gilStandaloneLogo {
+      display: block;
+
+      width: auto;
+      max-width: 245px;
+      max-height: 105px;
+
+      object-fit: contain;
+      object-position: left center;
+
+      filter:
+        drop-shadow(
+          0 4px 7px
+          rgba(0,0,0,.22)
+        );
+    }
+
+
+    .gilStandaloneHeading {
+      min-width: 0;
+    }
+
+    .gilStandaloneHeading h1 {
+      margin: 0;
+
+      color: #fff;
+
+      font-size: 27px;
+      font-weight: 800;
+
+      line-height: 1.15;
+    }
+
+    .gilStandaloneHeading p {
+      margin:
+        7px
+        0
+        0;
+
+      color: rgba(255,255,255,.95);
+
+      font-size: 14px;
+      font-weight: 600;
+
+      line-height: 1.4;
+    }
+
+
+    .gilStandaloneActions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .gilStandalonePdfButton {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+
+      padding:
+        10px
+        14px;
+
+      border:
+        1px solid
+        rgba(255,255,255,.65);
+
+      border-radius: 7px;
+
+      background:
+        rgba(255,255,255,.08);
+
+      color: #fff;
+
+      font-weight: 800;
+      font-size: 13px;
+
+      cursor: pointer;
+    }
+
+    .gilStandalonePdfButton:hover {
+      background:
+        rgba(255,255,255,.16);
+    }
+
+    .gilStandalonePdfIcon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      min-width: 27px;
+      height: 27px;
+
+      padding:
+        0
+        5px;
+
+      border-radius: 4px;
+
+      background: #fff;
+
+      color: #28679c;
+
+      font-size: 9px;
+      font-weight: 900;
+    }
+
+
+    .page {
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 10px 22px 26px;
+    }
+
+    .title {
+      margin-bottom: 20px;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 26px;
+      color: #16324f;
+    }
+
+    .title p {
+      margin: 6px 0 0;
+      color: #66788a;
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns:
+        repeat(4, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .kpi {
+      background: white;
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: 0 2px 9px rgba(0,0,0,.07);
+    }
+
+    .kpiLabel {
+      font-size: 13px;
+      color: #708090;
+      margin-bottom: 8px;
+    }
+
+    .kpiValue {
+      font-size: 30px;
+      font-weight: 700;
+      color: #16324f;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: end;
+
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 18px;
+      box-shadow: 0 2px 9px rgba(0,0,0,.07);
+    }
+
+    .filterGroup {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .filterGroup label {
+      font-size: 12px;
+      color: #66788a;
+      font-weight: 600;
+    }
+
+    select,
+    input {
+      min-width: 170px;
+      border: 1px solid #ccd4dc;
+      border-radius: 7px;
+      padding: 8px 10px;
+      background: white;
+    }
+
+    .tableCard {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 9px rgba(0,0,0,.07);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      background: #eef3f6;
+      text-align: left;
+      color: #46596b;
+      padding: 12px 10px;
+      border-bottom: 1px solid #dbe2e8;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 11px 10px;
+      border-bottom: 1px solid #edf1f4;
+      vertical-align: middle;
+    }
+
+    tr.mainRow {
+      cursor: pointer;
+    }
+
+    tr.mainRow:hover {
+      background: #f8fafb;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .green {
+      background: #dff6e9;
+      color: #177245;
+    }
+
+    .red {
+      background: #fde5e3;
+      color: #b42318;
+    }
+
+    .orange {
+      background: #fff1d6;
+      color: #a15c00;
+    }
+
+    .gray {
+      background: #edf1f4;
+      color: #5d6b78;
+    }
+
+    .detailRow {
+      display: none;
+      background: #fafcfd;
+    }
+
+    .detailRow.open {
+      display: table-row;
+    }
+
+    .detail {
+      padding: 18px 20px 22px;
+    }
+
+    .detailGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .detailBox {
+      background: white;
+      border: 1px solid #e1e7ec;
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .detailBox h3 {
+      margin: 0 0 12px;
+      font-size: 15px;
+      color: #16324f;
+    }
+
+    .miniTable {
+      width: 100%;
+      font-size: 12px;
+    }
+
+    .miniTable th,
+    .miniTable td {
+      padding: 7px 6px;
+    }
+
+    .empty {
+      padding: 30px;
+      text-align: center;
+      color: #778899;
+    }
+
+    .footerInfo {
+      margin-top: 14px;
+      font-size: 12px;
+      color: #778899;
+      text-align: right;
+    }
+
+    @media (max-width: 1100px) {
+
+      .gilStandaloneHeader {
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+
+      .gilStandaloneActions {
+        justify-content: flex-start;
+      }
+
+      .kpis {
+        grid-template-columns:
+          repeat(2, 1fr);
+      }
+
+      .detailGrid {
+        grid-template-columns: 1fr;
+      }
+
+      .tableCard {
+        overflow-x: auto;
+      }
+    }
+    @media print {
+
+      .gilPortalBack,
+      .gilStandaloneActions,
+      .filters {
+        display: none !important;
+      }
+
+      body {
+        background: #fff;
+      }
+
+      .gilStandaloneHeader {
+        box-shadow: none;
+      }
+    }
+
+  </style>
+</head>
+
+<body>
+
+<a
+  class="gilPortalBack"
+  href="../../index.html"
+>
+  ← Retour à l’accueil GIL
+</a>
+
+
+<section
+  class="gilStandaloneHeader"
+  aria-label="Tests Standalone GIL"
+>
+
+  <div class="gilStandaloneLogoWrap">
+
+    <img
+      class="gilStandaloneLogo"
+      src="../../assets/gil_logo.png"
+      alt="GIL - Group Integration Layer"
+    >
+
+  </div>
+
+
+  <div class="gilStandaloneHeading">
+
+    <h1>
+      Tests Standalone GIL
+    </h1>
+
+    <p>
+      Qualification des Capabilities GIL —
+      readiness JIRA et validation Octane
+      par version, release et environnement
+    </p>
+
+  </div>
+
+
+  <div class="gilStandaloneActions">
+
+    <button
+      type="button"
+      class="gilStandalonePdfButton"
+      onclick="window.print()"
+      title="Imprimer ou enregistrer le rapport au format PDF"
+    >
+
+      <span
+        class="gilStandalonePdfIcon"
+        aria-hidden="true"
+      >
+        PDF
+      </span>
+
+      <span>
+        Imprimer en PDF
+      </span>
+
+    </button>
+
+  </div>
+
+</section>
+
+<main class="page">
+
+  <section class="kpis">
+
+    <div class="kpi">
+      <div class="kpiLabel">
+        Capabilities
+      </div>
+      <div
+        class="kpiValue"
+        id="kpiTotal"
+      >
+        —
+      </div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpiLabel">
+        Ready for Test
+      </div>
+      <div
+        class="kpiValue"
+        id="kpiReadyTest"
+      >
+        —
+      </div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpiLabel">
+        Ready for Use
+      </div>
+      <div
+        class="kpiValue"
+        id="kpiReadyUse"
+      >
+        —
+      </div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpiLabel">
+        Non validées
+      </div>
+      <div
+        class="kpiValue"
+        id="kpiNonReady"
+      >
+        —
+      </div>
+    </div>
+
+  </section>
+
+  <section class="filters">
+
+    <div class="filterGroup">
+      <label for="filterVersion">
+        Version / Release
+      </label>
+      <select id="filterVersion">
+        <option value="">
+          Toutes
+        </option>
+      </select>
+    </div>
+
+    <div class="filterGroup">
+      <label for="filterEnv">
+        Environnement
+      </label>
+      <select id="filterEnv">
+        <option value="">
+          Tous
+        </option>
+        <option value="SIT">
+          SIT
+        </option>
+        <option value="UAT">
+          UAT
+        </option>
+      </select>
+    </div>
+
+    <div class="filterGroup">
+      <label for="filterStatus">
+        Ready for Use
+      </label>
+      <select id="filterStatus">
+        <option value="">
+          Tous
+        </option>
+        <option value="ready">
+          Ready
+        </option>
+        <option value="not-ready">
+          Non Ready
+        </option>
+      </select>
+    </div>
+
+    <div class="filterGroup">
+      <label for="filterCapability">
+        Capability
+      </label>
+      <input
+        id="filterCapability"
+        type="search"
+        placeholder="Rechercher..."
+      >
+    </div>
+
+  </section>
+
+  <section class="tableCard">
+
+    <table>
+      <thead>
+        <tr>
+          <th>Capability GIL</th>
+          <th>Epic JIRA</th>
+          <th>Version</th>
+          <th>Env.</th>
+          <th>Tâches Ready</th>
+          <th>JIRA</th>
+          <th>Test Suite Octane</th>
+          <th>PASS</th>
+          <th>FAIL</th>
+          <th>Dernière exécution</th>
+          <th>Ready for Use</th>
+        </tr>
+      </thead>
+
+      <tbody id="standaloneBody">
+      </tbody>
+    </table>
+
+    <div
+      class="empty"
+      id="emptyMessage"
+      hidden
+    >
+      Aucune Capability ne correspond aux filtres.
+    </div>
+
+  </section>
+
+  <div
+    class="footerInfo"
+    id="generatedAt"
+  >
+  </div>
+
+</main>
+
+<script src="standalone.js"></script>
+
+</body>
+</html>
