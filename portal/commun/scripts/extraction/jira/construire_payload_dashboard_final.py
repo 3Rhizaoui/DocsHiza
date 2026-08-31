@@ -1505,6 +1505,61 @@ def main():
             ""
         )
 
+    def sprint_ticket_epic_key(ticket):
+        """
+        Retourne la clé de l'Epic parent d'un ticket du sprint.
+
+        Source Jira prioritaire :
+          raw.fields.epic.key
+
+        Fallback Jira observé sur BNP :
+          raw.fields.customfield_13728
+        """
+
+        if not isinstance(ticket, dict):
+            return ""
+
+        raw = ticket.get("raw") or {}
+
+        if not isinstance(raw, dict):
+            raw = {}
+
+        fields = raw.get("fields") or {}
+
+        if not isinstance(fields, dict):
+            fields = {}
+
+        epic = fields.get("epic") or {}
+
+        if isinstance(epic, dict):
+            epic_key = clean_label(
+                epic.get("key"),
+                ""
+            )
+
+            if epic_key:
+                return epic_key
+
+        epic_key = clean_label(
+            fields.get("customfield_13728"),
+            ""
+        )
+
+        if epic_key:
+            return epic_key
+
+        # Compatibilité avec une éventuelle normalisation amont.
+        return clean_label(
+            row_value(
+                ticket,
+                "epicKey",
+                "epicJiraKey",
+                "parentEpicKey",
+            ),
+            ""
+        )
+
+
     def sprint_minimal_ticket(ticket, reference=""):
         # Le document sprint normalisé utilise actuellement "champsMetier".
         # On garde aussi "champsMétiers" pour compatibilité avec les anciens
@@ -1545,6 +1600,7 @@ def main():
 
         return {
             "jiraKey": sprint_ticket_key(ticket),
+            "epicKey": sprint_ticket_epic_key(ticket),
             "type": sprint_ticket_type(ticket),
             "resume": sprint_ticket_summary(ticket),
             "statutJira": sprint_ticket_status(ticket),
@@ -2283,20 +2339,53 @@ def main():
         context_rows,
         kind,
     ):
+        # Les informations métier (flux, domaine, version...)
+        # viennent en priorité de la fiche Epic Arrimage.
         sources = [
             detailed_issue,
             active_issue,
             *context_rows,
         ]
 
-        jira_key = (
+        # Pour une contribution Arrimage, le ticket du sprint est
+        # l'objet réellement travaillé. Son Epic parent reste
+        # conservé séparément.
+        ticket_sources = (
+            [
+                active_issue,
+                detailed_issue,
+                *context_rows,
+            ]
+            if kind == "arrimage"
+            else sources
+        )
+
+        detailed_jira_key = (
             _sprint_join_key(detailed_issue)
-            or _sprint_join_key(active_issue)
+        )
+
+        active_jira_key = (
+            _sprint_join_key(active_issue)
+        )
+
+        jira_key = (
+            active_jira_key
+            if kind == "arrimage"
+            else (
+                detailed_jira_key
+                or active_jira_key
+            )
+        )
+
+        epic_jira_key = (
+            detailed_jira_key
+            if kind == "arrimage"
+            else ""
         )
 
         summary = _sprint_join_text(
             _sprint_join_first(
-                sources,
+                ticket_sources,
                 "summary",
                 "resume",
                 "titre",
@@ -2306,7 +2395,7 @@ def main():
 
         issue_type = _sprint_join_text(
             _sprint_join_first(
-                sources,
+                ticket_sources,
                 "issuetype",
                 "issueType",
                 "typeTicket",
@@ -2316,7 +2405,7 @@ def main():
 
         status = _sprint_join_text(
             _sprint_join_first(
-                sources,
+                ticket_sources,
                 "status",
                 "statut",
                 "statusName",
@@ -2402,12 +2491,34 @@ def main():
 
         return {
             "jiraKey": jira_key,
-            "referenceJira": jira_key,
+
+            # Clé du ticket réellement présent dans le sprint.
+            "ticketJiraKey": (
+                jira_key
+                if kind == "arrimage"
+                else ""
+            ),
+
+            # Epic / demande d'arrimage parente.
+            "epicJiraKey": epic_jira_key,
+
+            # Compatibilité : pour Arrimage, referenceJira reste
+            # la demande d'arrimage (Epic), comme auparavant.
+            "referenceJira": (
+                epic_jira_key
+                if kind == "arrimage"
+                else jira_key
+            ),
+
             "referenceOctane": reference_octane,
+
             "reference": (
                 reference_octane
                 if kind == "anomaly"
-                else jira_key
+                else (
+                    epic_jira_key
+                    or jira_key
+                )
             ),
             "summary": summary,
             "issueType": issue_type,
@@ -2627,31 +2738,84 @@ def main():
     # ------------------------------------------------------------
     # 4. JOIN ARRIMAGE
     #
-    # Intersection :
-    #   ticket Terminé du sprint actif
-    #   ∩ résultat JQL "epics"
+    # Relation métier réelle observée dans Jira :
     #
-    # La JQL garantit déjà :
-    #   issuetype = Epic
-    #   summary ~ "Arrimage"
+    #   ticket du sprint actif
+    #       -> epicKey
+    #       -> résultat JQL "epics" Arrimage
+    #
+    # Un ticket n'a donc PAS la même clé Jira que son Epic.
+    #
+    # La notion "Terminé" n'est plus utilisée pour déterminer
+    # l'appartenance à Arrimage. Elle reste portée par le statut
+    # du ticket et peut être exploitée séparément.
     # ------------------------------------------------------------
-
-    sprint_join_arrimage_keys = sorted(
-        sprint_join_done_keys
-        & set(sprint_join_epics_by_key)
-    )
 
     sprint_join_arrimage = []
 
-    for jira_key in sprint_join_arrimage_keys:
+    for active_ticket in sprint_join_active_tickets:
+
+        if not isinstance(active_ticket, dict):
+            continue
+
+        ticket_key = _sprint_join_key(
+            active_ticket
+        )
+
+        epic_key = clean_label(
+            row_value(
+                active_ticket,
+                "epicKey",
+                "epicJiraKey",
+                "parentEpicKey",
+            ),
+            ""
+        )
+
+        if not epic_key:
+            continue
+
+        epic_issue = sprint_join_epics_by_key.get(
+            epic_key
+        )
+
+        if not isinstance(epic_issue, dict):
+            continue
+
+        context_rows = []
+
+        if ticket_key:
+            context_rows.extend(
+                sprint_join_context.get(
+                    ticket_key,
+                    [],
+                )
+            )
+
+        context_rows.extend(
+            sprint_join_context.get(
+                epic_key,
+                [],
+            )
+        )
+
         row = _sprint_join_build_row(
-            sprint_join_epics_by_key[jira_key],
-            sprint_join_done_by_key[jira_key],
-            sprint_join_context.get(jira_key, []),
+            epic_issue,
+            active_ticket,
+            context_rows,
             "arrimage",
         )
 
-        sprint_join_arrimage.append(row)
+        # Etat opérationnel explicite du ticket du sprint.
+        row["termine"] = bool(
+            _sprint_join_is_done(
+                active_ticket
+            )
+        )
+
+        sprint_join_arrimage.append(
+            row
+        )
 
 
     # ------------------------------------------------------------
@@ -2721,6 +2885,18 @@ def main():
         len(sprint_join_anomalies),
         "arrimageJoin=",
         len(sprint_join_arrimage),
+        "arrimageDone=",
+        sum(
+            1
+            for row in sprint_join_arrimage
+            if row.get("termine")
+        ),
+        "arrimageEpics=",
+        len({
+            row.get("epicJiraKey")
+            for row in sprint_join_arrimage
+            if row.get("epicJiraKey")
+        }),
         "anomaliesJoin=",
         len(sprint_join_anomaly_rows),
     )
