@@ -6,6 +6,7 @@ import re
 import unicodedata
 
 from regles_metier import is_arrimage_epic
+from join_arrimage import join_arrimage
 from gil_paths import (
     PAYLOAD_BASE,
     DASHBOARD_GIL_DATA,
@@ -2753,34 +2754,18 @@ def main():
 
     sprint_join_arrimage = []
 
-    for active_ticket in sprint_join_active_tickets:
+    sprint_arrimage_matches = join_arrimage(
+        sprint_join_active_tickets,
+        sprint_join_epics,
+    )
 
-        if not isinstance(active_ticket, dict):
-            continue
+    for match in sprint_arrimage_matches:
 
-        ticket_key = _sprint_join_key(
-            active_ticket
-        )
+        active_ticket = match["ticket"]
+        epic_issue = match["epic"]
 
-        epic_key = clean_label(
-            row_value(
-                active_ticket,
-                "epicKey",
-                "epicJiraKey",
-                "parentEpicKey",
-            ),
-            ""
-        )
-
-        if not epic_key:
-            continue
-
-        epic_issue = sprint_join_epics_by_key.get(
-            epic_key
-        )
-
-        if not isinstance(epic_issue, dict):
-            continue
+        ticket_key = match["ticketJiraKey"]
+        epic_key = match["epicJiraKey"]
 
         context_rows = []
 
@@ -2792,12 +2777,13 @@ def main():
                 )
             )
 
-        context_rows.extend(
-            sprint_join_context.get(
-                epic_key,
-                [],
+        if epic_key:
+            context_rows.extend(
+                sprint_join_context.get(
+                    epic_key,
+                    [],
+                )
             )
-        )
 
         row = _sprint_join_build_row(
             epic_issue,
@@ -2806,12 +2792,7 @@ def main():
             "arrimage",
         )
 
-        # Etat opérationnel explicite du ticket du sprint.
-        row["termine"] = bool(
-            _sprint_join_is_done(
-                active_ticket
-            )
-        )
+        row["termine"] = match["termine"]
 
         sprint_join_arrimage.append(
             row
