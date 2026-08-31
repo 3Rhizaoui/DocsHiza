@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-31T20:00:00",
+  "source": {
+    "type": "OCTANE"
+  },
+  "qualifications": [
+    {
+      "capability": "Exchange Layer",
+      "release": "V1",
+      "environnement": "SIT",
+      "testSuite": {
+        "id": "901502",
+        "nom": "TS-GIL - Exchange layer"
+      },
+      "executions": [
+        {
+          "id": "901503",
+          "nom": "EventStream Kafka",
+          "statut": "Réussi",
+          "dateExecution": "2026-04-29T10:00:00",
+          "preuves": ["trace-execution-901503"]
+        },
+        {
+          "id": "901504",
+          "nom": "Transfert de fichier",
+          "statut": "Échec",
+          "dateExecution": "2026-04-29T10:15:00",
+          "preuves": ["trace-execution-901504"]
+        },
+        {
+          "id": "901505",
+          "nom": "Réception / Envoi de flux",
+          "statut": "Réussi",
+          "dateExecution": "2026-04-29T10:30:00",
+          "preuves": ["trace-execution-901505"]
+        }
+      ]
+    },
+    {
+      "capability": "Protocol Conversion",
+      "release": "V2",
+      "environnement": "UAT",
+      "testSuite": {
+        "id": "902000",
+        "nom": "TS-GIL - Protocol Conversion"
+      },
+      "executions": [
+        {
+          "id": "902001",
+          "nom": "REST API",
+          "statut": "Réussi",
+          "dateExecution": "2026-05-02T09:00:00",
+          "preuves": ["trace-execution-902001"]
+        },
+        {
+          "id": "902002",
+          "nom": "FILE",
+          "statut": "Réussi",
+          "dateExecution": "2026-05-02T09:20:00",
+          "preuves": ["trace-execution-902002"]
+        }
+      ]
+    }
+  ]
+}

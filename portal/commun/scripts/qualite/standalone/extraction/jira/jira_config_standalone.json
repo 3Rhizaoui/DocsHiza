@@ -1,0 +1,9 @@
+{
+  "jira_base_url": "https://jira.group.echonet",
+  "query_name": "capabilities_gil",
+  "jql": "project = AERL_GIL AND issuetype = Epic AND summary ~ \"FEATURE GIL\"",
+  "business_rules": {
+    "summary_regex": "\\[\\s*FEATURE\\s+GIL\\s*\\]",
+    "description": "Une Capability GIL est un Epic dont le titre contient [FEATURE GIL]."
+  }
+}

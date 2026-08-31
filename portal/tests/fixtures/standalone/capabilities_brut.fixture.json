@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-31T20:00:00",
+  "source": {
+    "type": "JIRA SSO",
+    "baseUrl": "https://jira.example",
+    "queryName": "capabilities_gil",
+    "jql": "project = AERL_GIL AND issuetype = Epic AND summary ~ \"FEATURE GIL\""
+  },
+  "fields": {
+    "fixVersions": "Fix Version/s",
+    "customfield_20001": "Environnement"
+  },
+  "capabilities": [
+    {
+      "epic": {
+        "key": "AERL_GIL-100",
+        "fields": {
+          "summary": "[FEATURE GIL] Exchange Layer",
+          "fixVersions": [
+            {
+              "name": "V1"
+            }
+          ],
+          "customfield_20001": "SIT"
+        }
+      },
+      "children": [
+        {
+          "key": "AERL_GIL-101",
+          "fields": {
+            "summary": "Implémenter le routage",
+            "status": {
+              "name": "Ready for Test"
+            }
+          }
+        },
+        {
+          "key": "AERL_GIL-102",
+          "fields": {
+            "summary": "Configurer Kafka",
+            "status": {
+              "name": "Ready for Test"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "epic": {
+        "key": "AERL_GIL-200",
+        "fields": {
+          "summary": "[FEATURE GIL] Protocol Conversion",
+          "fixVersions": [
+            {
+              "name": "V2"
+            }
+          ],
+          "customfield_20001": "UAT"
+        }
+      },
+      "children": [
+        {
+          "key": "AERL_GIL-201",
+          "fields": {
+            "summary": "Support REST",
+            "status": {
+              "name": "Ready for Test"
+            }
+          }
+        },
+        {
+          "key": "AERL_GIL-202",
+          "fields": {
+            "summary": "Support FILE",
+            "status": {
+              "name": "In Progress"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "diagnostic": {
+    "featureGil": 2,
+    "children": 4,
+    "errors": []
+  }
+}

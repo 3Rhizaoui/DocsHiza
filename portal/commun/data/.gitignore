@@ -2,3 +2,13 @@
 !.gitignore
 !.gitkeep
 !gil_portal_pages.template.json
+
+!jira/
+!standalone/
+
+standalone/*
+!standalone/.gitignore
+!standalone/jira/
+!standalone/octane/
+!standalone/jira/.gitkeep
+!standalone/octane/.gitkeep
