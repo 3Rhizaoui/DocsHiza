@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+
+**/.jira_sso_profile_standalone/
+**/.octane_sso_profile_standalone/

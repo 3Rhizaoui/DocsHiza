@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "octane_base_url": "https://almoctane-eur.saas.microfocus.com",
+  "shared_space": "489001",
+  "workspace": "104001",
+  "business_rules": {
+    "capability_match": "exact",
+    "join_fields": [
+      "capability",
+      "release",
+      "environnement"
+    ],
+    "allowed_environments": [
+      "SIT",
+      "UAT"
+    ]
+  }
+}
