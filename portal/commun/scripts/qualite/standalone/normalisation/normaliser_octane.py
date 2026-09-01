@@ -92,6 +92,8 @@ def normalize_qualification(row: dict) -> dict:
     )
 
     suite = row.get("testSuite") or {}
+    suite_run = row.get("suiteRun") or {}
+    octane_feature = row.get("octaneFeature") or {}
 
     dates = [
         execution["dateExecution"]
@@ -110,11 +112,34 @@ def normalize_qualification(row: dict) -> dict:
             row.get("environnement")
             or row.get("environment")
         ).upper(),
+        "octaneFeature": {
+            "id": text(
+                octane_feature.get("id")
+            ),
+            "nom": text(
+                octane_feature.get("nom")
+                or octane_feature.get("name")
+            ),
+        },
         "testSuite": {
             "id": text(suite.get("id")),
             "nom": text(
                 suite.get("nom")
                 or suite.get("name")
+            ),
+            "testsPlanifies": int(
+                suite.get("testsPlanifies")
+                or suite.get("plannedTests")
+                or 0
+            ),
+        },
+        "suiteRun": {
+            "id": text(
+                suite_run.get("id")
+            ),
+            "nom": text(
+                suite_run.get("nom")
+                or suite_run.get("name")
             ),
         },
         "executions": executions,

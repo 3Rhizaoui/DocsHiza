@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-01T09:30:00",
+  "source": {
+    "type": "OCTANE_API_FIXTURE",
+    "sharedSpace": "489001",
+    "workspace": "104001"
+  },
+  "capability": {
+    "id": "770019",
+    "name": "GIL - Exchange layer"
+  },
+  "release": {
+    "id": "",
+    "name": "Release-GIL Lot 1"
+  },
+  "environment": {
+    "name": "SIT"
+  },
+  "testSuite": {
+    "id": "1118086",
+    "name": "TS-GIL - Exchange layer",
+    "plannedTests": 19
+  },
+  "suiteRun": {
+    "id": "901502",
+    "name": "TS-GIL - Exchange layer"
+  },
+  "runs": [
+    {
+      "id": "901503",
+      "name": "EventStream Kafka - Bus d'événement interne",
+      "status": "Réussi",
+      "executionDate": "2026-04-29T10:00:00",
+      "release": "Release-GIL Lot 1",
+      "environment": "SIT",
+      "proofs": []
+    },
+    {
+      "id": "901504",
+      "name": "Transfert de fichier",
+      "status": "Échec",
+      "executionDate": "2026-04-29T10:15:00",
+      "release": "Release-GIL Lot 1",
+      "environment": "SIT",
+      "proofs": []
+    },
+    {
+      "id": "901505",
+      "name": "Réception / Envoi de flux",
+      "status": "Réussi",
+      "executionDate": "2026-04-29T10:30:00",
+      "release": "Release-GIL Lot 1",
+      "environment": "SIT",
+      "proofs": []
+    },
+    {
+      "id": "901506",
+      "name": "Routage migration grands remettants (GCH)",
+      "status": "Échec",
+      "executionDate": "2026-04-29T10:45:00",
+      "release": "Release-GIL Lot 1",
+      "environment": "SIT",
+      "proofs": []
+    },
+    {
+      "id": "901507",
+      "name": "Alimentation des assets groupe",
+      "status": "Réussi",
+      "executionDate": "2026-04-29T11:00:00",
+      "release": "Release-GIL Lot 1",
+      "environment": "SIT",
+      "proofs": []
+    },
+    {
+      "id": "901508",
+      "name": "Protocoles d'échange REST API",
+      "status": "Réussi",
+      "executionDate": "2026-04-29T11:15:00",
+      "release": "Release-GIL Lot 1",
+      "environment": "SIT",
+      "proofs": []
+    }
+  ]
+}
