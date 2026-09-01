@@ -21,6 +21,24 @@ JIRA_ENGINE = (
     / "jira"
 )
 
+STANDALONE_ENGINE = (
+    SCRIPT_DIR
+    / "qualite"
+    / "standalone"
+)
+
+STANDALONE_JIRA_ENGINE = (
+    STANDALONE_ENGINE
+    / "extraction"
+    / "jira"
+)
+
+STANDALONE_OCTANE_ENGINE = (
+    STANDALONE_ENGINE
+    / "extraction"
+    / "octane"
+)
+
 PUBLICATION_SCRIPT = (
     SCRIPT_DIR
     / "publier_portal.py"
@@ -187,7 +205,7 @@ def main() -> int:
 
     print()
     print("=" * 68)
-    print("GIL PORTAL - PIPELINE JIRA AUTONOME")
+    print("GIL PORTAL - PIPELINE MULTISOURCE AUTONOME")
     print("=" * 68)
     print()
     print("Portal :", PORTAL_DIR)
@@ -213,6 +231,36 @@ def main() -> int:
                 ),
             ],
         ),
+
+        # ====================================================
+        # STANDALONE - ACQUISITION DES SOURCES
+        #
+        # Les connexions interactives sont volontairement
+        # placées au début du pipeline.
+        # ====================================================
+
+        (
+            "Extraction JIRA Standalone - Capabilities GIL",
+            [
+                node,
+                str(
+                    STANDALONE_JIRA_ENGINE
+                    / "extraire_capabilities.js"
+                ),
+            ],
+        ),
+
+        (
+            "Connexion Octane Standalone via SSO",
+            [
+                node,
+                str(
+                    STANDALONE_OCTANE_ENGINE
+                    / "diagnostiquer_octane_sso.js"
+                ),
+            ],
+        ),
+
         (
             "Détection officielle des sprints JIRA",
             [
@@ -354,7 +402,7 @@ def main() -> int:
 
         print()
         print("=" * 68)
-        print("[ERREUR BLOQUANTE] PIPELINE JIRA INTERROMPU")
+        print("[ERREUR BLOQUANTE] PIPELINE GIL INTERROMPU")
         print("=" * 68)
         print(exc)
 
@@ -376,7 +424,7 @@ def main() -> int:
 
     print()
     print("=" * 68)
-    print("PIPELINE JIRA TERMINE AVEC SUCCES")
+    print("PIPELINE GIL TERMINE AVEC SUCCES")
     print("=" * 68)
     print()
     print(
