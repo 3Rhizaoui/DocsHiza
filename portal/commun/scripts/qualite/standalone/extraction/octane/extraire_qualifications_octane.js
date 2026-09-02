@@ -7,7 +7,7 @@ const ROOT = __dirname;
 
 const DATA_DIR = path.resolve(
   ROOT,
-  '../../../../data/standalone/octane'
+  '../../../../../data/standalone/octane'
 );
 
 const QUALIFICATIONS_OUT = path.join(
@@ -1161,10 +1161,9 @@ async function main() {
         config
       );
 
-    const target = path.resolve(
-      ROOT,
-      '../../../../data/standalone/octane/'
-      + 'octane_reference_probe.json'
+    const target = path.join(
+      DATA_DIR,
+      'octane_reference_probe.json'
     );
 
     fs.mkdirSync(
@@ -1185,10 +1184,9 @@ async function main() {
     );
 
     const discoveryTarget =
-      path.resolve(
-        ROOT,
-        '../../../../data/standalone/octane/'
-        + 'octane_discovery.json'
+      path.join(
+        DATA_DIR,
+        'octane_discovery.json'
       );
 
     fs.writeFileSync(
