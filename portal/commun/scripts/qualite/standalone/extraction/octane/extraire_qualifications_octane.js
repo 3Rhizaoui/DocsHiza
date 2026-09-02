@@ -655,6 +655,70 @@ async function extractReferenceSample(
     }
   }
 
+
+  // ----------------------------------------------------------
+  // GOLDEN SAMPLE EXCHANGE LAYER
+  //
+  // Temporaire pour diagnostic BNP :
+  // on récupère les 6 exécutions visibles dans Octane.
+  //
+  // Cette liste sera remplacée ensuite par la relation
+  // dynamique Suite Run -> Runs.
+  // ----------------------------------------------------------
+
+  const referenceRunIds = [
+    "901503",
+    "901504",
+    "901505",
+    "901506",
+    "901507",
+    "901508"
+  ];
+
+  result.testRuns = [];
+
+  for (const runId of referenceRunIds) {
+
+    const url =
+      `${apiBase}/runs/${runId}`;
+
+    try {
+
+      const run =
+        await fetchOctaneJson(
+          cdp,
+          url
+        );
+
+      result.testRuns.push(
+        run
+      );
+
+      console.log(
+        "[OCTANE][RUN]",
+        runId,
+        "OK"
+      );
+
+    } catch (error) {
+
+      result.testRuns.push({
+        id: runId,
+        error:
+          String(
+            error?.message ||
+            error
+          )
+      });
+
+      console.log(
+        "[OCTANE][RUN]",
+        runId,
+        "KO"
+      );
+    }
+  }
+
   return {
     schemaVersion: 1,
     source: {
@@ -898,6 +962,34 @@ function buildReferenceQualification(
       )
     );
 
+  const testRuns =
+    Array.isArray(
+      probes.testRuns
+    )
+      ? probes.testRuns
+          .map(
+            item =>
+              firstEntity(
+                safeEntityBody(
+                  item
+                )
+              )
+          )
+          .filter(
+            item =>
+              item
+              && Object.keys(
+                item
+              ).length
+          )
+      : (
+          Object.keys(
+            testRun
+          ).length
+            ? [testRun]
+            : []
+        );
+
   const featureName =
     entityText(
       feature,
@@ -913,9 +1005,30 @@ function buildReferenceQualification(
       )
       .trim();
 
+  const firstRunWithRelease =
+    testRuns.find(
+      run =>
+        entityText(
+          run,
+          'release',
+          'release_name'
+        )
+    ) || {};
+
+  const firstRunWithEnvironment =
+    testRuns.find(
+      run =>
+        entityText(
+          run,
+          'environment',
+          'environnement',
+          'environment_tags'
+        )
+    ) || {};
+
   const release =
     entityText(
-      testRun,
+      firstRunWithRelease,
       'release',
       'release_name'
     )
@@ -928,33 +1041,18 @@ function buildReferenceQualification(
   const environment =
     (
       entityText(
-        testRun,
+        firstRunWithEnvironment,
         'environment',
-        'environnement'
+        'environnement',
+        'environment_tags'
       )
       || entityText(
         suiteRun,
         'environment',
-        'environnement'
+        'environnement',
+        'environment_tags'
       )
     ).toUpperCase();
-
-  const executionStatus =
-    entityText(
-      testRun,
-      'status',
-      'run_status'
-    );
-
-  const executionDate =
-    entityText(
-      testRun,
-      'execution_date',
-      'executionDate',
-      'started',
-      'start_time',
-      'last_modified'
-    );
 
   const qualification = {
     capability,
@@ -1012,21 +1110,46 @@ function buildReferenceQualification(
     executions: []
   };
 
-  if (
-    Object.keys(testRun).length
-  ) {
+  for (const run of testRuns) {
+
+    const runId =
+      entityText(
+        run,
+        'id'
+      );
+
+    if (!runId) {
+      continue;
+    }
+
+    const executionStatus =
+      entityText(
+        run,
+        'status',
+        'run_status',
+        'native_status',
+        'nativeStatus',
+        'status_native'
+      );
+
+    const executionDate =
+      entityText(
+        run,
+        'execution_date',
+        'executionDate',
+        'started',
+        'start_time',
+        'last_modified',
+        'creation_time'
+      );
 
     qualification.executions.push({
       id:
-        entityText(
-          testRun,
-          'id'
-        )
-        || '901503',
+        runId,
 
       nom:
         entityText(
-          testRun,
+          run,
           'name'
         ),
 
@@ -1035,6 +1158,21 @@ function buildReferenceQualification(
 
       dateExecution:
         executionDate,
+
+      release:
+        entityText(
+          run,
+          'release',
+          'release_name'
+        ),
+
+      environnement:
+        entityText(
+          run,
+          'environment',
+          'environnement',
+          'environment_tags'
+        ).toUpperCase(),
 
       preuves: []
     });
