@@ -545,7 +545,19 @@ async function main() {
     const epicsResponse =
       await fetchOctaneJson(
         cdp,
-        `${apiBase}/epics?limit=200`
+        `${apiBase}/work_items`
+        + '?fields='
+        + encodeURIComponent(
+          'id,name,subtype,parent,logical_name,'
+          + 'workspace_id,phase,owner,author,'
+          + 'has_children,shared'
+        )
+        + '&limit=max'
+        + '&order_by=name'
+        + '&query='
+        + encodeURIComponent(
+          '"(subtype IN {\'epic\'})"'
+        )
       );
 
     diagnostic.raw.epics =
@@ -702,6 +714,10 @@ async function main() {
     const epic =
       epics.find(
         row =>
+          text(row.subtype)
+            .toLowerCase()
+          === 'epic'
+          &&
           text(row.name)
             .toLowerCase()
           === 'gil - capabilities'
@@ -716,89 +732,243 @@ async function main() {
       );
     }
 
-    diagnostic.epic = epic;
 
+    console.log();
     console.log(
-      '[EPIC]',
+      '[OCTANE][EPIC TROUVE]',
       text(epic.id),
       '|',
       text(epic.name)
     );
 
+    diagnostic.epic = {
+      id:
+        text(epic.id),
+      name:
+        text(epic.name),
+      subtype:
+        text(epic.subtype),
+      source:
+        'work_items'
+    };
+
 
     // ========================================================
-    // NIVEAU 2
-    // FEATURES DE GIL - Capabilities
+    // FEATURES ENFANTS DE GIL - CAPABILITIES
+    //
+    // Requête reproduite à partir du Network Octane :
+    //
+    //   /work_items/descendants
+    //   parents=<EPIC_ID>:feature
+    //
+    // L'ID de l'Epic est découvert dynamiquement ci-dessus.
     // ========================================================
 
     console.log();
     console.log(
-      '[2] Parcours des Features'
+      '[2] Recherche des Features de',
+      text(epic.name)
     );
 
-    const featuresResponse =
-      await fetchOctaneJson(
-        cdp,
-        `${apiBase}/features?limit=500`
+    const descendantsUrl =
+      `${apiBase}/work_items/descendants`
+      + '?fields='
+      + encodeURIComponent(
+        'id,parent,name,subtype,has_children,'
+        + 'owner,author,path,workspace_id,'
+        + 'shared_phase,entity_icon'
+      )
+      + '&keep-descendants=n'
+      + '&limit=max'
+      + '&order_by=parent,name'
+      + '&parents='
+      + encodeURIComponent(
+        `${text(epic.id)}:feature`
+      )
+      + '&query='
+      + encodeURIComponent(
+        '"(subtype IN '
+        + '{\'work_item_root\',\'epic\',\'feature\'})"'
       );
 
-    diagnostic.raw.features =
-      featuresResponse;
+    const descendantsResponse =
+      await fetchOctaneJson(
+        cdp,
+        descendantsUrl
+      );
 
-    const features =
+    diagnostic.raw.descendants =
+      descendantsResponse;
+
+    const descendants =
       entitiesOf(
-        featuresResponse
+        descendantsResponse
+      );
+
+    const capabilityFeatures =
+      descendants.filter(
+        row =>
+          text(row.subtype)
+            .toLowerCase()
+          === 'feature'
       );
 
     diagnostic.features =
-      features;
+      capabilityFeatures.map(
+        row => ({
+          id:
+            text(row.id),
+          name:
+            text(row.name),
+          subtype:
+            text(row.subtype),
+          parent: {
+            id:
+              text(row.parent?.id),
+            name:
+              text(row.parent?.name),
+            subtype:
+              text(row.parent?.subtype)
+          }
+        })
+      );
 
-    for (const feature of features) {
+    console.log(
+      '[OCTANE][FEATURES HTTP]',
+      'status =',
+      descendantsResponse?.status,
+      '| ok =',
+      descendantsResponse?.ok
+    );
+
+    console.log(
+      '[OCTANE][FEATURES COUNT]',
+      capabilityFeatures.length
+    );
+
+    for (const feature of capabilityFeatures) {
 
       console.log(
-        '[FEATURE]',
+        '[OCTANE][FEATURE]',
         text(feature.id),
         '|',
-        text(feature.name)
+        text(feature.name),
+        '| parent =',
+        text(feature.parent?.id),
+        '-',
+        text(feature.parent?.name)
       );
     }
 
 
-    // ========================================================
-    // EXEMPLE DE REFERENCE
-    // Sélection dynamique par nom, pas par ID fixe
-    // ========================================================
-
-    const selectedFeature =
-      features.find(
+    const selectedExchangeLayer =
+      capabilityFeatures.find(
         row =>
           text(row.name)
             .toLowerCase()
           === 'gil - exchange layer'
       );
 
-    if (!selectedFeature) {
+    if (selectedExchangeLayer) {
 
-      throw new Error(
-        'Feature GIL - Exchange layer introuvable'
+      diagnostic.selectedFeature = {
+        id:
+          text(selectedExchangeLayer.id),
+        name:
+          text(selectedExchangeLayer.name),
+        subtype:
+          text(selectedExchangeLayer.subtype)
+      };
+
+      console.log();
+      console.log(
+        '[OCTANE][FEATURE SELECTIONNEE]',
+        text(selectedExchangeLayer.id),
+        '|',
+        text(selectedExchangeLayer.name)
+      );
+
+    } else {
+
+      console.log();
+      console.log(
+        '[OCTANE][ATTENTION]',
+        'Feature GIL - Exchange layer non trouvée'
       );
     }
 
-    diagnostic.selectedFeature =
-      selectedFeature;
+
+    fs.mkdirSync(
+      DATA_DIR,
+      {
+        recursive: true
+      }
+    );
+
+    fs.writeFileSync(
+      OUTPUT,
+      JSON.stringify(
+        diagnostic,
+        null,
+        2
+      ),
+      'utf8'
+    );
 
     console.log();
     console.log(
-      '[FEATURE SELECTIONNEE]',
-      text(selectedFeature.id),
+      '[OCTANE][DIAGNOSTIC ECRIT]',
+      OUTPUT
+    );
+
+    // ========================================================
+    // NIVEAU 2 DEJA TRAITE
+    //
+    // Les Features ont été récupérées plus haut via :
+    //
+    //   /work_items/descendants
+    //
+    // à partir de l'Epic GIL - Capabilities découvert
+    // dynamiquement avec /work_items.
+    //
+    // diagnostic.features et diagnostic.selectedFeature
+    // contiennent donc déjà le résultat officiel.
+    // ========================================================
+
+    if (!diagnostic.selectedFeature) {
+
+      throw new Error(
+        'Feature GIL - Exchange layer introuvable '
+        + 'dans les descendants de GIL - Capabilities'
+      );
+    }
+
+    console.log();
+    console.log(
+      '[OCTANE][NIVEAU 2 VALIDE]',
+      diagnostic.features.length,
+      'Feature(s) trouvée(s)'
+    );
+
+    console.log(
+      '[OCTANE][FEATURE DE REFERENCE]',
+      diagnostic.selectedFeature.id,
       '|',
-      text(selectedFeature.name)
+      diagnostic.selectedFeature.name
     );
 
 
     // ========================================================
-    // La suite du diagnostic sera ajoutée après observation
-    // de la relation réelle Feature -> Tests sur BNP.
+    // PROCHAIN NIVEAU
+    //
+    // Feature sélectionnée
+    //       ↓
+    // onglet Tests
+    //       ↓
+    // Test Suite TS
+    //
+    // La relation réelle Feature -> Tests sera ajoutée
+    // après observation Network Octane sur BNP.
     // ========================================================
 
     fs.writeFileSync(
