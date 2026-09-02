@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "matching_enabled": false,
+  "description": "Mode diagnostic temporaire : affichage indépendant des données JIRA et Octane sans supprimer la logique de matching."
+}

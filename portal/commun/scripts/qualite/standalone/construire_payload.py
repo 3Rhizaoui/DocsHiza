@@ -9,6 +9,11 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
+CONFIG_FILE = (
+    SCRIPT_DIR
+    / "standalone_config.json"
+)
+
 sys.path.insert(
     0,
     str(SCRIPT_DIR),
@@ -24,6 +29,30 @@ from standalone_paths import (
 
 def text(value) -> str:
     return str(value or "").strip()
+
+
+def load_standalone_config() -> dict:
+
+    if not CONFIG_FILE.exists():
+        return {
+            "matching_enabled": True,
+        }
+
+    data = json.loads(
+        CONFIG_FILE.read_text(
+            encoding="utf-8",
+            errors="replace",
+        )
+    )
+
+    return {
+        "matching_enabled": bool(
+            data.get(
+                "matching_enabled",
+                True,
+            )
+        ),
+    }
 
 
 def normalize_key_part(value) -> str:
@@ -373,9 +402,114 @@ def build_row(
     }
 
 
+def build_octane_only_row(
+    octane: dict,
+) -> dict:
+
+    capability = text(
+        octane.get("capability")
+    )
+
+    release = text(
+        octane.get("release")
+    )
+
+    environnement = text(
+        octane.get("environnement")
+    ).upper()
+
+    results = (
+        octane.get("resultats")
+        or {}
+    )
+
+    all_pass = bool(
+        results.get("tousPass")
+    )
+
+    return {
+        "sourceType": "OCTANE",
+        "diagnosticOnly": True,
+
+        "capability": capability,
+        "jiraKey": "",
+        "version": "",
+        "environnement": "",
+
+        "joinKey": {
+            "capability":
+                normalize_key_part(
+                    capability
+                ),
+            "versionRelease":
+                normalize_key_part(
+                    release
+                ),
+            "environnement":
+                normalize_key_part(
+                    environnement
+                ),
+        },
+
+        "jira": {
+            "capability": "",
+            "titre": "",
+            "version": "",
+            "environnement": "",
+            "taches": [],
+            "readiness": {
+                "pret": False,
+            },
+        },
+
+        "octane": octane,
+
+        "matching": {
+            "enabled": False,
+            "trouve": False,
+            "ambigu": False,
+            "nombreCorrespondances": 0,
+
+            "capability": {
+                "jira": "",
+                "octane": capability,
+                "match": False,
+            },
+
+            "versionRelease": {
+                "jira": "",
+                "octane": release,
+                "match": False,
+            },
+
+            "environnement": {
+                "jira": "",
+                "octane":
+                    environnement,
+                "match": False,
+            },
+
+            "coherent": False,
+        },
+
+        "readiness": {
+            "jiraReadyForTest": False,
+            "octaneAllPass": all_pass,
+            "sourcesCoherentes": False,
+        },
+
+        "readyForUse": False,
+
+        "raisonsNonReady": [
+            "Mode diagnostic - matching désactivé"
+        ],
+    }
+
+
 def build_payload(
     jira_data: dict,
     octane_data: dict,
+    matching_enabled: bool = True,
 ) -> dict:
 
     jira_rows = (
@@ -394,29 +528,81 @@ def build_payload(
 
     rows = []
 
-    for jira in jira_rows:
+    if matching_enabled:
 
-        key = join_key(
-            jira.get("capability"),
-            jira.get("version"),
-            jira.get("environnement"),
-        )
+        for jira in jira_rows:
 
-        matches = (
-            octane_index.get(
-                key,
-                [],
+            key = join_key(
+                jira.get("capability"),
+                jira.get("version"),
+                jira.get("environnement"),
             )
-            if all(key)
-            else []
-        )
 
-        rows.append(
-            build_row(
+            matches = (
+                octane_index.get(
+                    key,
+                    [],
+                )
+                if all(key)
+                else []
+            )
+
+            row = build_row(
                 jira,
                 matches,
             )
-        )
+
+            row["sourceType"] = (
+                "MATCHED"
+                if row["matching"]["trouve"]
+                else "JIRA"
+            )
+
+            row["matching"][
+                "enabled"
+            ] = True
+
+            rows.append(row)
+
+    else:
+
+        # ---------------------------------------------
+        # MODE DIAGNOSTIC
+        #
+        # Les deux sources sont volontairement
+        # affichées indépendamment.
+        #
+        # La logique de matching reste intacte et
+        # pourra être réactivée par configuration.
+        # ---------------------------------------------
+
+        for jira in jira_rows:
+
+            row = build_row(
+                jira,
+                [],
+            )
+
+            row["sourceType"] = "JIRA"
+            row["diagnosticOnly"] = True
+
+            row["matching"][
+                "enabled"
+            ] = False
+
+            row["raisonsNonReady"] = [
+                "Mode diagnostic - matching désactivé"
+            ]
+
+            rows.append(row)
+
+        for octane in octane_rows:
+
+            rows.append(
+                build_octane_only_row(
+                    octane
+                )
+            )
 
     rows.sort(
         key=lambda row: (
@@ -462,6 +648,20 @@ def build_payload(
             "jira": "JIRA",
             "octane": "OCTANE",
         },
+
+        "matchingEnabled":
+            matching_enabled,
+
+        "diagnosticMode":
+            not matching_enabled,
+
+        "sourceCounts": {
+            "jira":
+                len(jira_rows),
+            "octane":
+                len(octane_rows),
+        },
+
         "joinRule": [
             "capability",
             "versionRelease",
@@ -509,9 +709,31 @@ def main() -> int:
         OCTANE_NORMALISE
     )
 
+    config = (
+        load_standalone_config()
+    )
+
+    matching_enabled = bool(
+        config.get(
+            "matching_enabled",
+            True,
+        )
+    )
+
+    print(
+        "Matching :",
+        (
+            "ACTIVE"
+            if matching_enabled
+            else "DESACTIVE - MODE DIAGNOSTIC"
+        ),
+    )
+
     payload = build_payload(
         jira_data,
         octane_data,
+        matching_enabled=
+            matching_enabled,
     )
 
     ensure_runtime_dirs()
