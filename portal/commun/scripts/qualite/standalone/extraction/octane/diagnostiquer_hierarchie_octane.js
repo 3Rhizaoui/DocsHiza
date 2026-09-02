@@ -773,23 +773,14 @@ async function main() {
     const descendantsUrl =
       `${apiBase}/work_items/descendants`
       + '?fields='
-      + encodeURIComponent(
-        'id,parent,name,subtype,has_children,'
-        + 'owner,author,path,workspace_id,'
-        + 'shared_phase,entity_icon'
-      )
+      + 'id,parent,name,subtype,has_children,'
+      + 'owner,author,path,workspace_id,'
+      + 'shared_phase,entity_icon'
       + '&keep-descendants=n'
       + '&limit=max'
       + '&order_by=parent,name'
       + '&parents='
-      + encodeURIComponent(
-        `${text(epic.id)}:feature`
-      )
-      + '&query='
-      + encodeURIComponent(
-        '"(subtype IN '
-        + '{\'work_item_root\',\'epic\',\'feature\'})"'
-      );
+      + `${text(epic.id)}:feature`;
 
     const descendantsResponse =
       await fetchOctaneJson(
