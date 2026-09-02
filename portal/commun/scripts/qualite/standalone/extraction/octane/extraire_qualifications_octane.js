@@ -2096,34 +2096,6 @@ async function main() {
       );
     }
 
-    console.log();
-    console.log(
-      '[OCTANE][RAW RUN FIELDS]'
-    );
-
-    for (
-      const probe
-      of result?.probes?.testRuns || []
-    ) {
-
-      const body =
-        safeEntityBody(
-          probe
-        );
-
-      const entity =
-        firstEntity(
-          body
-        );
-
-      console.log(
-        JSON.stringify(
-          entity,
-          null,
-          2
-        )
-      );
-    }
 
     fs.mkdirSync(
       DATA_DIR,
@@ -2158,7 +2130,7 @@ async function main() {
     console.log();
     console.log(
       JSON.stringify(
-        result,
+        qualificationsPayload,
         null,
         2
       )
