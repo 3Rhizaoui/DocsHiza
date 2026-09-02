@@ -1,5 +1,5 @@
 {
   "schemaVersion": 1,
-  "matching_enabled": false,
-  "description": "Mode diagnostic temporaire : affichage indépendant des données JIRA et Octane sans supprimer la logique de matching."
+  "matching_enabled": true,
+  "description": "Matching JIRA / Octane actif avec rapprochement Capability + Release + Environnement et fallback contrôlé lorsque l'environnement Octane est absent."
 }

@@ -53,20 +53,86 @@ def normalize_execution(execution: dict) -> dict:
 
     normalized_status = normalized(status)
 
+    error = (
+        execution.get("erreur")
+        if isinstance(
+            execution.get("erreur"),
+            dict,
+        )
+        else {}
+    )
+
     return {
-        "id": text(execution.get("id")),
+        "id": text(
+            execution.get("id")
+        ),
+
         "nom": text(
             execution.get("nom")
             or execution.get("name")
         ),
+
         "statut": status,
-        "pass": normalized_status in PASS_STATUSES,
-        "fail": normalized_status in FAIL_STATUSES,
+
+        "pass":
+            normalized_status in PASS_STATUSES,
+
+        "fail":
+            normalized_status in FAIL_STATUSES,
+
         "dateExecution": text(
             execution.get("dateExecution")
             or execution.get("executionDate")
         ),
-        "preuves": execution.get("preuves") or [],
+
+        "duree":
+            execution.get("duree"),
+
+        "release": text(
+            execution.get("release")
+        ),
+
+        "environnement": text(
+            execution.get("environnement")
+            or execution.get("environment")
+        ).upper(),
+
+        "sprint": text(
+            execution.get("sprint")
+        ),
+
+        "jalon": text(
+            execution.get("jalon")
+            or execution.get("milestone")
+        ),
+
+        "executePar": text(
+            execution.get("executePar")
+            or execution.get("runBy")
+        ),
+
+        "sousType": text(
+            execution.get("sousType")
+            or execution.get("subtype")
+        ),
+
+        "ordre":
+            execution.get("ordre"),
+
+        "erreur": {
+            "type": text(
+                error.get("type")
+            ),
+            "message": text(
+                error.get("message")
+            ),
+            "details": text(
+                error.get("details")
+            ),
+        },
+
+        "preuves":
+            execution.get("preuves") or [],
     }
 
 
@@ -137,9 +203,38 @@ def normalize_qualification(row: dict) -> dict:
             "id": text(
                 suite_run.get("id")
             ),
+
             "nom": text(
                 suite_run.get("nom")
                 or suite_run.get("name")
+            ),
+
+            "statut": text(
+                suite_run.get("statut")
+                or suite_run.get("status")
+            ),
+
+            "dateDebut": text(
+                suite_run.get("dateDebut")
+                or suite_run.get("started")
+            ),
+
+            "release": text(
+                suite_run.get("release")
+            ),
+
+            "sprint": text(
+                suite_run.get("sprint")
+            ),
+
+            "jalon": text(
+                suite_run.get("jalon")
+                or suite_run.get("milestone")
+            ),
+
+            "executePar": text(
+                suite_run.get("executePar")
+                or suite_run.get("runBy")
             ),
         },
         "executions": executions,

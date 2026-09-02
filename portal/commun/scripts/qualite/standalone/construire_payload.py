@@ -97,25 +97,56 @@ def index_octane(
     qualifications: list[dict],
 ) -> dict:
 
-    index = {}
+    exact = {}
+    without_environment = {}
 
     for row in qualifications:
 
-        key = join_key(
-            row.get("capability"),
-            row.get("release"),
-            row.get("environnement"),
+        capability = normalize_key_part(
+            row.get("capability")
         )
 
-        if not all(key):
+        release = normalize_key_part(
+            row.get("release")
+        )
+
+        environment = normalize_key_part(
+            row.get("environnement")
+        )
+
+        # Capability + Release restent obligatoires.
+        # L'environnement peut être absent dans Octane :
+        # dans ce cas la qualification reste visible,
+        # mais elle ne sera jamais considérée cohérente.
+        if not capability or not release:
             continue
 
-        index.setdefault(
-            key,
-            [],
-        ).append(row)
+        if environment:
 
-    return index
+            exact.setdefault(
+                (
+                    capability,
+                    release,
+                    environment,
+                ),
+                [],
+            ).append(row)
+
+        else:
+
+            without_environment.setdefault(
+                (
+                    capability,
+                    release,
+                ),
+                [],
+            ).append(row)
+
+    return {
+        "exact": exact,
+        "withoutEnvironment":
+            without_environment,
+    }
 
 
 def build_row(
@@ -538,14 +569,46 @@ def build_payload(
                 jira.get("environnement"),
             )
 
-            matches = (
-                octane_index.get(
-                    key,
-                    [],
+            matches = []
+
+            if all(key):
+
+                # 1. Priorité au rapprochement strict :
+                # Capability + Release + Environnement.
+                matches = (
+                    octane_index
+                    .get("exact", {})
+                    .get(
+                        key,
+                        [],
+                    )
                 )
-                if all(key)
-                else []
-            )
+
+            # 2. Si aucun match exact, accepter une
+            # qualification Octane dont l'environnement
+            # est réellement absent.
+            #
+            # Aucun SIT/UAT n'est inventé.
+            if (
+                not matches
+                and key[0]
+                and key[1]
+            ):
+
+                matches = (
+                    octane_index
+                    .get(
+                        "withoutEnvironment",
+                        {},
+                    )
+                    .get(
+                        (
+                            key[0],
+                            key[1],
+                        ),
+                        [],
+                    )
+                )
 
             row = build_row(
                 jira,

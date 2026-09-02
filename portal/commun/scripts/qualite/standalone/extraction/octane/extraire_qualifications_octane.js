@@ -1210,6 +1210,734 @@ function buildQualificationsPayload(
 }
 
 
+
+function entitiesOf(body) {
+
+  if (!body) {
+    return [];
+  }
+
+  if (Array.isArray(body.data)) {
+    return body.data;
+  }
+
+  if (Array.isArray(body.entities)) {
+    return body.entities;
+  }
+
+  return [];
+}
+
+
+function dynamicText(value) {
+
+  if (
+    value === null
+    || value === undefined
+  ) {
+    return '';
+  }
+
+  if (typeof value === 'object') {
+
+    return String(
+      value.name
+      || value.value
+      || value.id
+      || ''
+    ).trim();
+  }
+
+  return String(value).trim();
+}
+
+
+function capabilityFromFeatureName(name) {
+
+  return dynamicText(name)
+    .replace(
+      /^GIL\s*-\s*/i,
+      ''
+    )
+    .trim();
+}
+
+
+function executionProofs(run) {
+
+  const proofs = [];
+
+  if (run.external_report_url) {
+    proofs.push({
+      type: 'external_report_url',
+      valeur: run.external_report_url
+    });
+  }
+
+  if (run.custom_report_link) {
+    proofs.push({
+      type: 'custom_report_link',
+      valeur: run.custom_report_link
+    });
+  }
+
+  if (run.has_attachments) {
+    proofs.push({
+      type: 'attachments',
+      valeur: true
+    });
+  }
+
+  if (run.linked_defects) {
+    proofs.push({
+      type: 'linked_defects',
+      valeur: run.linked_defects
+    });
+  }
+
+  return proofs;
+}
+
+
+async function extractDynamicQualifications(
+  cdp,
+  config
+) {
+
+  const apiBase =
+    octaneApiBase(config);
+
+  console.log();
+  console.log(
+    '[OCTANE][DYNAMIC]',
+    'Début extraction réelle N1 -> N5'
+  );
+
+
+  // ==========================================================
+  // N1 - EPIC GIL - CAPABILITIES
+  // ==========================================================
+
+  const epicFields = [
+    'id',
+    'name',
+    'subtype',
+    'parent'
+  ].join(',');
+
+  const epicQuery =
+    `"(subtype='epic')"`;
+
+  const epicUrl =
+    `${apiBase}/work_items`
+    + '?fields=' + epicFields
+    + '&limit=300'
+    + '&offset=0'
+    + '&order_by=id'
+    + '&query='
+    + encodeURIComponent(epicQuery);
+
+  const epicBody =
+    await fetchOctaneJson(
+      cdp,
+      epicUrl
+    );
+
+  const epics =
+    entitiesOf(epicBody);
+
+  const capabilitiesEpic =
+    epics.find(
+      row =>
+        dynamicText(row.name)
+          .toLowerCase()
+        === 'gil - capabilities'
+    );
+
+  if (!capabilitiesEpic) {
+    throw new Error(
+      'Epic Octane "GIL - Capabilities" introuvable'
+    );
+  }
+
+  console.log(
+    '[OCTANE][N1]',
+    dynamicText(capabilitiesEpic.id),
+    '|',
+    dynamicText(capabilitiesEpic.name)
+  );
+
+
+  // ==========================================================
+  // N2 - FEATURES DE L'EPIC
+  // ==========================================================
+
+  const epicId =
+    dynamicText(
+      capabilitiesEpic.id
+    );
+
+  const featureFields = [
+    'id',
+    'name',
+    'subtype',
+    'parent',
+    'path'
+  ].join(',');
+
+  const featureQuery =
+    `"(parent={id=${epicId}};subtype='feature')"`;
+
+  const featureUrl =
+    `${apiBase}/work_items`
+    + '?fields=' + featureFields
+    + '&limit=300'
+    + '&offset=0'
+    + '&order_by=id'
+    + '&query='
+    + encodeURIComponent(featureQuery);
+
+  const featureBody =
+    await fetchOctaneJson(
+      cdp,
+      featureUrl
+    );
+
+  const features =
+    entitiesOf(featureBody);
+
+  console.log(
+    '[OCTANE][N2]',
+    features.length,
+    'Feature(s)'
+  );
+
+  const qualifications = [];
+
+
+  // ==========================================================
+  // N3 -> N5 POUR CHAQUE FEATURE
+  // ==========================================================
+
+  for (const feature of features) {
+
+    const featureId =
+      dynamicText(feature.id);
+
+    const featureName =
+      dynamicText(feature.name);
+
+    const capability =
+      capabilityFromFeatureName(
+        featureName
+      );
+
+    console.log();
+    console.log(
+      '[OCTANE][FEATURE]',
+      featureId,
+      '|',
+      featureName
+    );
+
+
+    // --------------------------------------------------------
+    // N3 - TESTS COUVRANT LA FEATURE
+    // --------------------------------------------------------
+
+    const testFields = [
+      'id',
+      'name',
+      'subtype',
+      'phase',
+      'test_status',
+      'covered_content',
+      'covered_requirement'
+    ].join(',');
+
+    /*
+     * Relation validée sur BNP :
+     * tests.covered_content -> Feature.
+     *
+     * Le filtre direct par id est conservé ici.
+     */
+    const testQuery =
+      `"(covered_content={id=${featureId}})"`;
+
+    const testUrl =
+      `${apiBase}/tests`
+      + '?fields=' + testFields
+      + '&limit=500'
+      + '&offset=0'
+      + '&order_by=id'
+      + '&query='
+      + encodeURIComponent(testQuery);
+
+    let tests = [];
+
+    try {
+
+      const testBody =
+        await fetchOctaneJson(
+          cdp,
+          testUrl
+        );
+
+      tests =
+        entitiesOf(testBody);
+
+    } catch (error) {
+
+      console.log(
+        '[OCTANE][N3][KO]',
+        featureId,
+        String(
+          error?.message || error
+        )
+      );
+
+      continue;
+    }
+
+
+    const testSuites =
+      tests.filter(
+        row =>
+          dynamicText(row.subtype)
+            .toLowerCase()
+          === 'test_suite'
+      );
+
+    console.log(
+      '[OCTANE][N3]',
+      'tests =',
+      tests.length,
+      '| suites =',
+      testSuites.length
+    );
+
+
+    /*
+     * Une Feature peut avoir plusieurs Test Suites.
+     * On produit donc une qualification par Suite/Run,
+     * sans écraser les autres Releases.
+     */
+    for (const testSuite of testSuites) {
+
+      const testSuiteId =
+        dynamicText(
+          testSuite.id
+        );
+
+      const testSuiteName =
+        dynamicText(
+          testSuite.name
+        );
+
+
+      // ------------------------------------------------------
+      // N4 - SUITE RUNS
+      // ------------------------------------------------------
+
+      const suiteRunFields = [
+        'id',
+        'name',
+        'test_name',
+        'subtype',
+        'started',
+        'native_status',
+        'past_status',
+        'release',
+        'milestone',
+        'sprint',
+        'default_run_by',
+        'runs_in_suite'
+      ].join(',');
+
+      const suiteRunQuery =
+        `"(test={id=${testSuiteId}};`
+        + "subtype IN 'run_suite')\"";
+
+      const suiteRunUrl =
+        `${apiBase}/runs`
+        + '?fields=' + suiteRunFields
+        + '&limit=500'
+        + '&offset=0'
+        + '&order_by=id'
+        + '&query='
+        + encodeURIComponent(
+          suiteRunQuery
+        );
+
+      let suiteRuns = [];
+
+      try {
+
+        const suiteRunBody =
+          await fetchOctaneJson(
+            cdp,
+            suiteRunUrl
+          );
+
+        suiteRuns =
+          entitiesOf(
+            suiteRunBody
+          );
+
+      } catch (error) {
+
+        console.log(
+          '[OCTANE][N4][KO]',
+          testSuiteId,
+          String(
+            error?.message || error
+          )
+        );
+
+        continue;
+      }
+
+
+      console.log(
+        '[OCTANE][N4]',
+        testSuiteId,
+        '| Suite Runs =',
+        suiteRuns.length
+      );
+
+
+      for (const suiteRun of suiteRuns) {
+
+        const suiteRunId =
+          dynamicText(
+            suiteRun.id
+          );
+
+
+        // ----------------------------------------------------
+        // N5 - RUNS ENFANTS
+        // ----------------------------------------------------
+
+        const runFields = [
+          'id',
+          'name',
+          'test_name',
+          'subtype',
+          'status',
+          'native_status',
+          'past_status',
+          'started',
+          'duration',
+          'order_in_suite_run',
+          'parent_suite',
+          'release',
+          'sprint',
+          'milestone',
+          'run_by',
+          'test_runner',
+          'linked_defects',
+          'has_attachments',
+          'taxonomies',
+          'default_taxonomies',
+          'external_assets',
+          'error_type',
+          'error_message',
+          'error_details',
+          'external_report_url',
+          'custom_report_link'
+        ].join(',');
+
+        const runQuery =
+          `"(parent_suite={id=${suiteRunId}};`
+          + "subtype IN 'run_manual','run_automated',"
+          + "'gherkin_automated_run')\"";
+
+        const runUrl =
+          `${apiBase}/runs`
+          + '?fields=' + runFields
+          + '&limit=1000'
+          + '&offset=0'
+          + '&order_by=order_in_suite_run'
+          + '&query='
+          + encodeURIComponent(
+            runQuery
+          );
+
+        let runs = [];
+
+        try {
+
+          const runBody =
+            await fetchOctaneJson(
+              cdp,
+              runUrl
+            );
+
+          runs =
+            entitiesOf(runBody);
+
+        } catch (error) {
+
+          console.log(
+            '[OCTANE][N5][KO]',
+            suiteRunId,
+            String(
+              error?.message || error
+            )
+          );
+
+          continue;
+        }
+
+
+        console.log(
+          '[OCTANE][N5]',
+          suiteRunId,
+          '| executions =',
+          runs.length
+        );
+
+
+        /*
+         * Release :
+         * priorité aux Runs, puis Suite Run.
+         */
+        const releaseRun =
+          runs.find(
+            run =>
+              dynamicText(
+                run.release
+              )
+          );
+
+        const release =
+          dynamicText(
+            releaseRun?.release
+            || suiteRun.release
+          );
+
+
+        /*
+         * ENVIRONNEMENT :
+         * volontairement PAS de valeur par défaut.
+         *
+         * On ne transforme jamais un champ vide en SIT.
+         */
+        const environmentRun =
+          runs.find(
+            run =>
+              dynamicText(
+                run.environment
+                || run.environnement
+                || run.environment_tags
+              )
+          );
+
+        const environnement =
+          dynamicText(
+            environmentRun?.environment
+            || environmentRun?.environnement
+            || environmentRun?.environment_tags
+            || suiteRun.environment
+            || suiteRun.environnement
+            || suiteRun.environment_tags
+          ).toUpperCase();
+
+
+        const executions =
+          runs.map(
+            run => ({
+              id:
+                dynamicText(run.id),
+
+              nom:
+                dynamicText(
+                  run.test_name
+                  || run.name
+                ),
+
+              statut:
+                dynamicText(
+                  run.native_status
+                  || run.status
+                  || run.past_status
+                ),
+
+              dateExecution:
+                dynamicText(
+                  run.started
+                ),
+
+              duree:
+                run.duration ?? null,
+
+              release:
+                dynamicText(
+                  run.release
+                ),
+
+              environnement:
+                dynamicText(
+                  run.environment
+                  || run.environnement
+                  || run.environment_tags
+                ).toUpperCase(),
+
+              sprint:
+                dynamicText(
+                  run.sprint
+                ),
+
+              jalon:
+                dynamicText(
+                  run.milestone
+                ),
+
+              executePar:
+                dynamicText(
+                  run.run_by
+                ),
+
+              sousType:
+                dynamicText(
+                  run.subtype
+                ),
+
+              ordre:
+                run.order_in_suite_run
+                ?? null,
+
+              erreur: {
+                type:
+                  dynamicText(
+                    run.error_type
+                  ),
+                message:
+                  dynamicText(
+                    run.error_message
+                  ),
+                details:
+                  dynamicText(
+                    run.error_details
+                  )
+              },
+
+              preuves:
+                executionProofs(run)
+            })
+          );
+
+
+        qualifications.push({
+          capability,
+
+          octaneFeature: {
+            id:
+              featureId,
+            nom:
+              featureName
+          },
+
+          release,
+
+          environnement,
+
+          testSuite: {
+            id:
+              testSuiteId,
+            nom:
+              testSuiteName,
+            testsPlanifies:
+              Number(
+                suiteRun
+                  ?.runs_in_suite
+                  ?.total_count
+                || runs.length
+                || 0
+              )
+          },
+
+          suiteRun: {
+            id:
+              suiteRunId,
+            nom:
+              dynamicText(
+                suiteRun.name
+                || suiteRun.test_name
+              ),
+            statut:
+              dynamicText(
+                suiteRun.native_status
+                || suiteRun.past_status
+              ),
+            dateDebut:
+              dynamicText(
+                suiteRun.started
+              ),
+            release:
+              dynamicText(
+                suiteRun.release
+              ),
+            sprint:
+              dynamicText(
+                suiteRun.sprint
+              ),
+            jalon:
+              dynamicText(
+                suiteRun.milestone
+              ),
+            executePar:
+              dynamicText(
+                suiteRun.default_run_by
+              )
+          },
+
+          executions
+        });
+      }
+    }
+  }
+
+
+  console.log();
+  console.log(
+    '[OCTANE][DYNAMIC][FIN]',
+    qualifications.length,
+    'qualification(s)'
+  );
+
+
+  return {
+    schemaVersion: 2,
+
+    generatedAt:
+      new Date().toISOString(),
+
+    source: {
+      type:
+        'OCTANE SSO DYNAMIC',
+
+      sharedSpace:
+        config.sharedSpace,
+
+      workspace:
+        config.workspace,
+
+      epic: {
+        id:
+          epicId,
+        nom:
+          dynamicText(
+            capabilitiesEpic.name
+          )
+      }
+    },
+
+    qualifications
+  };
+}
+
+
 async function main() {
 
   const config =
@@ -1279,68 +2007,13 @@ async function main() {
 
     console.log();
     console.log(
-      'Extraction de référence Octane...'
-    );
-
-    const result =
-      await extractReferenceSample(
-        cdp,
-        config
-      );
-
-    console.log();
-    console.log(
-      'Découverte du modèle Octane...'
-    );
-
-    const discovery =
-      await discoverOctaneModel(
-        cdp,
-        config
-      );
-
-    const target = path.join(
-      DATA_DIR,
-      'octane_reference_probe.json'
-    );
-
-    fs.mkdirSync(
-      path.dirname(target),
-      {
-        recursive: true
-      }
-    );
-
-    fs.writeFileSync(
-      target,
-      JSON.stringify(
-        result,
-        null,
-        2
-      ),
-      'utf8'
-    );
-
-    const discoveryTarget =
-      path.join(
-        DATA_DIR,
-        'octane_discovery.json'
-      );
-
-    fs.writeFileSync(
-      discoveryTarget,
-      JSON.stringify(
-        discovery,
-        null,
-        2
-      ),
-      'utf8'
+      'Extraction dynamique Octane N1 -> N5...'
     );
 
     const qualificationsPayload =
-      buildQualificationsPayload(
-        config,
-        result
+      await extractDynamicQualifications(
+        cdp,
+        config
       );
 
     console.log();

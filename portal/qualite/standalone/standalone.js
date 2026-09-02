@@ -166,6 +166,144 @@
   }
 
 
+  function formatDuration(value) {
+
+    if (
+      value === null
+      || value === undefined
+      || value === ""
+    ) {
+      return "—";
+    }
+
+    const numeric =
+      Number(value);
+
+    if (Number.isNaN(numeric)) {
+      return String(value);
+    }
+
+    /*
+     * Octane peut retourner une durée numérique.
+     * On conserve la valeur source sans inventer
+     * une unité si elle n'est pas connue.
+     */
+    return String(value);
+  }
+
+
+  function objectText(value) {
+
+    if (
+      value === null
+      || value === undefined
+      || value === ""
+    ) {
+      return "";
+    }
+
+    if (Array.isArray(value)) {
+
+      return value
+        .map(objectText)
+        .filter(Boolean)
+        .join(", ");
+    }
+
+    if (typeof value === "object") {
+
+      if (value.name) {
+        return String(value.name);
+      }
+
+      if (value.value) {
+        return String(value.value);
+      }
+
+      if (value.id) {
+        return String(value.id);
+      }
+
+      try {
+        return JSON.stringify(value);
+      } catch (_) {
+        return String(value);
+      }
+    }
+
+    return String(value);
+  }
+
+
+  function linkedDefectsText(execution) {
+
+    const proofs =
+      Array.isArray(execution?.preuves)
+        ? execution.preuves
+        : [];
+
+    const defects =
+      proofs
+        .filter(
+          proof =>
+            proof?.type
+            === "linked_defects"
+        )
+        .map(
+          proof =>
+            objectText(
+              proof?.valeur
+            )
+        )
+        .filter(Boolean);
+
+    return defects.join(", ");
+  }
+
+
+  function executionErrorText(execution) {
+
+    const error =
+      execution?.erreur || {};
+
+    const parts = [];
+
+    if (error.type) {
+      parts.push(
+        "Type : " + error.type
+      );
+    }
+
+    if (error.message) {
+      parts.push(
+        "Cause : " + error.message
+      );
+    }
+
+    if (
+      error.details
+      && error.details !== error.message
+    ) {
+      parts.push(
+        "Détail : " + error.details
+      );
+    }
+
+    const defects =
+      linkedDefectsText(
+        execution
+      );
+
+    if (defects) {
+      parts.push(
+        "Bug lié : " + defects
+      );
+    }
+
+    return parts.join(" | ");
+  }
+
+
   function buildExecutionRows(row) {
 
     const executions =
@@ -181,58 +319,124 @@
     }
 
     return `
-      <table class="miniTable">
-        <thead>
-          <tr>
-            <th>Exécution</th>
-            <th>Résultat</th>
-            <th>Date</th>
-            <th>Preuves</th>
-          </tr>
-        </thead>
+      <div style="overflow-x:auto">
+        <table class="miniTable">
+          <thead>
+            <tr>
+              <th>ID AR</th>
+              <th>Test</th>
+              <th>Résultat</th>
+              <th>Démarré</th>
+              <th>Durée</th>
+              <th>Release</th>
+              <th>Sprint</th>
+              <th>Jalon</th>
+              <th>Exécuté par</th>
+              <th>Cause / Bug lié</th>
+            </tr>
+          </thead>
 
-        <tbody>
-          ${
-            executions.map(execution => `
-              <tr>
-                <td>
-                  ${escapeHtml(execution.nom)}
-                </td>
+          <tbody>
+            ${
+              executions.map(
+                execution => {
 
-                <td>
-                  ${
-                    execution.pass
-                      ? '<span class="status green">PASS</span>'
-                      : execution.fail
-                        ? '<span class="status red">FAIL</span>'
-                        : '<span class="status gray">'
-                          + escapeHtml(execution.statut)
-                          + '</span>'
-                  }
-                </td>
+                  const errorText =
+                    executionErrorText(
+                      execution
+                    );
 
-                <td>
-                  ${
-                    escapeHtml(
-                      formatDate(
-                        execution.dateExecution
-                      )
-                    )
-                  }
-                </td>
+                  return `
+                    <tr>
+                      <td>
+                        <strong>
+                          ${escapeHtml(
+                            execution.id || "—"
+                          )}
+                        </strong>
+                      </td>
 
-                <td>
-                  ${
-                    Array.isArray(execution.preuves)
-                      ? execution.preuves.length
-                      : 0
-                  }
-                </td>
-              </tr>
-            `).join("")
-          }
-        </tbody>
-      </table>
+                      <td>
+                        ${escapeHtml(
+                          execution.nom || "—"
+                        )}
+                      </td>
+
+                      <td>
+                        ${
+                          execution.pass
+                            ? '<span class="status green">PASS</span>'
+                            : execution.fail
+                              ? '<span class="status red">FAIL</span>'
+                              : '<span class="status gray">'
+                                + escapeHtml(
+                                    execution.statut
+                                    || "—"
+                                  )
+                                + '</span>'
+                        }
+                      </td>
+
+                      <td>
+                        ${escapeHtml(
+                          formatDate(
+                            execution.dateExecution
+                          )
+                        )}
+                      </td>
+
+                      <td>
+                        ${escapeHtml(
+                          formatDuration(
+                            execution.duree
+                          )
+                        )}
+                      </td>
+
+                      <td>
+                        ${escapeHtml(
+                          execution.release
+                          || row?.octane?.release
+                          || "—"
+                        )}
+                      </td>
+
+                      <td>
+                        ${escapeHtml(
+                          execution.sprint
+                          || "—"
+                        )}
+                      </td>
+
+                      <td>
+                        ${escapeHtml(
+                          execution.jalon
+                          || "—"
+                        )}
+                      </td>
+
+                      <td>
+                        ${escapeHtml(
+                          execution.executePar
+                          || "—"
+                        )}
+                      </td>
+
+                      <td>
+                        ${
+                          errorText
+                            ? escapeHtml(errorText)
+                            : "—"
+                        }
+                      </td>
+                    </tr>
+                  `;
+                }
+              ).join("")
+            }
+          </tbody>
+        </table>
+      </div>
     `;
   }
 
@@ -690,6 +894,72 @@
                         octane
                           ?.suiteRun
                           ?.id
+                        || "—"
+                      )
+                    }
+
+                    ${
+                      octane?.suiteRun?.nom
+                        ? " - "
+                          + escapeHtml(
+                              octane.suiteRun.nom
+                            )
+                        : ""
+                    }
+
+                  </div>
+
+                  <div style="margin-bottom:12px">
+
+                    <strong>Statut SR :</strong>
+                    ${
+                      escapeHtml(
+                        octane?.suiteRun?.statut
+                        || "—"
+                      )
+                    }
+
+                    &nbsp;&nbsp;
+
+                    <strong>Démarré :</strong>
+                    ${
+                      escapeHtml(
+                        formatDate(
+                          octane
+                            ?.suiteRun
+                            ?.dateDebut
+                        )
+                      )
+                    }
+
+                    &nbsp;&nbsp;
+
+                    <strong>Sprint :</strong>
+                    ${
+                      escapeHtml(
+                        octane?.suiteRun?.sprint
+                        || "—"
+                      )
+                    }
+
+                    &nbsp;&nbsp;
+
+                    <strong>Jalon :</strong>
+                    ${
+                      escapeHtml(
+                        octane?.suiteRun?.jalon
+                        || "—"
+                      )
+                    }
+
+                    &nbsp;&nbsp;
+
+                    <strong>Exécuté par :</strong>
+                    ${
+                      escapeHtml(
+                        octane
+                          ?.suiteRun
+                          ?.executePar
                         || "—"
                       )
                     }
