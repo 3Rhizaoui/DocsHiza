@@ -1346,7 +1346,7 @@ async function main() {
 
     const suiteRunQuery =
       `"(test={id=${testSuiteId}};`
-      + 'subtype IN {run_suite})"';
+      + "subtype IN 'run_suite')\"";
 
     const suiteRunsUrl =
       `${apiBase}/runs`
@@ -1525,11 +1525,8 @@ async function main() {
 
       const runsQuery =
         `"(parent_suite={id=${suiteRunId}};`
-        + 'subtype IN {'
-        + 'run_manual,'
-        + 'run_automated,'
-        + 'gherkin_automated_run'
-        + '})"';
+        + "subtype IN 'run_manual','run_automated',"
+        + "'gherkin_automated_run')\"";
 
 
       const runsUrl =
