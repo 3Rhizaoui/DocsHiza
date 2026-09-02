@@ -770,22 +770,32 @@ async function main() {
       text(epic.name)
     );
 
-    const descendantsUrl =
-      `${apiBase}/work_items/descendants`
+    // Requete observee directement dans l'UI Octane :
+    //
+    //   GET /work_items
+    //   query="(parent={id=766022};subtype='feature')"
+    //
+    // L'ID Epic reste dynamique.
+    const featuresUrl =
+      `${apiBase}/work_items`
       + '?fields='
-      + 'id,parent,name,subtype,has_children,'
-      + 'owner,author,path,workspace_id,'
-      + 'shared_phase,entity_icon'
-      + '&keep-descendants=n'
-      + '&limit=max'
-      + '&order_by=parent,name'
-      + '&parents='
-      + `${text(epic.id)}:feature`;
+      + encodeURIComponent(
+        'id,name,subtype,parent,phase,'
+        + 'has_children,workspace_id'
+      )
+      + '&limit=200'
+      + '&offset=0'
+      + '&order_by=id'
+      + '&query='
+      + encodeURIComponent(
+        `"(parent={id=${text(epic.id)}};`
+        + `subtype='feature')"`
+      );
 
     const descendantsResponse =
       await fetchOctaneJson(
         cdp,
-        descendantsUrl
+        featuresUrl
       );
 
     diagnostic.raw.descendants =
