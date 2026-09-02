@@ -1343,6 +1343,115 @@ async function main() {
         result
       );
 
+    console.log();
+    console.log(
+      '='.repeat(70)
+    );
+    console.log(
+      '[OCTANE][DIAGNOSTIC METIER]'
+    );
+    console.log(
+      '='.repeat(70)
+    );
+
+    for (
+      const qualification
+      of qualificationsPayload.qualifications || []
+    ) {
+
+      console.log();
+      console.log(
+        '[OCTANE][FEATURE]',
+        qualification?.octaneFeature?.id || '',
+        '|',
+        qualification?.octaneFeature?.nom || ''
+      );
+
+      console.log(
+        '[OCTANE][TEST_SUITE]',
+        qualification?.testSuite?.id || '',
+        '|',
+        qualification?.testSuite?.nom || '',
+        '| planifies =',
+        qualification?.testSuite?.testsPlanifies || 0
+      );
+
+      console.log(
+        '[OCTANE][SUITE_RUN]',
+        qualification?.suiteRun?.id || '',
+        '|',
+        qualification?.suiteRun?.nom || ''
+      );
+
+      console.log(
+        '[OCTANE][CONTEXT]',
+        'release =',
+        qualification?.release || '<vide>',
+        '| environnement =',
+        qualification?.environnement || '<vide>'
+      );
+
+      for (
+        const execution
+        of qualification.executions || []
+      ) {
+
+        console.log(
+          '[OCTANE][EXECUTION]',
+          execution.id || '',
+          '|',
+          execution.nom || '',
+          '| statut =',
+          execution.statut || '<vide>',
+          '| release =',
+          execution.release || '<vide>',
+          '| env =',
+          execution.environnement || '<vide>',
+          '| date =',
+          execution.dateExecution || '<vide>',
+          '| preuves =',
+          Array.isArray(execution.preuves)
+            ? execution.preuves.length
+            : 0
+        );
+      }
+
+      console.log(
+        '[OCTANE][SUMMARY]',
+        'executions =',
+        (qualification.executions || []).length
+      );
+    }
+
+    console.log();
+    console.log(
+      '[OCTANE][RAW RUN FIELDS]'
+    );
+
+    for (
+      const probe
+      of result?.probes?.testRuns || []
+    ) {
+
+      const body =
+        safeEntityBody(
+          probe
+        );
+
+      const entity =
+        firstEntity(
+          body
+        );
+
+      console.log(
+        JSON.stringify(
+          entity,
+          null,
+          2
+        )
+      );
+    }
+
     fs.mkdirSync(
       DATA_DIR,
       {

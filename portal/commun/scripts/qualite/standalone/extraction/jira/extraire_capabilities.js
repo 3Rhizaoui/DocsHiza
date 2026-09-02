@@ -1153,6 +1153,30 @@ async function main() {
         'tâche(s) / issue(s) liée(s)'
       );
 
+      console.log(
+        '  [JIRA][FIELDS]',
+        JSON.stringify(
+          epic.fields || {},
+          null,
+          2
+        )
+      );
+
+      for (
+        const child
+        of children.issues || []
+      ) {
+
+        console.log(
+          '  [JIRA][CHILD]',
+          child.key || '',
+          '|',
+          child.fields?.summary || '',
+          '| status =',
+          child.fields?.status?.name || ''
+        );
+      }
+
     }
 
     const output = {
@@ -1230,6 +1254,17 @@ async function main() {
     console.log(
       'Issues enfants :',
       output.diagnostic.children
+    );
+
+    console.log();
+    console.log(
+      '[JIRA][SUMMARY]',
+      'capabilities =',
+      capabilities.length,
+      '| enfants =',
+      output.diagnostic.children,
+      '| erreurs =',
+      errors.length
     );
 
   } finally {
