@@ -237,6 +237,172 @@
   }
 
 
+
+  function matchingValue(
+    row,
+    name
+  ) {
+
+    return (
+      row?.matching?.[name]
+      || {}
+    );
+  }
+
+
+  function coherenceBadge(row) {
+
+    const matching =
+      row?.matching || {};
+
+    if (matching.ambigu) {
+      return (
+        '<span class="status orange">'
+        + 'AMBIGU'
+        + '</span>'
+      );
+    }
+
+    if (!matching.trouve) {
+      return (
+        '<span class="status gray">'
+        + 'OCTANE ABSENT'
+        + '</span>'
+      );
+    }
+
+    if (matching.coherent) {
+      return (
+        '<span class="status green">'
+        + 'COHÉRENT'
+        + '</span>'
+      );
+    }
+
+    return (
+      '<span class="status red">'
+      + 'INCOHÉRENT'
+      + '</span>'
+    );
+  }
+
+
+  function buildMatchingDetails(row) {
+
+    const capability =
+      matchingValue(
+        row,
+        "capability"
+      );
+
+    const version =
+      matchingValue(
+        row,
+        "versionRelease"
+      );
+
+    const environment =
+      matchingValue(
+        row,
+        "environnement"
+      );
+
+    const matchMark = value =>
+      value
+        ? '<span class="status green">OK</span>'
+        : '<span class="status red">KO</span>';
+
+    return `
+      <table class="miniTable">
+        <thead>
+          <tr>
+            <th>Critère</th>
+            <th>JIRA</th>
+            <th>Octane</th>
+            <th>Match</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          <tr>
+            <td>Capability</td>
+            <td>
+              ${escapeHtml(capability.jira || "—")}
+            </td>
+            <td>
+              ${escapeHtml(capability.octane || "—")}
+            </td>
+            <td>
+              ${matchMark(Boolean(capability.match))}
+            </td>
+          </tr>
+
+          <tr>
+            <td>Version / Release</td>
+            <td>
+              ${escapeHtml(version.jira || "—")}
+            </td>
+            <td>
+              ${escapeHtml(version.octane || "—")}
+            </td>
+            <td>
+              ${matchMark(Boolean(version.match))}
+            </td>
+          </tr>
+
+          <tr>
+            <td>Environnement</td>
+            <td>
+              ${escapeHtml(environment.jira || "—")}
+            </td>
+            <td>
+              ${escapeHtml(environment.octane || "—")}
+            </td>
+            <td>
+              ${matchMark(Boolean(environment.match))}
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+    `;
+  }
+
+
+  function buildNonReadyReasons(row) {
+
+    const reasons =
+      Array.isArray(
+        row?.raisonsNonReady
+      )
+        ? row.raisonsNonReady
+        : [];
+
+    if (!reasons.length) {
+
+      return (
+        '<div class="status green">'
+        + 'Tous les contrôles sont satisfaits'
+        + '</div>'
+      );
+    }
+
+    return `
+      <ul>
+        ${
+          reasons
+            .map(
+              reason =>
+                `<li>${escapeHtml(reason)}</li>`
+            )
+            .join("")
+        }
+      </ul>
+    `;
+  }
+
+
   function renderRows(rows) {
 
     const body =
@@ -256,8 +422,25 @@
         const results =
           octaneResults(row);
 
+        const octane =
+          row?.octane || null;
+
         const suite =
-          row?.octane?.testSuite || {};
+          octane?.testSuite || {};
+
+        const plannedTests =
+          Number(
+            suite.testsPlanifies || 0
+          );
+
+        const executedTests =
+          Array.isArray(
+            octane?.executions
+          )
+            ? octane.executions.length
+            : Number(
+                results.total || 0
+              );
 
         const main =
           document.createElement("tr");
@@ -276,15 +459,23 @@
           </td>
 
           <td>
-            ${escapeHtml(row.jiraKey)}
+            ${escapeHtml(row.jiraKey || "—")}
           </td>
 
           <td>
-            ${escapeHtml(row.version || "—")}
+            ${escapeHtml(
+              row?.jira?.version
+              || row.version
+              || "—"
+            )}
           </td>
 
           <td>
-            ${escapeHtml(row.environnement || "—")}
+            ${escapeHtml(
+              row?.jira?.environnement
+              || row.environnement
+              || "—"
+            )}
           </td>
 
           <td>
@@ -321,6 +512,31 @@
 
           <td>
             ${
+              escapeHtml(
+                octane?.release || "—"
+              )
+            }
+          </td>
+
+          <td>
+            ${
+              escapeHtml(
+                octane?.environnement || "—"
+              )
+            }
+          </td>
+
+          <td>
+            ${executedTests}
+            ${
+              plannedTests
+                ? " / " + plannedTests
+                : ""
+            }
+          </td>
+
+          <td>
+            ${
               Number(
                 results.pass || 0
               )
@@ -339,11 +555,14 @@
             ${
               escapeHtml(
                 formatDate(
-                  row?.octane
-                    ?.derniereExecution
+                  octane?.derniereExecution
                 )
               )
             }
+          </td>
+
+          <td>
+            ${coherenceBadge(row)}
           </td>
 
           <td>
@@ -362,58 +581,172 @@
           "detailRow";
 
         detail.innerHTML = `
-          <td colspan="11">
+          <td colspan="15">
+
             <div class="detail">
 
               <div class="detailGrid">
 
                 <div class="detailBox">
-                  <h3>
-                    JIRA - Tâches de la Capability
-                  </h3>
 
-                  ${buildTaskRows(row)}
-                </div>
-
-                <div class="detailBox">
                   <h3>
-                    OCTANE - Qualification
+                    JIRA - Capability et tâches
                   </h3>
 
                   <div style="margin-bottom:12px">
-                    <strong>Release :</strong>
+
+                    <strong>Epic :</strong>
+                    ${escapeHtml(row.jiraKey || "—")}
+
+                    &nbsp;&nbsp;
+
+                    <strong>Version :</strong>
                     ${
                       escapeHtml(
-                        row?.octane?.release
+                        row?.jira?.version
+                        || row.version
                         || "—"
                       )
                     }
+
                     &nbsp;&nbsp;
 
                     <strong>Environnement :</strong>
                     ${
                       escapeHtml(
-                        row?.octane?.environnement
+                        row?.jira?.environnement
+                        || row.environnement
                         || "—"
                       )
                     }
+
+                  </div>
+
+                  ${buildTaskRows(row)}
+
+                </div>
+
+
+                <div class="detailBox">
+
+                  <h3>
+                    OCTANE - Qualification
+                  </h3>
+
+                  <div style="margin-bottom:12px">
+
+                    <strong>Feature :</strong>
+                    ${
+                      escapeHtml(
+                        octane
+                          ?.octaneFeature
+                          ?.nom
+                        || "—"
+                      )
+                    }
+
+                    &nbsp;&nbsp;
+
+                    <strong>Release :</strong>
+                    ${
+                      escapeHtml(
+                        octane?.release
+                        || "—"
+                      )
+                    }
+
+                    &nbsp;&nbsp;
+
+                    <strong>Environnement :</strong>
+                    ${
+                      escapeHtml(
+                        octane?.environnement
+                        || "—"
+                      )
+                    }
+
+                  </div>
+
+                  <div style="margin-bottom:12px">
+
+                    <strong>Test Suite :</strong>
+                    ${
+                      escapeHtml(
+                        suite.nom || "—"
+                      )
+                    }
+
+                    ${
+                      suite.id
+                        ? " (" + escapeHtml(suite.id) + ")"
+                        : ""
+                    }
+
+                    &nbsp;&nbsp;
+
+                    <strong>Suite Run :</strong>
+                    ${
+                      escapeHtml(
+                        octane
+                          ?.suiteRun
+                          ?.id
+                        || "—"
+                      )
+                    }
+
                   </div>
 
                   ${buildExecutionRows(row)}
+
+                </div>
+
+
+                <div class="detailBox">
+
+                  <h3>
+                    Cohérence JIRA / Octane
+                  </h3>
+
+                  ${buildMatchingDetails(row)}
+
+                </div>
+
+
+                <div class="detailBox">
+
+                  <h3>
+                    Décision Ready for Use
+                  </h3>
+
+                  <div style="margin-bottom:12px">
+
+                    ${
+                      row.readyForUse
+                        ? '<span class="status green">READY FOR USE</span>'
+                        : '<span class="status red">NON READY FOR USE</span>'
+                    }
+
+                  </div>
+
+                  ${buildNonReadyReasons(row)}
+
                 </div>
 
               </div>
 
             </div>
+
           </td>
         `;
 
         main.addEventListener(
           "click",
           () => {
+
             detail.classList.toggle(
               "open"
             );
+
           }
         );
 

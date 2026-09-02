@@ -663,6 +663,110 @@ function escapeJqlString(value) {
 }
 
 
+
+async function discoverEpicRelationFields(
+  cdp,
+  baseUrl
+) {
+
+  const expression = `
+    (async () => {
+
+      const response =
+        await fetch(
+          ${JSON.stringify(baseUrl)}
+          + '/rest/api/2/field',
+          {
+            credentials: 'include',
+            headers: {
+              'Accept':
+                'application/json'
+            }
+          }
+        );
+
+      if (!response.ok) {
+
+        throw new Error(
+          'API JIRA FIELD '
+          + response.status
+          + ' : '
+          + (
+            await response.text()
+          ).slice(0, 500)
+        );
+
+      }
+
+      const fields =
+        await response.json();
+
+      return (
+        fields || []
+      )
+        .filter(field => {
+
+          const name =
+            String(
+              field?.name || ''
+            )
+              .trim()
+              .toLowerCase();
+
+          return (
+            name === 'epic link'
+            || name === 'parent link'
+            || name.includes('epic link')
+            || name.includes('parent link')
+          );
+
+        })
+        .map(field => ({
+          id:
+            String(
+              field?.id || ''
+            ),
+          name:
+            String(
+              field?.name || ''
+            )
+        }));
+
+    })()
+  `;
+
+  const result =
+    await cdp.send(
+      'Runtime.evaluate',
+      {
+        expression,
+        awaitPromise: true,
+        returnByValue: true
+      }
+    );
+
+  if (result.exceptionDetails) {
+
+    const detail =
+      result.exceptionDetails
+        .exception
+        ?.description ||
+      result.exceptionDetails.text;
+
+    throw new Error(
+      detail ||
+      'Erreur découverte champs Jira'
+    );
+
+  }
+
+  return (
+    result.result?.value
+    || []
+  );
+}
+
+
 async function fetchEpicChildren(
   cdp,
   baseUrl,
@@ -674,15 +778,71 @@ async function fetchEpicChildren(
 
   const errors = [];
 
+  const diagnostics = [];
+
   const queries = [
-    `parent = "${escapeJqlString(epicKey)}"`,
-    `"Epic Link" = "${escapeJqlString(epicKey)}"`
+    {
+      source: 'parent',
+      jql:
+        `parent = "${escapeJqlString(epicKey)}"`
+    },
+    {
+      source: 'Epic Link',
+      jql:
+        `"Epic Link" = "${escapeJqlString(epicKey)}"`
+    }
   ];
+
+  try {
+
+    const relationFields =
+      await discoverEpicRelationFields(
+        cdp,
+        baseUrl
+      );
+
+    for (
+      const field
+      of relationFields
+    ) {
+
+      const fieldId =
+        String(
+          field?.id || ''
+        ).trim();
+
+      if (!fieldId) {
+        continue;
+      }
+
+      queries.push({
+        source:
+          `${field.name} (${fieldId})`,
+        jql:
+          `"${escapeJqlString(fieldId)}" = "${escapeJqlString(epicKey)}"`
+      });
+
+    }
+
+  } catch (error) {
+
+    errors.push({
+      epicKey,
+      jql:
+        '<discoverEpicRelationFields>',
+      error:
+        String(
+          error?.message ||
+          error
+        )
+    });
+
+  }
 
   let names = {};
 
   for (
-    const childJql
+    const query
     of queries
   ) {
 
@@ -692,7 +852,7 @@ async function fetchEpicChildren(
         await executeJql(
           cdp,
           baseUrl,
-          childJql
+          query.jql
         );
 
       names =
@@ -701,9 +861,29 @@ async function fetchEpicChildren(
           value.names || {}
         );
 
+      const found =
+        value.issues || [];
+
+      diagnostics.push({
+        source:
+          query.source,
+        jql:
+          query.jql,
+        count:
+          found.length
+      });
+
+      console.log(
+        '  [JIRA CHILD QUERY]',
+        query.source,
+        '=>',
+        found.length,
+        'issue(s)'
+      );
+
       for (
         const issue
-        of value.issues || []
+        of found
       ) {
 
         if (issue.key) {
@@ -719,14 +899,27 @@ async function fetchEpicChildren(
 
     } catch (error) {
 
-      errors.push({
+      const row = {
         epicKey,
-        jql: childJql,
+        source:
+          query.source,
+        jql:
+          query.jql,
         error:
           String(
-            error.message || error
+            error?.message ||
+            error
           )
-      });
+      };
+
+      errors.push(row);
+
+      console.log(
+        '  [JIRA CHILD QUERY ERROR]',
+        query.source,
+        '=>',
+        row.error
+      );
 
     }
 
@@ -737,7 +930,8 @@ async function fetchEpicChildren(
       ...issueMap.values()
     ],
     names,
-    errors
+    errors,
+    diagnostics
   };
 
 }
@@ -931,10 +1125,26 @@ async function main() {
         ...(children.errors || [])
       );
 
+      for (
+        const childError
+        of children.errors || []
+      ) {
+
+        console.log(
+          '  [JIRA CHILD QUERY ERROR]',
+          childError.jql,
+          '=>',
+          childError.error
+        );
+
+      }
+
       detailed.push({
         epic,
         children:
-          children.issues || []
+          children.issues || [],
+        childrenDiagnostics:
+          children.diagnostics || []
       });
 
       console.log(

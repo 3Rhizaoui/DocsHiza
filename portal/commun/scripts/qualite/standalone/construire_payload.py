@@ -99,18 +99,86 @@ def build_row(
         or {}
     )
 
+    ambiguous = (
+        len(octane_matches) > 1
+    )
+
     octane = (
         octane_matches[0]
         if len(octane_matches) == 1
         else None
     )
 
-    ambiguous = (
-        len(octane_matches) > 1
-    )
-
     octane_found = (
         octane is not None
+    )
+
+    jira_capability = text(
+        jira.get("capability")
+    )
+
+    jira_version = text(
+        jira.get("version")
+    )
+
+    jira_environment = text(
+        jira.get("environnement")
+    ).upper()
+
+    octane_capability = text(
+        octane.get("capability")
+        if octane
+        else ""
+    )
+
+    octane_release = text(
+        octane.get("release")
+        if octane
+        else ""
+    )
+
+    octane_environment = text(
+        octane.get("environnement")
+        if octane
+        else ""
+    ).upper()
+
+    capability_match = (
+        octane_found
+        and normalize_key_part(
+            jira_capability
+        )
+        == normalize_key_part(
+            octane_capability
+        )
+    )
+
+    version_release_match = (
+        octane_found
+        and normalize_key_part(
+            jira_version
+        )
+        == normalize_key_part(
+            octane_release
+        )
+    )
+
+    environment_match = (
+        octane_found
+        and normalize_key_part(
+            jira_environment
+        )
+        == normalize_key_part(
+            octane_environment
+        )
+    )
+
+    coherent = (
+        octane_found
+        and not ambiguous
+        and capability_match
+        and version_release_match
+        and environment_match
     )
 
     octane_results = (
@@ -131,44 +199,107 @@ def build_row(
         )
     )
 
-    # À ce stade les preuves sont affichées,
-    # mais leur absence ne bloque pas encore le vert.
-    # Cette règle métier reste à confirmer.
+    reasons = []
+
+    if not jira_capability:
+        reasons.append(
+            "Capability JIRA absente"
+        )
+
+    if not jira_version:
+        reasons.append(
+            "Version JIRA absente"
+        )
+
+    if not jira_environment:
+        reasons.append(
+            "Environnement JIRA absent"
+        )
+
+    if ambiguous:
+        reasons.append(
+            "Plusieurs qualifications Octane correspondent"
+        )
+
+    elif not octane_found:
+        reasons.append(
+            "Qualification Octane correspondante absente"
+        )
+
+    else:
+
+        if not capability_match:
+            reasons.append(
+                "Capability JIRA / Octane incohérente"
+            )
+
+        if not version_release_match:
+            reasons.append(
+                "Version JIRA / Release Octane incohérente"
+            )
+
+        if not environment_match:
+            reasons.append(
+                "Environnement JIRA / Octane incohérent"
+            )
+
+    if not jira_ready:
+        reasons.append(
+            "JIRA non Ready for Test"
+        )
+
+    if octane_found and not all_pass:
+        reasons.append(
+            "Tests Octane non tous PASS"
+        )
+
+    # Les preuves restent informatives pour le moment.
+    # Leur absence ne bloque pas encore Ready for Use.
     ready_for_use = (
-        jira_ready
-        and octane_found
-        and not ambiguous
+        coherent
+        and jira_ready
         and all_pass
     )
 
     return {
-        "capability": text(
-            jira.get("capability")
-        ),
+        "capability":
+            jira_capability,
+
         "jiraKey": text(
             jira.get("jiraKey")
         ),
-        "version": text(
-            jira.get("version")
-        ),
-        "environnement": text(
-            jira.get("environnement")
-        ).upper(),
+
+        "version":
+            jira_version,
+
+        "environnement":
+            jira_environment,
+
         "joinKey": {
-            "capability": normalize_key_part(
-                jira.get("capability")
-            ),
-            "versionRelease": normalize_key_part(
-                jira.get("version")
-            ),
-            "environnement": normalize_key_part(
-                jira.get("environnement")
-            ),
+            "capability":
+                normalize_key_part(
+                    jira_capability
+                ),
+            "versionRelease":
+                normalize_key_part(
+                    jira_version
+                ),
+            "environnement":
+                normalize_key_part(
+                    jira_environment
+                ),
         },
+
         "jira": {
+            "capability":
+                jira_capability,
             "titre": text(
                 jira.get("titre")
             ),
+            "version":
+                jira_version,
+            "environnement":
+                jira_environment,
             "taches": (
                 jira.get("taches")
                 or []
@@ -176,14 +307,69 @@ def build_row(
             "readiness":
                 jira_readiness,
         },
-        "octane": octane,
+
+        "octane":
+            octane,
+
         "matching": {
-            "trouve": octane_found,
-            "ambigu": ambiguous,
+            "trouve":
+                octane_found,
+
+            "ambigu":
+                ambiguous,
+
             "nombreCorrespondances":
                 len(octane_matches),
+
+            "capability": {
+                "jira":
+                    jira_capability,
+                "octane":
+                    octane_capability,
+                "match":
+                    capability_match,
+            },
+
+            "versionRelease": {
+                "jira":
+                    jira_version,
+                "octane":
+                    octane_release,
+                "match":
+                    version_release_match,
+            },
+
+            "environnement": {
+                "jira":
+                    jira_environment,
+                "octane":
+                    octane_environment,
+                "match":
+                    environment_match,
+            },
+
+            "coherent":
+                coherent,
         },
-        "readyForUse": ready_for_use,
+
+        "readiness": {
+            "jiraReadyForTest":
+                jira_ready,
+            "octaneAllPass":
+                all_pass,
+            "sourcesCoherentes":
+                coherent,
+        },
+
+        "readyForUse":
+            ready_for_use,
+
+        "raisonsNonReady":
+            (
+                []
+                if ready_for_use
+                else reasons
+            ),
     }
 
 

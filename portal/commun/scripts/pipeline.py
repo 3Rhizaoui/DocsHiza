@@ -39,6 +39,16 @@ STANDALONE_OCTANE_ENGINE = (
     / "octane"
 )
 
+STANDALONE_NORMALISATION_ENGINE = (
+    STANDALONE_ENGINE
+    / "normalisation"
+)
+
+STANDALONE_PAYLOAD_SCRIPT = (
+    STANDALONE_ENGINE
+    / "construire_payload.py"
+)
+
 PUBLICATION_SCRIPT = (
     SCRIPT_DIR
     / "publier_portal.py"
@@ -251,12 +261,12 @@ def main() -> int:
         ),
 
         (
-            "Connexion Octane Standalone via SSO",
+            "Extraction Octane Standalone via SSO",
             [
                 node,
                 str(
                     STANDALONE_OCTANE_ENGINE
-                    / "diagnostiquer_octane_sso.js"
+                    / "extraire_qualifications_octane.js"
                 ),
             ],
         ),
@@ -361,6 +371,42 @@ def main() -> int:
                 ),
             ],
         ),
+        # ====================================================
+        # STANDALONE - NORMALISATION ET PAYLOAD
+        # ====================================================
+
+        (
+            "Normalisation JIRA Standalone",
+            [
+                python,
+                str(
+                    STANDALONE_NORMALISATION_ENGINE
+                    / "normaliser_jira.py"
+                ),
+            ],
+        ),
+
+        (
+            "Normalisation Octane Standalone",
+            [
+                python,
+                str(
+                    STANDALONE_NORMALISATION_ENGINE
+                    / "normaliser_octane.py"
+                ),
+            ],
+        ),
+
+        (
+            "Construction payload Standalone",
+            [
+                python,
+                str(
+                    STANDALONE_PAYLOAD_SCRIPT
+                ),
+            ],
+        ),
+
         (
             "Publication des données Portal",
             [
