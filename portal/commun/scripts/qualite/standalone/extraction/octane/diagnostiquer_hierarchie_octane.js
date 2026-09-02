@@ -451,6 +451,87 @@ function text(value) {
 }
 
 
+
+function containsEntityId(
+  value,
+  expectedId
+) {
+
+  const wanted =
+    String(expectedId || '').trim();
+
+  if (!wanted) {
+    return false;
+  }
+
+  if (
+    value === null
+    || value === undefined
+  ) {
+    return false;
+  }
+
+  if (Array.isArray(value)) {
+
+    return value.some(
+      item =>
+        containsEntityId(
+          item,
+          wanted
+        )
+    );
+  }
+
+  if (typeof value === 'object') {
+
+    if (
+      String(
+        value.id || ''
+      ).trim() === wanted
+    ) {
+      return true;
+    }
+
+    return Object.values(
+      value
+    ).some(
+      item =>
+        containsEntityId(
+          item,
+          wanted
+        )
+    );
+  }
+
+  return false;
+}
+
+
+function nativeValue(
+  value
+) {
+
+  if (
+    value === null
+    || value === undefined
+  ) {
+    return '';
+  }
+
+  if (typeof value === 'object') {
+
+    return String(
+      value.name
+      || value.value
+      || value.id
+      || ''
+    ).trim();
+  }
+
+  return String(value).trim();
+}
+
+
 async function main() {
 
   const config =
@@ -960,16 +1041,737 @@ async function main() {
 
 
     // ========================================================
-    // PROCHAIN NIVEAU
-    //
-    // Feature sélectionnée
-    //       ↓
-    // onglet Tests
-    //       ↓
-    // Test Suite TS
-    //
-    // La relation réelle Feature -> Tests sera ajoutée
-    // après observation Network Octane sur BNP.
+    // NIVEAU 3
+    // FEATURE -> TESTS -> TEST SUITE
+    // ========================================================
+
+    console.log();
+    console.log(
+      '[3] Tests de la Feature',
+      diagnostic.selectedFeature.id,
+      '|',
+      diagnostic.selectedFeature.name
+    );
+
+    const featureId =
+      text(
+        diagnostic.selectedFeature.id
+      );
+
+    const testFields = [
+      'id',
+      'name',
+      'subtype',
+      'phase',
+      'owner',
+      'author',
+      'test_status',
+      'testing_tool_type',
+      'covered_content',
+      'covered_requirement',
+      'product_areas'
+    ].join(',');
+
+
+    /*
+     * Relation observée dans Octane :
+     *
+     * Feature -> onglet Tests
+     * endpoint : /tests
+     * relation : covered_content
+     *
+     * On commence avec le filtre direct.
+     */
+    const testsQuery =
+      `"(covered_content={id=${featureId}})"`;
+
+    const testsUrl =
+      `${apiBase}/tests`
+      + '?fields='
+      + testFields
+      + '&limit=300'
+      + '&offset=0'
+      + '&order_by=id'
+      + '&query='
+      + encodeURIComponent(
+        testsQuery
+      );
+
+    let testsResponse =
+      await fetchOctaneJson(
+        cdp,
+        testsUrl
+      );
+
+    diagnostic.raw.testsQuery =
+      testsQuery;
+
+    diagnostic.raw.tests =
+      testsResponse;
+
+    let featureTests =
+      entitiesOf(
+        testsResponse
+      );
+
+
+    /*
+     * Fallback diagnostic :
+     * si cette instance refuse la query, on récupère un
+     * ensemble plus large puis on filtre localement sur
+     * covered_content.
+     */
+    if (
+      !testsResponse?.ok
+      || !featureTests.length
+    ) {
+
+      console.log(
+        '[OCTANE][TESTS]',
+        'query covered_content non exploitable, fallback local'
+      );
+
+      const fallbackUrl =
+        `${apiBase}/tests`
+        + '?fields='
+        + testFields
+        + '&limit=1000'
+        + '&offset=0'
+        + '&order_by=id';
+
+      const fallbackResponse =
+        await fetchOctaneJson(
+          cdp,
+          fallbackUrl
+        );
+
+      diagnostic.raw.testsFallback =
+        fallbackResponse;
+
+      featureTests =
+        entitiesOf(
+          fallbackResponse
+        )
+          .filter(
+            row =>
+              containsEntityId(
+                row.covered_content,
+                featureId
+              )
+          );
+
+      testsResponse =
+        fallbackResponse;
+    }
+
+
+    diagnostic.tests =
+      featureTests.map(
+        row => ({
+          id:
+            text(row.id),
+
+          name:
+            text(row.name),
+
+          subtype:
+            text(row.subtype),
+
+          coveredContent:
+            row.covered_content || null,
+
+          coveredRequirement:
+            row.covered_requirement || null
+        })
+      );
+
+
+    console.log(
+      '[OCTANE][TESTS HTTP]',
+      'status =',
+      testsResponse?.status,
+      '| ok =',
+      testsResponse?.ok
+    );
+
+    console.log(
+      '[OCTANE][TESTS COUNT]',
+      featureTests.length
+    );
+
+    for (const test of featureTests) {
+
+      console.log(
+        '[OCTANE][TEST]',
+        text(test.id),
+        '|',
+        text(test.name),
+        '| subtype =',
+        text(test.subtype)
+      );
+    }
+
+
+    const testSuites =
+      featureTests.filter(
+        row =>
+          text(row.subtype)
+            .toLowerCase()
+          === 'test_suite'
+      );
+
+    diagnostic.testSuites =
+      testSuites.map(
+        row => ({
+          id:
+            text(row.id),
+          name:
+            text(row.name),
+          subtype:
+            text(row.subtype)
+        })
+      );
+
+
+    console.log(
+      '[OCTANE][TEST SUITES COUNT]',
+      testSuites.length
+    );
+
+
+    /*
+     * Sélection dynamique.
+     *
+     * Priorité :
+     * 1. TS dont le nom contient le nom de la Feature
+     * 2. TS unique
+     */
+    const capabilityName =
+      text(
+        diagnostic.selectedFeature.name
+      )
+        .replace(
+          /^GIL\s*-\s*/i,
+          ''
+        )
+        .toLowerCase()
+        .trim();
+
+    let selectedTestSuite =
+      testSuites.find(
+        row =>
+          text(row.name)
+            .toLowerCase()
+            .includes(
+              capabilityName
+            )
+      );
+
+    if (
+      !selectedTestSuite
+      && testSuites.length === 1
+    ) {
+      selectedTestSuite =
+        testSuites[0];
+    }
+
+    if (!selectedTestSuite) {
+
+      throw new Error(
+        'Aucun Test Suite sélectionnable pour '
+        + diagnostic.selectedFeature.name
+      );
+    }
+
+
+    diagnostic.selectedTestSuite = {
+      id:
+        text(selectedTestSuite.id),
+
+      name:
+        text(selectedTestSuite.name),
+
+      subtype:
+        text(selectedTestSuite.subtype)
+    };
+
+
+    console.log();
+    console.log(
+      '[OCTANE][NIVEAU 3 VALIDE]'
+    );
+
+    console.log(
+      '[OCTANE][TEST SUITE SELECTIONNE]',
+      diagnostic.selectedTestSuite.id,
+      '|',
+      diagnostic.selectedTestSuite.name
+    );
+
+
+    // ========================================================
+    // NIVEAU 4
+    // TEST SUITE -> SUITE RUNS
+    // ========================================================
+
+    console.log();
+    console.log(
+      '[4] Exécutions de suite du TS',
+      diagnostic.selectedTestSuite.id
+    );
+
+    const testSuiteId =
+      text(
+        diagnostic.selectedTestSuite.id
+      );
+
+    const suiteRunFields = [
+      'id',
+      'name',
+      'test_name',
+      'subtype',
+      'started',
+      'draft_run',
+      'past_status',
+      'native_status',
+      'release',
+      'milestone',
+      'sprint',
+      'default_run_by',
+      'runs_in_suite',
+      'error_type',
+      'error_message',
+      'error_details'
+    ].join(',');
+
+    const suiteRunQuery =
+      `"(test={id=${testSuiteId}};`
+      + 'subtype IN {run_suite})"';
+
+    const suiteRunsUrl =
+      `${apiBase}/runs`
+      + '?fields='
+      + suiteRunFields
+      + '&limit=300'
+      + '&offset=0'
+      + '&order_by=id'
+      + '&query='
+      + encodeURIComponent(
+        suiteRunQuery
+      );
+
+    const suiteRunsResponse =
+      await fetchOctaneJson(
+        cdp,
+        suiteRunsUrl
+      );
+
+    diagnostic.raw.suiteRunsQuery =
+      suiteRunQuery;
+
+    diagnostic.raw.suiteRuns =
+      suiteRunsResponse;
+
+    const suiteRuns =
+      entitiesOf(
+        suiteRunsResponse
+      );
+
+
+    diagnostic.suiteRuns =
+      suiteRuns.map(
+        row => ({
+          id:
+            text(row.id),
+
+          name:
+            text(row.name),
+
+          testName:
+            text(row.test_name),
+
+          subtype:
+            text(row.subtype),
+
+          started:
+            row.started || null,
+
+          nativeStatus:
+            row.native_status || null,
+
+          pastStatus:
+            row.past_status || null,
+
+          release:
+            row.release || null,
+
+          sprint:
+            row.sprint || null,
+
+          milestone:
+            row.milestone || null,
+
+          runBy:
+            row.default_run_by || null,
+
+          runsInSuite:
+            row.runs_in_suite || null
+        })
+      );
+
+
+    console.log(
+      '[OCTANE][SUITE RUNS HTTP]',
+      'status =',
+      suiteRunsResponse?.status,
+      '| ok =',
+      suiteRunsResponse?.ok
+    );
+
+    console.log(
+      '[OCTANE][SUITE RUNS COUNT]',
+      suiteRuns.length
+    );
+
+    for (const sr of suiteRuns) {
+
+      console.log(
+        '[OCTANE][SUITE RUN]',
+        text(sr.id),
+        '|',
+        text(sr.name),
+        '| started =',
+        nativeValue(sr.started),
+        '| status =',
+        nativeValue(
+          sr.native_status
+          || sr.past_status
+        )
+      );
+    }
+
+
+    if (!suiteRuns.length) {
+
+      throw new Error(
+        'Aucune Exécution de Suite trouvée pour TS '
+        + testSuiteId
+      );
+    }
+
+
+    console.log();
+    console.log(
+      '[OCTANE][NIVEAU 4 VALIDE]',
+      suiteRuns.length,
+      'Suite Run(s)'
+    );
+
+
+    // ========================================================
+    // NIVEAU 5
+    // SUITE RUN -> EXECUTIONS AR
+    // ========================================================
+
+    diagnostic.automatedRuns = [];
+    diagnostic.raw.runCollections = [];
+
+
+    for (const suiteRun of suiteRuns) {
+
+      const suiteRunId =
+        text(
+          suiteRun.id
+        );
+
+      if (!suiteRunId) {
+        continue;
+      }
+
+
+      console.log();
+      console.log(
+        '[5] Exécutions du SR',
+        suiteRunId
+      );
+
+
+      const runFields = [
+        'id',
+        'name',
+        'test_name',
+        'subtype',
+        'status',
+        'native_status',
+        'past_status',
+        'started',
+        'duration',
+        'order_in_suite_run',
+        'parent_suite',
+        'release',
+        'sprint',
+        'milestone',
+        'run_by',
+        'test_runner',
+        'linked_defects',
+        'error_type',
+        'error_message',
+        'error_details',
+        'external_report_url',
+        'custom_report_link',
+        'draft_run'
+      ].join(',');
+
+
+      const runsQuery =
+        `"(parent_suite={id=${suiteRunId}};`
+        + 'subtype IN {'
+        + 'run_manual,'
+        + 'run_automated,'
+        + 'gherkin_automated_run'
+        + '})"';
+
+
+      const runsUrl =
+        `${apiBase}/runs`
+        + '?fields='
+        + runFields
+        + '&limit=500'
+        + '&offset=0'
+        + '&order_by=order_in_suite_run,id'
+        + '&query='
+        + encodeURIComponent(
+          runsQuery
+        );
+
+
+      const runsResponse =
+        await fetchOctaneJson(
+          cdp,
+          runsUrl
+        );
+
+
+      diagnostic.raw.runCollections.push({
+        suiteRunId,
+        query:
+          runsQuery,
+        response:
+          runsResponse
+      });
+
+
+      const executions =
+        entitiesOf(
+          runsResponse
+        );
+
+
+      console.log(
+        '[OCTANE][RUNS HTTP]',
+        'SR =',
+        suiteRunId,
+        '| status =',
+        runsResponse?.status,
+        '| ok =',
+        runsResponse?.ok
+      );
+
+
+      console.log(
+        '[OCTANE][RUNS COUNT]',
+        executions.length
+      );
+
+
+      for (const run of executions) {
+
+        const execution = {
+          id:
+            text(run.id),
+
+          name:
+            text(run.name),
+
+          testName:
+            text(run.test_name),
+
+          subtype:
+            text(run.subtype),
+
+          nativeStatus:
+            nativeValue(
+              run.native_status
+            ),
+
+          status:
+            nativeValue(
+              run.status
+            ),
+
+          pastStatus:
+            nativeValue(
+              run.past_status
+            ),
+
+          started:
+            nativeValue(
+              run.started
+            ),
+
+          duration:
+            run.duration ?? null,
+
+          release:
+            run.release || null,
+
+          sprint:
+            run.sprint || null,
+
+          milestone:
+            run.milestone || null,
+
+          runBy:
+            run.run_by || null,
+
+          testRunner:
+            run.test_runner || null,
+
+          linkedDefects:
+            run.linked_defects || null,
+
+          errorType:
+            run.error_type || null,
+
+          errorMessage:
+            run.error_message || null,
+
+          errorDetails:
+            run.error_details || null,
+
+          externalReportUrl:
+            run.external_report_url || null,
+
+          customReportLink:
+            run.custom_report_link || null,
+
+          suiteRunId
+        };
+
+
+        diagnostic.automatedRuns.push(
+          execution
+        );
+
+
+        console.log(
+          '[OCTANE][AR]',
+          execution.id,
+          '|',
+          execution.testName
+          || execution.name,
+          '| statut =',
+          execution.nativeStatus
+          || execution.status
+          || execution.pastStatus
+          || '<vide>',
+          '| démarré =',
+          execution.started
+          || '<vide>',
+          '| durée =',
+          execution.duration ?? '<vide>',
+          '| release =',
+          nativeValue(
+            execution.release
+          )
+          || '<vide>',
+          '| sprint =',
+          nativeValue(
+            execution.sprint
+          )
+          || '<vide>',
+          '| jalon =',
+          nativeValue(
+            execution.milestone
+          )
+          || '<vide>',
+          '| exécuté par =',
+          nativeValue(
+            execution.runBy
+          )
+          || '<vide>'
+        );
+      }
+    }
+
+
+    const passCount =
+      diagnostic.automatedRuns.filter(
+        run =>
+          [
+            'passed',
+            'pass',
+            'réussi',
+            'reussi',
+            'success'
+          ].includes(
+            String(
+              run.nativeStatus
+              || run.status
+              || run.pastStatus
+              || ''
+            )
+              .trim()
+              .toLowerCase()
+          )
+      ).length;
+
+
+    const failCount =
+      diagnostic.automatedRuns.filter(
+        run =>
+          [
+            'failed',
+            'fail',
+            'échec',
+            'echec'
+          ].includes(
+            String(
+              run.nativeStatus
+              || run.status
+              || run.pastStatus
+              || ''
+            )
+              .trim()
+              .toLowerCase()
+          )
+      ).length;
+
+
+    diagnostic.executionSummary = {
+      total:
+        diagnostic.automatedRuns.length,
+
+      pass:
+        passCount,
+
+      fail:
+        failCount
+    };
+
+
+    console.log();
+    console.log(
+      '[OCTANE][NIVEAU 5 VALIDE]',
+      'total =',
+      diagnostic.executionSummary.total,
+      '| PASS =',
+      diagnostic.executionSummary.pass,
+      '| FAIL =',
+      diagnostic.executionSummary.fail
+    );
+
+
     // ========================================================
 
     fs.writeFileSync(
