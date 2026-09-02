@@ -584,8 +584,10 @@ async function main() {
       console.log(
         '[OCTANE][EPIC CANDIDAT]',
         text(row.id),
-        '|',
-        text(row.name),
+        '| name =',
+        text(row.name) || '<vide>',
+        '| logical_name =',
+        text(row.logical_name) || '<vide>',
         '| type =',
         text(
           row.subtype
@@ -594,6 +596,94 @@ async function main() {
         )
       );
     }
+
+
+    // ========================================================
+    // DETAIL DE CHAQUE EPIC
+    //
+    // La liste /epics ne retourne pas nécessairement
+    // le libellé fonctionnel affiché dans l'interface.
+    // On interroge donc chaque Epic individuellement afin
+    // d'identifier le vrai champ contenant :
+    //
+    //   "GIL - Capabilities"
+    //
+    // Aucun ID n'est utilisé ici comme règle métier.
+    // ========================================================
+
+    console.log();
+    console.log(
+      '[OCTANE][EPIC DETAILS]'
+    );
+
+    const epicDetails = [];
+
+    for (const row of epics) {
+
+      const epicId =
+        text(row.id);
+
+      if (!epicId) {
+        continue;
+      }
+
+      try {
+
+        const detail =
+          await fetchOctaneJson(
+            cdp,
+            `${apiBase}/epics/${epicId}`
+          );
+
+        epicDetails.push({
+          id: epicId,
+          response: detail
+        });
+
+        console.log();
+        console.log(
+          '[OCTANE][EPIC DETAIL]',
+          epicId,
+          '| status =',
+          detail?.status,
+          '| ok =',
+          detail?.ok
+        );
+
+        console.log(
+          JSON.stringify(
+            detail?.body || {},
+            null,
+            2
+          )
+        );
+
+      } catch (error) {
+
+        epicDetails.push({
+          id: epicId,
+          error:
+            String(
+              error?.message ||
+              error
+            )
+        });
+
+        console.log(
+          '[OCTANE][EPIC DETAIL ERROR]',
+          epicId,
+          '|',
+          String(
+            error?.message ||
+            error
+          )
+        );
+      }
+    }
+
+    diagnostic.raw.epicDetails =
+      epicDetails;
+
 
     /*
      * Toujours sauvegarder le diagnostic,
