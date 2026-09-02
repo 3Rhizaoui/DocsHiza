@@ -556,7 +556,7 @@ async function main() {
         + '&order_by=name'
         + '&query='
         + encodeURIComponent(
-          '"(subtype IN {\'epic\'})"'
+          '"(subtype=\'epic\')"'
         )
       );
 
