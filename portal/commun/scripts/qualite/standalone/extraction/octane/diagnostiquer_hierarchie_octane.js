@@ -496,7 +496,7 @@ async function main() {
       [
         `--remote-debugging-port=${PORT}`,
         `--user-data-dir=${PROFILE}`,
-        `${config.baseUrl}/ui/?p=${config.sharedSpace}/${config.workspace}`
+        `${config.baseUrl}/ui/?p=${config.sharedSpace}/${config.workspace}#/release-quality/hierarchy/tests_in_backlog`
       ],
       {
         detached: true,
@@ -556,6 +556,59 @@ async function main() {
         epicsResponse
       );
 
+    console.log(
+      '[OCTANE][EPICS HTTP]',
+      'status =',
+      epicsResponse?.status,
+      '| ok =',
+      epicsResponse?.ok
+    );
+
+    console.log(
+      '[OCTANE][EPICS COUNT]',
+      epics.length
+    );
+
+    console.log(
+      '[OCTANE][EPICS BODY KEYS]',
+      Object.keys(
+        epicsResponse?.body || {}
+      ).join(', ')
+    );
+
+    for (
+      const row
+      of epics.slice(0, 200)
+    ) {
+
+      console.log(
+        '[OCTANE][EPIC CANDIDAT]',
+        text(row.id),
+        '|',
+        text(row.name),
+        '| type =',
+        text(
+          row.subtype
+          || row.type
+          || row.entity_type
+        )
+      );
+    }
+
+    /*
+     * Toujours sauvegarder le diagnostic,
+     * même si l'Epic recherché n'est pas trouvé.
+     */
+    fs.writeFileSync(
+      OUTPUT,
+      JSON.stringify(
+        diagnostic,
+        null,
+        2
+      ),
+      'utf8'
+    );
+
     const epic =
       epics.find(
         row =>
@@ -567,7 +620,9 @@ async function main() {
     if (!epic) {
 
       throw new Error(
-        'Epic GIL - Capabilities introuvable'
+        'Epic GIL - Capabilities introuvable '
+        + '- réponse brute enregistrée dans '
+        + OUTPUT
       );
     }
 
