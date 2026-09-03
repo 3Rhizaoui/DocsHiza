@@ -1,90 +1,59 @@
+python - <<'PY'
+import json
+from pathlib import Path
 
-============================================================
-VERSION TEST BNP : STANDALONE-MATCHING-UI-V01
-Date : 04/09/2026
-============================================================
+p = Path(
+    "portal/commun/data/standalone/"
+    "payload_standalone.json"
+)
 
-OBJECTIF
---------
-Valider le contrat d'interface Standalone JIRA / OCTANE.
+data = json.loads(
+    p.read_text(
+        encoding="utf-8",
+        errors="replace"
+    )
+)
 
-RESULTAT ATTENDU
-----------------
-Pour 14 Features JIRA :
+rows = (
+    data.get("rows")
+    or data.get("qualifications")
+    or []
+)
 
-Total inventaire : 14
-JIRA : 14
+print("TOTAL =", len(rows))
 
-Si les 14 Features Octane équivalentes sont présentes :
-OCTANE : 14
-MATCHEES : 14
+for i, row in enumerate(rows[:8]):
 
-Une Feature = une ligne principale.
+    print()
+    print("=" * 70)
+    print("ROW", i)
+    print("=" * 70)
 
-Partie gauche :
-- Epic JIRA / Feature
-- Version JIRA
-- Env. JIRA
-- Taches Ready
-- Ready for Test
+    print("sourceType =", row.get("sourceType"))
+    print("capability =", row.get("capability"))
+    print("titre =", row.get("titre"))
+    print("jiraKey =", row.get("jiraKey"))
 
-Partie droite :
-- Test Suite Octane
-- Capability Octane
-- Env. Octane
-- Release Octane
-- Statut Global
-- Date execution
-- Ready for Flux
+    jira = row.get("jira") or {}
+    octane = row.get("octane") or {}
 
-DETAIL
-------
-Au clic sur une ligne :
+    print()
+    print("JIRA:")
+    print("  summary =", jira.get("summary"))
+    print("  titre =", jira.get("titre"))
+    print("  capability =", jira.get("capability"))
+    print("  version =", jira.get("version"))
+    print("  environnement =", jira.get("environnement"))
 
-Gauche :
-DETAILS JIRA
-- Epic
-- Version
-- Environnement
-- Description
-- Toutes les taches JIRA
-
-Droite :
-DETAILS OCTANE
-- Feature
-- Release
-- Environnement
-- Test Suite
-- Suite Run
-- Resultat
-- Date
-- Sprint
-- Jalon
-- Execute par
-- toutes les executions Octane
-- erreurs
-- bugs lies
-
-COULEURS
---------
-Lignes principales :
-alternance de deux intensites de bleu.
-
-Details JIRA :
-bleu clair.
-
-Details OCTANE :
-vert clair.
-
-IMPORTANT
----------
-Une ligne MATCHED appartient a la fois a JIRA et OCTANE.
-
-Le filtre JIRA doit donc conserver les lignes matchees.
-Le filtre OCTANE doit egalement conserver les lignes matchees.
-
-Ready for Flux ne doit pas etre invente.
-Si le payload ne fournit pas readyForFlux,
-la valeur affichee reste "-".
-
-============================================================
+    print()
+    print("OCTANE:")
+    print("  capability =", octane.get("capability"))
+    print(
+        "  feature nom =",
+        (octane.get("octaneFeature") or {}).get("nom")
+    )
+    print(
+        "  test suite =",
+        (octane.get("testSuite") or {}).get("nom")
+    )
+PY
