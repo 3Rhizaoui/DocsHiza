@@ -537,7 +537,7 @@
 
     <div class="kpi">
       <div class="kpiLabel">
-        Capabilities
+        Total inventaire
       </div>
       <div
         class="kpiValue"
@@ -549,7 +549,7 @@
 
     <div class="kpi">
       <div class="kpiLabel">
-        Ready for Test
+        JIRA
       </div>
       <div
         class="kpiValue"
@@ -561,7 +561,7 @@
 
     <div class="kpi">
       <div class="kpiLabel">
-        Ready for Use
+        OCTANE
       </div>
       <div
         class="kpiValue"
@@ -573,7 +573,7 @@
 
     <div class="kpi">
       <div class="kpiLabel">
-        Non validées
+        JIRA Ready for Test
       </div>
       <div
         class="kpiValue"
@@ -617,17 +617,17 @@
 
     <div class="filterGroup">
       <label for="filterStatus">
-        Ready for Use
+        Source
       </label>
       <select id="filterStatus">
         <option value="">
-          Tous
+          Toutes
         </option>
-        <option value="ready">
-          Ready
+        <option value="jira">
+          JIRA
         </option>
-        <option value="not-ready">
-          Non Ready
+        <option value="octane">
+          OCTANE
         </option>
       </select>
     </div>
@@ -650,7 +650,7 @@
     <table>
       <thead>
         <tr>
-          <th>Capability GIL</th>
+          <th>Source / Capability</th>
           <th>Epic JIRA</th>
           <th>Version JIRA</th>
           <th>Env. JIRA</th>
@@ -665,8 +665,8 @@
           <th>FAIL</th>
           <th>Dernière exécution</th>
 
-          <th>Cohérence</th>
-          <th>Ready for Use</th>
+          <th>État</th>
+          <th>Source</th>
         </tr>
       </thead>
 

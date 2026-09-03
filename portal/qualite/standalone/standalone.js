@@ -54,6 +54,60 @@
   }
 
 
+  function sourceType(row) {
+
+    return String(
+      row?.sourceType || ""
+    ).toUpperCase();
+  }
+
+
+  function isJiraRow(row) {
+
+    return sourceType(row) === "JIRA";
+  }
+
+
+  function isOctaneRow(row) {
+
+    return sourceType(row) === "OCTANE";
+  }
+
+
+  function rowVersionRelease(row) {
+
+    if (isOctaneRow(row)) {
+
+      return String(
+        row?.octane?.release || ""
+      );
+    }
+
+    return String(
+      row?.jira?.version
+      || row?.version
+      || ""
+    );
+  }
+
+
+  function rowEnvironment(row) {
+
+    if (isOctaneRow(row)) {
+
+      return String(
+        row?.octane?.environnement || ""
+      ).toUpperCase();
+    }
+
+    return String(
+      row?.jira?.environnement
+      || row?.environnement
+      || ""
+    ).toUpperCase();
+  }
+
+
   function octaneResults(row) {
 
     return (
@@ -86,27 +140,34 @@
     const total =
       rows.length;
 
-    const readyTest =
+    const jiraCount =
       rows.filter(
-        jiraReady
+        isJiraRow
       ).length;
 
-    const readyUse =
+    const octaneCount =
       rows.filter(
-        row => row.readyForUse
+        isOctaneRow
+      ).length;
+
+    const readyTest =
+      rows.filter(
+        row =>
+          isJiraRow(row)
+          && jiraReady(row)
       ).length;
 
     byId("kpiTotal").textContent =
       total;
 
     byId("kpiReadyTest").textContent =
-      readyTest;
+      jiraCount;
 
     byId("kpiReadyUse").textContent =
-      readyUse;
+      octaneCount;
 
     byId("kpiNonReady").textContent =
-      total - readyUse;
+      readyTest;
   }
 
 
@@ -629,6 +690,19 @@
         const octane =
           row?.octane || null;
 
+        const jiraOnly =
+          isJiraRow(row);
+
+        const octaneOnly =
+          isOctaneRow(row);
+
+        const sourceBadge =
+          jiraOnly
+            ? '<span class="status green">JIRA</span>'
+            : octaneOnly
+              ? '<span class="status orange">OCTANE</span>'
+              : '<span class="status">MATCHED</span>';
+
         const suite =
           octane?.testSuite || {};
 
@@ -657,6 +731,10 @@
 
         main.innerHTML = `
           <td>
+            <div style="margin-bottom:6px">
+              ${sourceBadge}
+            </div>
+
             <strong>
               ${escapeHtml(row.capability)}
             </strong>
@@ -698,11 +776,13 @@
 
           <td>
             ${
-              statusBadge(
-                jiraReady(row),
-                "Ready for Test",
-                "Non Ready"
-              )
+              jiraOnly
+                ? statusBadge(
+                    jiraReady(row),
+                    "Ready for Test",
+                    "Non Ready"
+                  )
+                : '<span class="status">—</span>'
             }
           </td>
 
@@ -766,15 +846,13 @@
           </td>
 
           <td>
-            ${coherenceBadge(row)}
+            <span class="status">
+              Non rapproché
+            </span>
           </td>
 
           <td>
-            ${
-              row.readyForUse
-                ? '<span class="status green">READY</span>'
-                : '<span class="status red">NON READY</span>'
-            }
+            ${sourceBadge}
           </td>
         `;
 
@@ -974,31 +1052,27 @@
                 <div class="detailBox">
 
                   <h3>
-                    Cohérence JIRA / Octane
-                  </h3>
-
-                  ${buildMatchingDetails(row)}
-
-                </div>
-
-
-                <div class="detailBox">
-
-                  <h3>
-                    Décision Ready for Use
+                    Inventaire de la source
                   </h3>
 
                   <div style="margin-bottom:12px">
-
-                    ${
-                      row.readyForUse
-                        ? '<span class="status green">READY FOR USE</span>'
-                        : '<span class="status red">NON READY FOR USE</span>'
-                    }
-
+                    <strong>Source :</strong>
+                    ${sourceBadge}
                   </div>
 
-                  ${buildNonReadyReasons(row)}
+                  <div style="margin-bottom:12px">
+                    <strong>État :</strong>
+                    <span class="status">
+                      Non rapproché
+                    </span>
+                  </div>
+
+                  <div>
+                    Les données JIRA et Octane sont
+                    volontairement affichées indépendamment.
+                    Aucun rapprochement métier n'est appliqué
+                    à ce stade.
+                  </div>
 
                 </div>
 
@@ -1035,7 +1109,7 @@
     const env =
       byId("filterEnv").value;
 
-    const status =
+    const source =
       byId("filterStatus").value;
 
     const capability =
@@ -1049,28 +1123,30 @@
 
         if (
           version
-          && row.version !== version
+          && rowVersionRelease(row)
+          !== version
         ) {
           return false;
         }
 
         if (
           env
-          && row.environnement !== env
+          && rowEnvironment(row)
+          !== env
         ) {
           return false;
         }
 
         if (
-          status === "ready"
-          && !row.readyForUse
+          source === "jira"
+          && !isJiraRow(row)
         ) {
           return false;
         }
 
         if (
-          status === "not-ready"
-          && row.readyForUse
+          source === "octane"
+          && !isOctaneRow(row)
         ) {
           return false;
         }
@@ -1102,7 +1178,10 @@
     const values = [
       ...new Set(
         sourceRows
-          .map(row => row.version)
+          .map(
+            row =>
+              rowVersionRelease(row)
+          )
           .filter(Boolean)
       )
     ].sort();
