@@ -1665,6 +1665,55 @@ async function main() {
         ?.summary_regex ||
       '';
 
+    function isFeatureGil(
+      issue,
+      regexText
+    ) {
+
+      const summary =
+        String(
+          issue?.fields?.summary || ''
+        ).trim();
+
+      if (!summary) {
+        return false;
+      }
+
+      const configuredRegex =
+        String(
+          regexText || ''
+        ).trim();
+
+      if (configuredRegex) {
+
+        try {
+
+          return (
+            new RegExp(
+              configuredRegex,
+              'i'
+            )
+          ).test(summary);
+
+        } catch (error) {
+
+          console.log(
+            '[JIRA][WARN] summary_regex invalide :',
+            configuredRegex,
+            '- fallback [FEATURE GIL]'
+          );
+
+        }
+
+      }
+
+      return (
+        /\[\s*FEATURE\s+GIL\s*\]/i
+      ).test(summary);
+
+    }
+
+
     const capabilities =
       (
         epicResult.issues || []
