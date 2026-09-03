@@ -253,3 +253,162 @@ Ils devront être récupérés dynamiquement.
 ============================================================
 FIN TEST JIRA-GREENHOPPER-N2N3-V1
 ============================================================
+
+
+============================================================
+TEST BNP - JIRA GREENHOPPER V2 DIAGNOSTIC
+Version : JIRA-GREENHOPPER-N2N3-V2-DIAG
+============================================================
+
+OBJECTIF
+--------
+Diagnostiquer précisément la réponse Jira de :
+
+POST /secure/AjaxIssueAction!default.jsp
+
+pour comprendre pourquoi le panneau
+"Tickets dans l'epic"
+n'est pas encore détecté automatiquement.
+
+Cette version ne change pas le matching.
+Elle ajoute uniquement du diagnostic.
+
+------------------------------------------------------------
+1. METTRE A JOUR LE DEPOT
+------------------------------------------------------------
+
+git pull origin GIL-General
+
+
+------------------------------------------------------------
+2. VERIFIER LA VERSION
+------------------------------------------------------------
+
+grep -n -E \
+'AJAX JSON|PANEL CANDIDATE|responsePreview|candidateDiagnostics' \
+portal/commun/scripts/qualite/standalone/extraction/jira/extraire_capabilities.js
+
+
+------------------------------------------------------------
+3. LANCER L EXTRACTION JIRA
+------------------------------------------------------------
+
+node \
+portal/commun/scripts/qualite/standalone/extraction/jira/extraire_capabilities.js
+
+IMPORTANT :
+ne pas rediriger la sortie car le script est interactif.
+
+
+------------------------------------------------------------
+4. VERIFIER LE CODE RETOUR
+------------------------------------------------------------
+
+echo "EXIT_CODE=$?"
+
+
+------------------------------------------------------------
+5. INSPECTER AERL_GIL-206
+------------------------------------------------------------
+
+python - <<'PY2'
+import json
+from pathlib import Path
+
+p = Path(
+    "portal/commun/data/standalone/jira/"
+    "capabilities_brut.json"
+)
+
+data = json.loads(
+    p.read_text(
+        encoding="utf-8",
+        errors="replace"
+    )
+)
+
+for row in (
+    data.get("capabilities")
+    or []
+):
+
+    epic = (
+        row.get("epic")
+        or {}
+    )
+
+    if (
+        epic.get("key")
+        != "AERL_GIL-206"
+    ):
+        continue
+
+    print(
+        "EPIC =",
+        epic.get("key")
+    )
+
+    print(
+        "ENFANTS =",
+        len(
+            row.get("children")
+            or []
+        )
+    )
+
+    print()
+
+    for diag in (
+        row.get(
+            "childrenDiagnostics"
+        )
+        or []
+    ):
+
+        print(
+            json.dumps(
+                diag,
+                ensure_ascii=False,
+                indent=2
+            )
+        )
+
+    break
+PY2
+
+
+------------------------------------------------------------
+RESULTATS A FOURNIR
+------------------------------------------------------------
+
+Chercher en priorité :
+
+source = ajax-issue-action
+
+avec :
+- status
+- contentType
+- responseLength
+- responsePreview
+
+puis :
+
+source = ajax-json-structure
+
+avec :
+- topLevelKeys
+
+puis :
+
+source = greenhopper-panel
+
+avec :
+- candidates
+- htmlLength
+- candidateDiagnostics
+
+NE PAS PARTAGER DE COOKIE OU HEADER D AUTHENTIFICATION.
+
+============================================================
+FIN JIRA-GREENHOPPER-N2N3-V2-DIAG
+============================================================

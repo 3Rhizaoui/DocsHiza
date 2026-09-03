@@ -866,6 +866,40 @@ async function fetchEpicChildren(
         const text =
           await response.text();
 
+        const contentType =
+          response.headers.get(
+            'content-type'
+          ) || '';
+
+        diagnostics.push({
+          source:
+            'ajax-issue-action',
+          epicKey,
+          status:
+            response.status,
+          ok:
+            response.ok,
+          contentType,
+          responseLength:
+            text.length,
+          responsePreview:
+            text.slice(
+              0,
+              1500
+            )
+        });
+
+        console.log(
+          '  [JIRA][N2][AJAX]',
+          epicKey,
+          '| status =',
+          response.status,
+          '| content-type =',
+          contentType,
+          '| length =',
+          text.length
+        );
+
         if (!response.ok) {
 
           throw new Error(
@@ -881,6 +915,30 @@ async function fetchEpicChildren(
 
           ajaxData =
             JSON.parse(text);
+
+          const topLevelKeys =
+            (
+              ajaxData
+              && typeof ajaxData === 'object'
+            )
+              ? Object.keys(
+                  ajaxData
+                )
+              : [];
+
+          diagnostics.push({
+            source:
+              'ajax-json-structure',
+            epicKey,
+            topLevelKeys
+          });
+
+          console.log(
+            '  [JIRA][N2][AJAX JSON]',
+            epicKey,
+            '| keys =',
+            topLevelKeys.join(', ')
+          );
 
         } catch (error) {
 
@@ -994,6 +1052,24 @@ async function fetchEpicChildren(
         panelHtml =
           candidates[0]?.html || '';
 
+        const candidateDiagnostics =
+          candidates
+            .slice(
+              0,
+              10
+            )
+            .map(candidate => ({
+              completeKey:
+                candidate.completeKey,
+              htmlLength:
+                candidate.html.length,
+              htmlPreview:
+                candidate.html.slice(
+                  0,
+                  1200
+                )
+            }));
+
         diagnostics.push({
           source:
             'greenhopper-panel',
@@ -1001,8 +1077,34 @@ async function fetchEpicChildren(
           candidates:
             candidates.length,
           htmlLength:
-            panelHtml.length
+            panelHtml.length,
+          candidateDiagnostics
         });
+
+        console.log(
+          '  [JIRA][N2][PANEL]',
+          epicKey,
+          '| candidates =',
+          candidates.length,
+          '| htmlLength =',
+          panelHtml.length
+        );
+
+        for (
+          const candidate
+          of candidateDiagnostics
+        ) {
+
+          console.log(
+            '  [JIRA][N2][PANEL CANDIDATE]',
+            epicKey,
+            '| key =',
+            candidate.completeKey,
+            '| length =',
+            candidate.htmlLength
+          );
+
+        }
 
       }
 
