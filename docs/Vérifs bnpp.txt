@@ -1,3 +1,5 @@
+Sur le PC BNP, fais plutôt ce diagnostic exact :
+
 python - <<'PY'
 import json
 from pathlib import Path
@@ -14,46 +16,34 @@ data = json.loads(
     )
 )
 
-rows = (
-    data.get("rows")
-    or data.get("qualifications")
-    or []
-)
+print("TYPE RACINE =", type(data).__name__)
+print("CLES RACINE =", list(data.keys()))
 
-print("TOTAL =", len(rows))
-
-for i, row in enumerate(rows[:8]):
-
-    print()
-    print("=" * 70)
-    print("ROW", i)
-    print("=" * 70)
-
-    print("sourceType =", row.get("sourceType"))
-    print("capability =", row.get("capability"))
-    print("titre =", row.get("titre"))
-    print("jiraKey =", row.get("jiraKey"))
-
-    jira = row.get("jira") or {}
-    octane = row.get("octane") or {}
-
-    print()
-    print("JIRA:")
-    print("  summary =", jira.get("summary"))
-    print("  titre =", jira.get("titre"))
-    print("  capability =", jira.get("capability"))
-    print("  version =", jira.get("version"))
-    print("  environnement =", jira.get("environnement"))
-
-    print()
-    print("OCTANE:")
-    print("  capability =", octane.get("capability"))
-    print(
-        "  feature nom =",
-        (octane.get("octaneFeature") or {}).get("nom")
-    )
-    print(
-        "  test suite =",
-        (octane.get("testSuite") or {}).get("nom")
-    )
+for key, value in data.items():
+    if isinstance(value, list):
+        print(
+            key,
+            "=> LISTE",
+            len(value)
+        )
+    elif isinstance(value, dict):
+        print(
+            key,
+            "=> DICT",
+            list(value.keys())[:20]
+        )
+    else:
+        print(
+            key,
+            "=>",
+            type(value).__name__,
+            repr(value)[:120]
+        )
 PY
+
+Puis fais aussi :
+
+grep -n -E \
+'payload_standalone|rows|qualifications|inventory|items|sources|data' \
+portal/qualite/standalone/standalone.js \
+portal/commun/scripts/qualite/standalone/construire_payload.py
