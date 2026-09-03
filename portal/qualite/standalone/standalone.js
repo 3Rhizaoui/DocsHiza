@@ -135,39 +135,62 @@
   }
 
 
+  function jiraTaskStats(rows) {
+
+    const tasks =
+      rows
+        .filter(
+          isJiraRow
+        )
+        .flatMap(
+          row =>
+            Array.isArray(
+              row?.jira?.taches
+            )
+              ? row.jira.taches
+              : []
+        );
+
+    const ready =
+      tasks.filter(
+        task =>
+          task?.readyForTest === true
+      ).length;
+
+    return {
+      total:
+        tasks.length,
+      ready,
+      nonReady:
+        tasks.length - ready
+    };
+  }
+
+
   function renderKpis(rows) {
 
     const total =
       rows.length;
 
-    const jiraCount =
-      rows.filter(
-        isJiraRow
-      ).length;
+    const jiraStats =
+      jiraTaskStats(rows);
 
     const octaneCount =
       rows.filter(
         isOctaneRow
       ).length;
 
-    const readyTest =
-      rows.filter(
-        row =>
-          isJiraRow(row)
-          && jiraReady(row)
-      ).length;
-
     byId("kpiTotal").textContent =
       total;
 
     byId("kpiReadyTest").textContent =
-      jiraCount;
+      jiraStats.ready;
 
     byId("kpiReadyUse").textContent =
       octaneCount;
 
     byId("kpiNonReady").textContent =
-      readyTest;
+      jiraStats.nonReady;
   }
 
 

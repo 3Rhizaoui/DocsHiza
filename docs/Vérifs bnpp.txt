@@ -54,3 +54,41 @@ function jiraTaskStats(rows) {
             tasks.length - ready
     };
 }
+============================================================
+VERSION TEST BNP - JIRA KPI TASK LEVEL
+Date : 2026-09-03
+Version : JIRA-KPI-N2-001
+============================================================
+
+Objet :
+Correction du calcul des KPI JIRA.
+
+Source dynamique :
+Epic JIRA
+-> jira.taches[]
+-> readyForTest
+
+Les KPI JIRA ne sont plus calcules au niveau de l'Epic.
+
+Exemple de reference :
+AERL_GIL-206 / GED
+
+Resultat source attendu :
+- 10 taches
+- 8 readyForTest = true
+- 2 readyForTest = false
+
+Controle console navigateur attendu :
+[KPI][JIRA]
+{
+  epics: ...,
+  tasks: ...,
+  ready: ...,
+  nonReady: ...,
+  octane: ...
+}
+
+Fichiers concernes :
+- portal/qualite/standalone/standalone.js
+- docs/Verifs bnpp.txt
+
