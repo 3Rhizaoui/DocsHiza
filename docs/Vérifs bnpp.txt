@@ -1,94 +1,39 @@
-Avant que je te donne le patch définitif, il me manque seulement la correspondance exacte entre les IDs HTML et les libellés des 4 KPI. Fais cette inspection uniquement sur BNP :
+python - <<'PY'
+import json
+from pathlib import Path
 
-grep -n -E \
-'kpiTotal|kpiReadyTest|kpiReadyUse|kpiNonReady' \
-portal/qualite/standalone/* \
-2>/dev/null
+p = Path(
+    "portal/commun/data/standalone/octane/"
+    "qualifications_brut.json"
+)
 
-Puis :
+data = json.loads(
+    p.read_text(encoding="utf-8")
+)
 
-grep -n -A45 -B10 \
-'function renderKpis' \
-portal/qualite/standalone/standalone.js
+print("TYPE RACINE =", type(data).__name__)
 
-Et également :
+if isinstance(data, dict):
+    print("CLES RACINE =", list(data.keys()))
 
-grep -n -A20 -B10 \
-'function jiraReady' \
-portal/qualite/standalone/standalone.js
+rows = (
+    data.get("qualifications")
+    or data.get("features")
+    or []
+)
 
-Je veux vérifier parce que ta capture semble montrer quelque chose de suspect dans les affectations :
+print("QUALIFICATIONS =", len(rows))
 
-byId("kpiReadyTest").textContent = jiraCount;
-byId("kpiReadyUse").textContent = octaneCount;
-byId("kpiNonReady").textContent = readyTest;
-
-Si c'est bien exactement le code actuel, il y a deux problèmes simultanés : le calcul se fait au niveau Epic au lieu des tâches, et les valeurs semblent affectées à des KPI qui ne correspondent pas à leur nom.
-
-Après ces trois commandes, je te donne directement le patch qui ajoutera une agrégation dynamique du type :
-
-function jiraTaskStats(rows) {
-
-    const tasks =
-        rows
-            .filter(isJiraRow)
-            .flatMap(
-                row =>
-                    Array.isArray(
-                        row?.jira?.taches
-                    )
-                        ? row.jira.taches
-                        : []
-            );
-
-    const ready =
-        tasks.filter(
-            task =>
-                task?.readyForTest === true
-        ).length;
-
-    return {
-        total: tasks.length,
-        ready,
-        nonReady:
-            tasks.length - ready
-    };
-}
-============================================================
-VERSION TEST BNP - JIRA KPI TASK LEVEL
-Date : 2026-09-03
-Version : JIRA-KPI-N2-001
-============================================================
-
-Objet :
-Correction du calcul des KPI JIRA.
-
-Source dynamique :
-Epic JIRA
--> jira.taches[]
--> readyForTest
-
-Les KPI JIRA ne sont plus calcules au niveau de l'Epic.
-
-Exemple de reference :
-AERL_GIL-206 / GED
-
-Resultat source attendu :
-- 10 taches
-- 8 readyForTest = true
-- 2 readyForTest = false
-
-Controle console navigateur attendu :
-[KPI][JIRA]
-{
-  epics: ...,
-  tasks: ...,
-  ready: ...,
-  nonReady: ...,
-  octane: ...
-}
-
-Fichiers concernes :
-- portal/qualite/standalone/standalone.js
-- docs/Verifs bnpp.txt
-
+for i, row in enumerate(rows[:3], 1):
+    print()
+    print("=" * 70)
+    print("QUALIFICATION", i)
+    print("=" * 70)
+    print(
+        json.dumps(
+            row,
+            ensure_ascii=False,
+            indent=2
+        )
+    )
+PY
