@@ -756,3 +756,175 @@ avec la liste des clés N2 récupérées.
 
 FIN TEST V2026.09.03-01
 ============================================================
+
+============================================================
+TEST BNP - JIRA STANDALONE N1/N2/N3 - V2026.09.03-01
+============================================================
+
+OBJECTIF
+--------
+Valider la récupération dynamique Jira des Capabilities GIL
+et de leurs tickets enfants sans reconstruire manuellement
+AjaxIssueAction.
+
+ARCHITECTURE TESTEE
+-------------------
+N1 = Epic / Capability Jira [FEATURE GIL]
+
+N2 = Tickets dans l'Epic récupérés depuis le panneau Jira natif :
+     greenhopper-epics-issue-web-panel
+     ghx-issues-in-epic-table
+     data-issuekey
+
+N3 = Détail de chaque ticket via :
+     /rest/api/2/issue/<KEY>?expand=names,schema,renderedFields
+
+IMPORTANT
+---------
+La source principale N2 est maintenant le chargement natif
+de la page Jira /browse/<EPIC> dans la session SSO existante.
+
+AjaxIssueAction!default.jsp n'est plus reconstruit manuellement.
+
+Le JQL :
+    parent = "<EPIC>"
+reste uniquement un fallback diagnostic.
+
+EPIC DE REFERENCE
+-----------------
+AERL_GIL-206
+[FEATURE GIL] - GED
+
+Résultat attendu :
+les tickets visibles dans le bloc Jira
+"Tickets dans l'Epic"
+doivent être présents dans :
+portal/commun/data/standalone/jira/capabilities_brut.json
+
+Exemples déjà observés dans Jira :
+AERL_GIL-585
+AERL_GIL-294
+AERL_GIL-357
+AERL_GIL-356
+AERL_GIL-746
+AERL_GIL-632
+AERL_GIL-748
+AERL_GIL-754
+AERL_GIL-799
+AERL_GIL-800
+
+EXECUTION
+---------
+
+1. Ouvrir Jira BNP et conserver la session SSO active.
+
+2. Lancer le portail / pipeline habituel afin que le navigateur
+   contrôlé par CDP soit disponible.
+
+3. Lancer l'extraction Jira Standalone.
+
+4. Vérifier dans la console la présence de :
+
+   [JIRA][N2][GREENHOPPER]
+   [JIRA][N3]
+   [JIRA][N2/N3][SUMMARY]
+
+5. Vérifier AERL_GIL-206 dans capabilities_brut.json.
+
+COMMANDE DE CONTROLE
+--------------------
+
+python - <<'PY2'
+import json
+from pathlib import Path
+
+p = Path(
+    "portal/commun/data/standalone/jira/"
+    "capabilities_brut.json"
+)
+
+data = json.loads(
+    p.read_text(
+        encoding="utf-8",
+        errors="replace"
+    )
+)
+
+for row in data.get("capabilities", []):
+
+    epic = row.get("epic") or {}
+
+    if epic.get("key") != "AERL_GIL-206":
+        continue
+
+    print(
+        "EPIC =",
+        epic.get("key")
+    )
+
+    print(
+        "SUMMARY =",
+        (epic.get("fields") or {}).get("summary")
+    )
+
+    children = (
+        row.get("children")
+        or []
+    )
+
+    print(
+        "ENFANTS =",
+        len(children)
+    )
+
+    print()
+
+    for child in children:
+
+        fields = (
+            child.get("fields")
+            or {}
+        )
+
+        print(
+            child.get("key"),
+            "|",
+            fields.get("summary"),
+            "| statut =",
+            (fields.get("status") or {}).get("name"),
+            "| type =",
+            (fields.get("issuetype") or {}).get("name"),
+            "| affecté =",
+            (fields.get("assignee") or {}).get("displayName")
+        )
+
+    print()
+    print("DIAGNOSTICS =")
+
+    for diag in (
+        row.get("childrenDiagnostics")
+        or []
+    ):
+        print(diag)
+
+    break
+PY2
+
+RESULTAT ATTENDU
+----------------
+Pour AERL_GIL-206 :
+
+ENFANTS > 0
+
+et diagnostic contenant au minimum :
+
+source = greenhopper-native-dom
+
+puis :
+
+source = jira-n2-n3-summary
+
+avec la liste des clés N2 récupérées.
+
+FIN TEST V2026.09.03-01
+============================================================
