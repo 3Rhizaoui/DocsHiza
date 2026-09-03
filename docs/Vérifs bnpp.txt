@@ -1,33 +1,28 @@
-Tu viens de faire l’extraction avec succès. Maintenant exécute simplement :
-
+1. Sur le PC BNP, reconstruis maintenant le payload
 python \
-portal/commun/scripts/qualite/standalone/normalisation/normaliser_jira.py
+portal/commun/scripts/qualite/standalone/construire_payload.py
 
-Puis :
+Puis immédiatement :
 
 python - <<'PY'
 import json
 from pathlib import Path
 
 p = Path(
-    "portal/commun/data/standalone/jira/"
-    "capabilities.json"
+    "portal/commun/data/standalone/"
+    "payload_standalone.json"
 )
 
 data = json.loads(
     p.read_text(
-        encoding="utf-8"
+        encoding="utf-8",
+        errors="replace"
     )
 )
 
-rows = data.get(
-    "capabilities"
-) or []
+rows = data.get("capabilities") or []
 
-print(
-    "CAPABILITIES NORMALISEES =",
-    len(rows)
-)
+print("TOTAL PAYLOAD =", len(rows))
 
 for row in rows:
 
@@ -35,71 +30,65 @@ for row in rows:
         continue
 
     print()
-    print(
-        "KEY         =",
-        row.get("jiraKey")
-    )
-    print(
-        "CAPABILITY  =",
-        row.get("capability")
-    )
-    print(
-        "VERSION     =",
-        repr(
-            row.get("version")
-        )
-    )
-    print(
-        "ENV         =",
-        repr(
-            row.get("environnement")
-        )
-    )
+    print("==============================")
+    print("AERL_GIL-206 DANS LE PAYLOAD")
+    print("==============================")
 
-    readiness = (
-        row.get("jiraReadiness")
-        or {}
+    print(
+        "sourceType =",
+        row.get("sourceType")
     )
 
     print(
-        "TOTAL       =",
-        readiness.get("total")
+        "capability =",
+        repr(row.get("capability"))
     )
+
     print(
-        "READY       =",
-        readiness.get(
-            "readyForTest"
+        "version =",
+        repr(row.get("version"))
+    )
+
+    print(
+        "environnement =",
+        repr(row.get("environnement"))
+    )
+
+    jira = row.get("jira") or {}
+
+    print()
+    print("JIRA =")
+    print(
+        json.dumps(
+            jira,
+            ensure_ascii=False,
+            indent=2
         )
-    )
-    print(
-        "NON READY   =",
-        readiness.get(
-            "nonReady"
-        )
-    )
-    print(
-        "PRET        =",
-        readiness.get("pret")
     )
 
     print()
-    print("=== TACHES ===")
-
-    for task in (
-        row.get("taches")
-        or []
-    ):
-        print(
-            task.get("jiraKey"),
-            "|",
-            task.get("statut"),
-            "| ready =",
-            task.get(
-                "readyForTest"
-            ),
-            "|",
-            task.get("titre")
+    print("READINESS DIRECT =")
+    print(
+        json.dumps(
+            row.get("readiness"),
+            ensure_ascii=False,
+            indent=2
         )
+    )
 
     break
+else:
+    print("AERL_GIL-206 INTROUVABLE")
 PY
+
+Donne-moi aussi :
+
+grep -n -E \
+'payload_standalone|fetch\(|loadData|DATA|json' \
+portal/qualite/standalone/standalone.js \
+| head -n 120
+
+et :
+
+sed -n '1,220p' \
+portal/qualite/standalone/standalone.js
