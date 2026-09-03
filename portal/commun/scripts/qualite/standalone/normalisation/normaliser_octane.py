@@ -260,14 +260,297 @@ def normalize_qualification(row: dict) -> dict:
     }
 
 
-def build_payload(data: dict) -> dict:
-    qualifications = [
-        normalize_qualification(row)
-        for row in (
-            data.get("qualifications") or []
+def normalize_execution_qualification(
+    row: dict,
+    execution: dict,
+) -> dict:
+
+    normalized_execution = (
+        normalize_execution(
+            execution
         )
-        if isinstance(row, dict)
-    ]
+    )
+
+    suite = (
+        row.get("testSuite")
+        or {}
+    )
+
+    suite_run = (
+        row.get("suiteRun")
+        or {}
+    )
+
+    octane_feature = (
+        row.get("octaneFeature")
+        or {}
+    )
+
+    status = (
+        normalized_execution[
+            "statut"
+        ]
+    )
+
+    if normalized_execution["pass"]:
+        etat = "Validé"
+
+    elif normalized_execution["fail"]:
+        etat = "Non validé"
+
+    else:
+        etat = (
+            status
+            or "Non déterminé"
+        )
+
+    release = text(
+        normalized_execution.get(
+            "release"
+        )
+        or suite_run.get(
+            "release"
+        )
+        or row.get(
+            "release"
+        )
+    )
+
+    environnement = text(
+        normalized_execution.get(
+            "environnement"
+        )
+        or row.get(
+            "environnement"
+        )
+        or row.get(
+            "environment"
+        )
+    ).upper()
+
+    sprint = text(
+        normalized_execution.get(
+            "sprint"
+        )
+        or suite_run.get(
+            "sprint"
+        )
+    )
+
+    jalon = text(
+        normalized_execution.get(
+            "jalon"
+        )
+        or suite_run.get(
+            "jalon"
+        )
+        or suite_run.get(
+            "milestone"
+        )
+    )
+
+    execute_par = text(
+        normalized_execution.get(
+            "executePar"
+        )
+        or suite_run.get(
+            "executePar"
+        )
+        or suite_run.get(
+            "runBy"
+        )
+    )
+
+    capability = text(
+        normalized_execution.get(
+            "nom"
+        )
+    )
+
+    return {
+        # Clé métier Octane destinée au futur
+        # rapprochement avec la Capability JIRA.
+        #
+        # Elle correspond au "Nom du test (initial)"
+        # observé dans l'interface Octane.
+        "capability":
+            capability,
+
+        "capabilityOctane":
+            capability,
+
+        # Conservation du niveau supérieur pour
+        # diagnostic et traçabilité.
+        "qualificationParente": text(
+            row.get("capability")
+        ),
+
+        "release":
+            release,
+
+        "environnement":
+            environnement,
+
+        "statut":
+            status,
+
+        "dateExecution":
+            normalized_execution.get(
+                "dateExecution"
+            )
+            or "",
+
+        "sprint":
+            sprint,
+
+        "jalon":
+            jalon,
+
+        "executePar":
+            execute_par,
+
+        "etat":
+            etat,
+
+        "octaneFeature": {
+            "id": text(
+                octane_feature.get("id")
+            ),
+            "nom": text(
+                octane_feature.get("nom")
+                or octane_feature.get(
+                    "name"
+                )
+            ),
+        },
+
+        "testSuite": {
+            "id": text(
+                suite.get("id")
+            ),
+            "nom": text(
+                suite.get("nom")
+                or suite.get("name")
+            ),
+            "testsPlanifies": int(
+                suite.get(
+                    "testsPlanifies"
+                )
+                or suite.get(
+                    "plannedTests"
+                )
+                or 0
+            ),
+        },
+
+        "suiteRun": {
+            "id": text(
+                suite_run.get("id")
+            ),
+            "nom": text(
+                suite_run.get("nom")
+                or suite_run.get("name")
+            ),
+            "statut": text(
+                suite_run.get("statut")
+                or suite_run.get("status")
+            ),
+            "dateDebut": text(
+                suite_run.get("dateDebut")
+                or suite_run.get("started")
+            ),
+            "release":
+                release,
+            "sprint":
+                sprint,
+            "jalon":
+                jalon,
+            "executePar":
+                execute_par,
+        },
+
+        # On conserve executions[] pour compatibilité
+        # avec le reste de la chaîne, mais désormais
+        # une ligne métier = une seule exécution.
+        "executions": [
+            normalized_execution
+        ],
+
+        "resultats": {
+            "total": 1,
+            "pass": (
+                1
+                if normalized_execution[
+                    "pass"
+                ]
+                else 0
+            ),
+            "fail": (
+                1
+                if normalized_execution[
+                    "fail"
+                ]
+                else 0
+            ),
+            "autres": (
+                0
+                if (
+                    normalized_execution[
+                        "pass"
+                    ]
+                    or normalized_execution[
+                        "fail"
+                    ]
+                )
+                else 1
+            ),
+            "tousPass":
+                normalized_execution[
+                    "pass"
+                ],
+        },
+
+        "derniereExecution":
+            normalized_execution.get(
+                "dateExecution"
+            )
+            or "",
+    }
+
+
+def build_payload(data: dict) -> dict:
+    qualifications = []
+
+    for row in (
+        data.get("qualifications")
+        or []
+    ):
+
+        if not isinstance(
+            row,
+            dict,
+        ):
+            continue
+
+        executions = (
+            row.get("executions")
+            or []
+        )
+
+        for execution in executions:
+
+            if not isinstance(
+                execution,
+                dict,
+            ):
+                continue
+
+            qualifications.append(
+                normalize_execution_qualification(
+                    row,
+                    execution,
+                )
+            )
 
     qualifications.sort(
         key=lambda row: (

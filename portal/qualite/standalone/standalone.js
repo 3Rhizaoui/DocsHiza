@@ -706,6 +706,28 @@
         const suite =
           octane?.testSuite || {};
 
+        const octaneCapability =
+          octane?.capability
+          || row?.capability
+          || "";
+
+        const octaneStatus =
+          octane?.statut
+          || "";
+
+        const octaneDate =
+          octane?.dateExecution
+          || octane?.derniereExecution
+          || "";
+
+        const octaneSprint =
+          octane?.sprint
+          || "";
+
+        const octaneState =
+          octane?.etat
+          || "";
+
         const plannedTests =
           Number(
             suite.testsPlanifies || 0
@@ -736,7 +758,11 @@
             </div>
 
             <strong>
-              ${escapeHtml(row.capability)}
+              ${
+                jiraOnly
+                  ? escapeHtml(row.capability)
+                  : "—"
+              }
             </strong>
           </td>
 
@@ -788,71 +814,88 @@
 
           <td>
             ${
-              escapeHtml(
-                suite.nom || "Non trouvé"
-              )
+              octaneOnly || octane
+                ? escapeHtml(
+                    suite.nom || "—"
+                  )
+                : "—"
             }
           </td>
 
           <td>
             ${
-              escapeHtml(
-                octane?.release || "—"
-              )
+              octaneOnly || octane
+                ? escapeHtml(
+                    octaneCapability || "—"
+                  )
+                : "—"
             }
           </td>
 
           <td>
             ${
-              escapeHtml(
-                octane?.environnement || "—"
-              )
-            }
-          </td>
-
-          <td>
-            ${executedTests}
-            ${
-              plannedTests
-                ? " / " + plannedTests
-                : ""
+              octaneOnly || octane
+                ? escapeHtml(
+                    octane?.environnement || "—"
+                  )
+                : "—"
             }
           </td>
 
           <td>
             ${
-              Number(
-                results.pass || 0
-              )
+              octaneOnly || octane
+                ? escapeHtml(
+                    octane?.release || "—"
+                  )
+                : "—"
             }
           </td>
 
           <td>
             ${
-              Number(
-                results.fail || 0
-              )
+              octaneOnly || octane
+                ? escapeHtml(
+                    octaneStatus || "—"
+                  )
+                : "—"
             }
           </td>
 
           <td>
             ${
-              escapeHtml(
-                formatDate(
-                  octane?.derniereExecution
-                )
-              )
+              octaneOnly || octane
+                ? escapeHtml(
+                    formatDate(
+                      octaneDate
+                    )
+                  )
+                : "—"
             }
           </td>
 
           <td>
-            <span class="status">
-              Non rapproché
-            </span>
+            ${
+              octaneOnly || octane
+                ? escapeHtml(
+                    octaneSprint || "—"
+                  )
+                : "—"
+            }
           </td>
 
           <td>
-            ${sourceBadge}
+            ${
+              octaneState === "Validé"
+                ? '<span class="status green">VALIDÉ</span>'
+                : octaneState === "Non validé"
+                  ? '<span class="status red">NON VALIDÉ</span>'
+                  : octaneState
+                    ? '<span class="status">'
+                      + escapeHtml(octaneState)
+                      + '</span>'
+                    : "—"
+            }
           </td>
         `;
 
@@ -863,7 +906,7 @@
           "detailRow";
 
         detail.innerHTML = `
-          <td colspan="15">
+          <td colspan="14">
 
             <div class="detail">
 
