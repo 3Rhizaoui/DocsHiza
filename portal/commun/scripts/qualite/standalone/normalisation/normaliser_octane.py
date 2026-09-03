@@ -532,25 +532,11 @@ def build_payload(data: dict) -> dict:
         ):
             continue
 
-        executions = (
-            row.get("executions")
-            or []
-        )
-
-        for execution in executions:
-
-            if not isinstance(
-                execution,
-                dict,
-            ):
-                continue
-
-            qualifications.append(
-                normalize_execution_qualification(
-                    row,
-                    execution,
-                )
+        qualifications.append(
+            normalize_qualification(
+                row
             )
+        )
 
     qualifications.sort(
         key=lambda row: (
@@ -566,7 +552,6 @@ def build_payload(data: dict) -> dict:
         "source": "OCTANE",
         "qualifications": qualifications,
     }
-
 
 def main(
     source: Path = OCTANE_BRUT,

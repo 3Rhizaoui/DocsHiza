@@ -37,3 +37,167 @@ for i, row in enumerate(rows[:3], 1):
         )
     )
 PY
+============================================================
+VERSION TEST BNP : OCTANE-QUALIFICATION-GROUP-V01
+Date : 03/09/2026
+============================================================
+
+OBJECTIF
+--------
+Valider la normalisation Octane au niveau qualification.
+
+Avant :
+1 execution Octane = 1 qualification / 1 ligne principale.
+
+Maintenant :
+1 qualification Octane
+-> Test Suite
+-> Suite Run
+-> plusieurs executions[]
+
+Pour Exchange layer sur BNP, resultat attendu :
+
+QUALIFICATIONS = 1
+
+Capability :
+Exchange layer
+
+Release :
+Release-GIL Lot 1
+
+Environnement :
+valeur reelle Octane.
+Si vide dans Octane, conserver vide.
+
+Test Suite :
+TS-GIL - Exchange layer
+
+Suite Run :
+Suite Run reelle extraite
+
+Executions :
+6
+
+Resultats :
+total = 6
+pass = 4
+fail = 2
+
+IMPORTANT
+---------
+Ne pas inventer :
+- Environnement
+- Sprint
+- Jalon
+- Execute par
+
+Ces valeurs doivent rester vides si Octane ne les fournit pas.
+
+
+------------------------------------------------------------
+TEST BNP
+------------------------------------------------------------
+
+1. Mettre a jour :
+
+git pull origin GIL-General
+
+
+2. Lancer la normalisation Octane :
+
+python \
+portal/commun/scripts/qualite/standalone/normalisation/normaliser_octane.py
+
+
+3. Controler le resultat :
+
+python - <<'PY'
+import json
+from pathlib import Path
+
+p = Path(
+    "portal/commun/data/standalone/octane/"
+    "qualifications.json"
+)
+
+data = json.loads(
+    p.read_text(
+        encoding="utf-8"
+    )
+)
+
+rows = (
+    data.get("qualifications")
+    or []
+)
+
+print(
+    "QUALIFICATIONS =",
+    len(rows)
+)
+
+for q in rows:
+
+    print()
+    print(
+        "CAPABILITY =",
+        q.get("capability")
+    )
+
+    print(
+        "RELEASE =",
+        repr(
+            q.get("release")
+        )
+    )
+
+    print(
+        "ENV =",
+        repr(
+            q.get("environnement")
+        )
+    )
+
+    print(
+        "TEST SUITE =",
+        q.get("testSuite")
+    )
+
+    print(
+        "SUITE RUN =",
+        q.get("suiteRun")
+    )
+
+    print(
+        "EXECUTIONS =",
+        len(
+            q.get("executions")
+            or []
+        )
+    )
+
+    print(
+        "RESULTATS =",
+        q.get("resultats")
+    )
+PY
+
+
+RESULTAT BNP ATTENDU
+--------------------
+
+Pour la qualification Exchange layer :
+
+EXECUTIONS = 6
+
+RESULTATS :
+total = 6
+pass = 4
+fail = 2
+
+La qualification ne doit plus etre dupliquee
+une fois par execution.
+
+============================================================
+FIN OCTANE-QUALIFICATION-GROUP-V01
+============================================================
