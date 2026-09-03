@@ -2121,11 +2121,6 @@ async function main() {
       QUALIFICATIONS_OUT
     );
 
-    console.log();
-    console.log(
-      'OK - diagnostic métier Octane produit :',
-      target
-    );
 
     console.log();
     console.log(
