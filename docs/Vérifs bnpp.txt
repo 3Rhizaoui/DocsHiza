@@ -1,91 +1,105 @@
+Tu viens de faire l’extraction avec succès. Maintenant exécute simplement :
+
+python \
+portal/commun/scripts/qualite/standalone/normalisation/normaliser_jira.py
+
+Puis :
+
 python - <<'PY'
 import json
 from pathlib import Path
 
 p = Path(
     "portal/commun/data/standalone/jira/"
-    "capabilities_brut.json"
+    "capabilities.json"
 )
 
 data = json.loads(
     p.read_text(
-        encoding="utf-8",
-        errors="replace"
+        encoding="utf-8"
     )
 )
 
-for row in data.get("capabilities", []):
+rows = data.get(
+    "capabilities"
+) or []
 
-    epic = row.get("epic") or {}
+print(
+    "CAPABILITIES NORMALISEES =",
+    len(rows)
+)
 
-    if epic.get("key") != "AERL_GIL-206":
+for row in rows:
+
+    if row.get("jiraKey") != "AERL_GIL-206":
         continue
 
-    print("===================================")
-    print("EPIC")
-    print("===================================")
-    print("KEY     =", epic.get("key"))
-
-    ef = epic.get("fields") or {}
-
-    for name in [
-        "summary",
-        "status",
-        "resolution",
-        "assignee",
-        "reporter",
-        "description",
-        "fixVersions",
-        "versions",
-        "environment",
-        "comment",
-        "issuetype",
-    ]:
-        print()
-        print(name, "=")
-        print(
-            json.dumps(
-                ef.get(name),
-                ensure_ascii=False,
-                indent=2
-            )
+    print()
+    print(
+        "KEY         =",
+        row.get("jiraKey")
+    )
+    print(
+        "CAPABILITY  =",
+        row.get("capability")
+    )
+    print(
+        "VERSION     =",
+        repr(
+            row.get("version")
         )
+    )
+    print(
+        "ENV         =",
+        repr(
+            row.get("environnement")
+        )
+    )
+
+    readiness = (
+        row.get("jiraReadiness")
+        or {}
+    )
+
+    print(
+        "TOTAL       =",
+        readiness.get("total")
+    )
+    print(
+        "READY       =",
+        readiness.get(
+            "readyForTest"
+        )
+    )
+    print(
+        "NON READY   =",
+        readiness.get(
+            "nonReady"
+        )
+    )
+    print(
+        "PRET        =",
+        readiness.get("pret")
+    )
 
     print()
-    print("===================================")
-    print("ENFANTS =", len(row.get("children") or []))
-    print("===================================")
+    print("=== TACHES ===")
 
-    for child in row.get("children") or []:
-
-        fields = child.get("fields") or {}
-
-        print()
-        print("-----------------------------------")
-        print("CHILD =", child.get("key"))
-        print("-----------------------------------")
-
-        for name in [
-            "summary",
-            "status",
-            "resolution",
-            "assignee",
-            "reporter",
-            "description",
-            "fixVersions",
-            "versions",
-            "environment",
-            "comment",
-            "issuetype",
-        ]:
-            print(
-                name,
-                "=",
-                json.dumps(
-                    fields.get(name),
-                    ensure_ascii=False
-                )[:3000]
-            )
+    for task in (
+        row.get("taches")
+        or []
+    ):
+        print(
+            task.get("jiraKey"),
+            "|",
+            task.get("statut"),
+            "| ready =",
+            task.get(
+                "readyForTest"
+            ),
+            "|",
+            task.get("titre")
+        )
 
     break
 PY
