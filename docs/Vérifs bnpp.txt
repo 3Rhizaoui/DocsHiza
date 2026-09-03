@@ -1,61 +1,3 @@
-
-============================================================
-VERSION TEST BNP : JIRA-DYNAMIC-N2-V03
-Date : 03/09/2026
-============================================================
-
-CORRECTION
-----------
-Restauration de la fonction isFeatureGil() utilisée lors du
-filtrage des Epics Jira [FEATURE GIL].
-
-Le filtrage utilise :
-- businessRules.summary_regex si configuré
-- sinon fallback sur [FEATURE GIL]
-
-OBJECTIF DU TEST BNP
---------------------
-Valider que l'extraction dépasse maintenant le filtrage N1
-et arrive jusqu'au moteur dynamique N2 / N3.
-
-Chaîne :
-N1 Epic Jira
--> filtrage FEATURE GIL
--> récupération dynamique "Tickets dans l'Epic"
--> N2 tickets Jira
--> N3 détail de chaque ticket
-
-RESULTAT ATTENDU MINIMUM
-------------------------
-L'erreur suivante ne doit plus apparaître :
-
-ReferenceError: isFeatureGil is not defined
-
-On doit obtenir :
-
-[CAPABILITIES] 13 Epic(s) [FEATURE GIL]
-
-Puis observer pour AERL_GIL-206 les traces :
-
-[JIRA][N2]
-[JIRA][N2][GREENHOPPER]
-[JIRA][N2][DIAG]
-[JIRA][N3]
-
-ou les diagnostics équivalents si le panneau Jira BNP
-nécessite encore un ajustement.
-
-COMMANDE DE TEST BNP
---------------------
-
-node \
-portal/commun/scripts/qualite/standalone/extraction/jira/extraire_capabilities.js
-
-CONTROLE AERL_GIL-206
----------------------
-
-Après exécution :
-
 python - <<'PY'
 import json
 from pathlib import Path
@@ -79,39 +21,71 @@ for row in data.get("capabilities", []):
     if epic.get("key") != "AERL_GIL-206":
         continue
 
-    print("EPIC =", epic.get("key"))
-    print(
-        "SUMMARY =",
-        (epic.get("fields") or {}).get("summary")
-    )
+    print("===================================")
+    print("EPIC")
+    print("===================================")
+    print("KEY     =", epic.get("key"))
 
-    children = row.get("children") or []
+    ef = epic.get("fields") or {}
 
-    print("ENFANTS =", len(children))
-    print()
-
-    for child in children:
-
-        fields = child.get("fields") or {}
-
+    for name in [
+        "summary",
+        "status",
+        "resolution",
+        "assignee",
+        "reporter",
+        "description",
+        "fixVersions",
+        "versions",
+        "environment",
+        "comment",
+        "issuetype",
+    ]:
+        print()
+        print(name, "=")
         print(
-            child.get("key"),
-            "|",
-            fields.get("summary"),
-            "| statut =",
-            (fields.get("status") or {}).get("name"),
-            "| type =",
-            (fields.get("issuetype") or {}).get("name")
+            json.dumps(
+                ef.get(name),
+                ensure_ascii=False,
+                indent=2
+            )
         )
 
     print()
-    print("DIAGNOSTICS =")
+    print("===================================")
+    print("ENFANTS =", len(row.get("children") or []))
+    print("===================================")
 
-    for diag in (
-        row.get("childrenDiagnostics")
-        or []
-    ):
-        print(diag)
+    for child in row.get("children") or []:
+
+        fields = child.get("fields") or {}
+
+        print()
+        print("-----------------------------------")
+        print("CHILD =", child.get("key"))
+        print("-----------------------------------")
+
+        for name in [
+            "summary",
+            "status",
+            "resolution",
+            "assignee",
+            "reporter",
+            "description",
+            "fixVersions",
+            "versions",
+            "environment",
+            "comment",
+            "issuetype",
+        ]:
+            print(
+                name,
+                "=",
+                json.dumps(
+                    fields.get(name),
+                    ensure_ascii=False
+                )[:3000]
+            )
 
     break
 PY
