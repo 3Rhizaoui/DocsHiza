@@ -1,94 +1,56 @@
-1. Sur le PC BNP, reconstruis maintenant le payload
-python \
-portal/commun/scripts/qualite/standalone/construire_payload.py
-
-Puis immédiatement :
-
-python - <<'PY'
-import json
-from pathlib import Path
-
-p = Path(
-    "portal/commun/data/standalone/"
-    "payload_standalone.json"
-)
-
-data = json.loads(
-    p.read_text(
-        encoding="utf-8",
-        errors="replace"
-    )
-)
-
-rows = data.get("capabilities") or []
-
-print("TOTAL PAYLOAD =", len(rows))
-
-for row in rows:
-
-    if row.get("jiraKey") != "AERL_GIL-206":
-        continue
-
-    print()
-    print("==============================")
-    print("AERL_GIL-206 DANS LE PAYLOAD")
-    print("==============================")
-
-    print(
-        "sourceType =",
-        row.get("sourceType")
-    )
-
-    print(
-        "capability =",
-        repr(row.get("capability"))
-    )
-
-    print(
-        "version =",
-        repr(row.get("version"))
-    )
-
-    print(
-        "environnement =",
-        repr(row.get("environnement"))
-    )
-
-    jira = row.get("jira") or {}
-
-    print()
-    print("JIRA =")
-    print(
-        json.dumps(
-            jira,
-            ensure_ascii=False,
-            indent=2
-        )
-    )
-
-    print()
-    print("READINESS DIRECT =")
-    print(
-        json.dumps(
-            row.get("readiness"),
-            ensure_ascii=False,
-            indent=2
-        )
-    )
-
-    break
-else:
-    print("AERL_GIL-206 INTROUVABLE")
-PY
-
-Donne-moi aussi :
+Avant que je te donne le patch définitif, il me manque seulement la correspondance exacte entre les IDs HTML et les libellés des 4 KPI. Fais cette inspection uniquement sur BNP :
 
 grep -n -E \
-'payload_standalone|fetch\(|loadData|DATA|json' \
-portal/qualite/standalone/standalone.js \
-| head -n 120
+'kpiTotal|kpiReadyTest|kpiReadyUse|kpiNonReady' \
+portal/qualite/standalone/* \
+2>/dev/null
 
-et :
+Puis :
 
-sed -n '1,220p' \
+grep -n -A45 -B10 \
+'function renderKpis' \
 portal/qualite/standalone/standalone.js
+
+Et également :
+
+grep -n -A20 -B10 \
+'function jiraReady' \
+portal/qualite/standalone/standalone.js
+
+Je veux vérifier parce que ta capture semble montrer quelque chose de suspect dans les affectations :
+
+byId("kpiReadyTest").textContent = jiraCount;
+byId("kpiReadyUse").textContent = octaneCount;
+byId("kpiNonReady").textContent = readyTest;
+
+Si c'est bien exactement le code actuel, il y a deux problèmes simultanés : le calcul se fait au niveau Epic au lieu des tâches, et les valeurs semblent affectées à des KPI qui ne correspondent pas à leur nom.
+
+Après ces trois commandes, je te donne directement le patch qui ajoutera une agrégation dynamique du type :
+
+function jiraTaskStats(rows) {
+
+    const tasks =
+        rows
+            .filter(isJiraRow)
+            .flatMap(
+                row =>
+                    Array.isArray(
+                        row?.jira?.taches
+                    )
+                        ? row.jira.taches
+                        : []
+            );
+
+    const ready =
+        tasks.filter(
+            task =>
+                task?.readyForTest === true
+        ).length;
+
+    return {
+        total: tasks.length,
+        ready,
+        nonReady:
+            tasks.length - ready
+    };
+}
