@@ -1,3 +1,18 @@
+Ensuite sur le PC BNP :
+
+git pull origin GIL-General
+
+Puis tu peux lancer l’extracteur JIRA normalement, sans redirection :
+
+node \
+  portal/commun/scripts/qualite/standalone/extraction/jira/extraire_capabilities.js
+
+et après le run :
+
+echo "EXIT_CODE=$?"
+
+Puis on contrôle AERL_GIL-206 avec :
+
 python - <<'PY'
 import json
 from pathlib import Path
@@ -14,36 +29,227 @@ data = json.loads(
     )
 )
 
-key = "AERL_GIL-206"
-
 for row in data.get("capabilities", []):
+
     epic = row.get("epic") or {}
 
-    if epic.get("key") != key:
+    if epic.get("key") != "AERL_GIL-206":
         continue
 
-    fields = epic.get("fields") or {}
+    print("EPIC =", epic.get("key"))
+    print("ENFANTS =", len(row.get("children") or []))
 
-    print("EPIC =", key)
-    print("SUMMARY =", fields.get("summary"))
+    for child in row.get("children") or []:
+
+        fields = child.get("fields") or {}
+
+        print(
+            child.get("key"),
+            "|",
+            fields.get("summary"),
+            "| statut =",
+            (fields.get("status") or {}).get("name"),
+            "| type =",
+            (fields.get("issuetype") or {}).get("name"),
+        )
+
     print()
+    print("DIAGNOSTICS =")
 
-    print("=== SUBTASKS ===")
-    print(json.dumps(
-        fields.get("subtasks"),
-        ensure_ascii=False,
-        indent=2
-    ))
-
-    print()
-    print("=== ISSUE LINKS ===")
-    print(json.dumps(
-        fields.get("issuelinks"),
-        ensure_ascii=False,
-        indent=2
-    ))
+    for diag in row.get("childrenDiagnostics") or []:
+        print(diag)
 
     break
-else:
-    print("EPIC INTROUVABLE :", key)
 PY
+
+Et oui, on garde aussi docs/Vérifs bnpp.txt pour le commit documentaire, mais pas dans ce commit fonctionnel JIRA. On le committra juste après avoir ajouté le résultat du test BNP.
+
+============================================================
+TEST BNP - JIRA STANDALONE DYNAMIQUE N1 -> N2 -> N3
+Version test : JIRA-GREENHOPPER-N2N3-V1
+Date : 03/09/2026
+============================================================
+
+OBJECTIF
+-------
+Valider la récupération dynamique des tickets liés à chaque
+Epic [FEATURE GIL] sans utiliser uniquement Epic Link / parent.
+
+Architecture testée :
+
+N1 : Epic [FEATURE GIL]
+     |
+     v
+N2 : POST Jira
+     /secure/AjaxIssueAction!default.jsp
+     issueKey=<EPIC>
+     |
+     v
+     panneau GreenHopper
+     "Tickets dans l'epic"
+     |
+     v
+     extraction des data-issuekey
+     |
+     v
+N3 : /rest/api/2/issue/<CHILD_KEY>
+     récupération du détail réel de chaque ticket
+
+
+------------------------------------------------------------
+1. METTRE A JOUR LE DEPOT BNP
+------------------------------------------------------------
+
+git pull origin GIL-General
+
+
+------------------------------------------------------------
+2. VERIFIER LA VERSION DU CODE
+------------------------------------------------------------
+
+grep -n -E \
+'GREENHOPPER|greenhopper-epics-issue-web-panel|AjaxIssueAction|JIRA.*N2|JIRA.*N3|parent-fallback' \
+portal/commun/scripts/qualite/standalone/extraction/jira/extraire_capabilities.js
+
+
+------------------------------------------------------------
+3. LANCER L'EXTRACTION JIRA STANDALONE
+------------------------------------------------------------
+
+node \
+portal/commun/scripts/qualite/standalone/extraction/jira/extraire_capabilities.js
+
+IMPORTANT :
+- ne pas rediriger stdout vers un fichier ;
+- le script utilise un terminal interactif ;
+- se connecter à Jira si demandé ;
+- appuyer sur Entrée quand le script le demande.
+
+
+------------------------------------------------------------
+4. VERIFIER LE CODE RETOUR
+------------------------------------------------------------
+
+echo "EXIT_CODE=$?"
+
+
+------------------------------------------------------------
+5. VERIFIER AERL_GIL-206
+------------------------------------------------------------
+
+python - <<'PY2'
+import json
+from pathlib import Path
+
+p = Path(
+    "portal/commun/data/standalone/jira/"
+    "capabilities_brut.json"
+)
+
+data = json.loads(
+    p.read_text(
+        encoding="utf-8",
+        errors="replace"
+    )
+)
+
+for row in data.get("capabilities", []):
+
+    epic = row.get("epic") or {}
+
+    if epic.get("key") != "AERL_GIL-206":
+        continue
+
+    print("EPIC =", epic.get("key"))
+    print(
+        "SUMMARY =",
+        (epic.get("fields") or {}).get("summary")
+    )
+
+    children = row.get("children") or []
+
+    print("ENFANTS =", len(children))
+    print()
+
+    for child in children:
+
+        fields = child.get("fields") or {}
+
+        print(
+            child.get("key"),
+            "|",
+            fields.get("summary"),
+            "| statut =",
+            (fields.get("status") or {}).get("name"),
+            "| type =",
+            (fields.get("issuetype") or {}).get("name"),
+        )
+
+    print()
+    print("DIAGNOSTICS =")
+
+    for diag in (
+        row.get("childrenDiagnostics")
+        or []
+    ):
+        print(diag)
+
+    break
+PY2
+
+
+------------------------------------------------------------
+RESULTAT ATTENDU
+------------------------------------------------------------
+
+Pour AERL_GIL-206 :
+
+ENFANTS doit être > 0.
+
+Des tickets visibles dans Jira doivent être retrouvés, par exemple :
+
+AERL_GIL-585
+AERL_GIL-294
+AERL_GIL-357
+AERL_GIL-356
+AERL_GIL-746
+AERL_GIL-632
+AERL_GIL-748
+AERL_GIL-754
+AERL_GIL-799
+AERL_GIL-800
+
+La liste exacte reste dynamique et dépend de Jira.
+
+Le diagnostic doit idéalement contenir :
+
+source = greenhopper-panel
+source = greenhopper-children
+
+et un count > 0.
+
+
+------------------------------------------------------------
+SI GREENHOPPER RETOURNE 0
+------------------------------------------------------------
+
+Si le résultat contient :
+
+[JIRA][N2][GREENHOPPER] ... => 0 ticket(s)
+
+ou :
+
+source = parent-fallback
+
+conserver toute la sortie.
+
+Cela indiquera que Jira exige certains paramètres dynamiques
+fields/panels supplémentaires dans le POST AjaxIssueAction.
+
+Ne pas modifier manuellement les IDs de champs.
+Ils devront être récupérés dynamiquement.
+
+
+============================================================
+FIN TEST JIRA-GREENHOPPER-N2N3-V1
+============================================================

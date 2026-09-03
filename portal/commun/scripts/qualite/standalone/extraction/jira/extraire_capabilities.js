@@ -773,168 +773,554 @@ async function fetchEpicChildren(
   epicKey
 ) {
 
-  const issueMap =
-    new Map();
+  // ==========================================================
+  // N2 JIRA - source principale
+  //
+  // Jira BNP n'expose pas les tickets de l'Epic via :
+  //   parent = EPIC
+  //   Epic Link = EPIC
+  //
+  // L'interface Jira utilise le panneau GreenHopper :
+  //   greenhopper-epics-issue-web-panel
+  //
+  // On reproduit donc le même parcours dynamique :
+  //
+  // N1 Epic
+  //   -> AjaxIssueAction!default.jsp
+  // N2 Tickets dans l'Epic
+  //   -> extraction des data-issuekey
+  // N3 détail REST de chaque ticket
+  // ==========================================================
 
-  const errors = [];
+  const expression = `
+    (async () => {
 
-  const diagnostics = [];
+      const baseUrl =
+        ${JSON.stringify(baseUrl)};
 
-  const queries = [
-    {
-      source: 'parent',
-      jql:
-        `parent = "${escapeJqlString(epicKey)}"`
-    },
-    {
-      source: 'Epic Link',
-      jql:
-        `"Epic Link" = "${escapeJqlString(epicKey)}"`
-    }
-  ];
+      const epicKey =
+        ${JSON.stringify(epicKey)};
 
-  try {
+      const diagnostics = [];
 
-    const relationFields =
-      await discoverEpicRelationFields(
-        cdp,
-        baseUrl
+      const errors = [];
+
+      const issueMap = {};
+
+      // -------------------------------------------------------
+      // 1. Charger le panneau Jira de l'Epic.
+      // -------------------------------------------------------
+
+      const body =
+        new URLSearchParams();
+
+      body.append(
+        'issueKey',
+        epicKey
       );
 
-    for (
-      const field
-      of relationFields
-    ) {
+      body.append(
+        'decorator',
+        'none'
+      );
 
-      const fieldId =
-        String(
-          field?.id || ''
-        ).trim();
+      body.append(
+        'prefetch',
+        'false'
+      );
 
-      if (!fieldId) {
-        continue;
+      body.append(
+        'shouldUpdateCurrentProject',
+        'false'
+      );
+
+      body.append(
+        'lastReadTime',
+        String(Date.now())
+      );
+
+      let ajaxData = null;
+
+      try {
+
+        const response =
+          await fetch(
+            baseUrl
+            + '/secure/AjaxIssueAction!default.jsp',
+            {
+              method: 'POST',
+              credentials: 'include',
+              headers: {
+                'Accept':
+                  'application/json, text/javascript, */*; q=0.01',
+                'Content-Type':
+                  'application/x-www-form-urlencoded; charset=UTF-8',
+                'X-Requested-With':
+                  'XMLHttpRequest'
+              },
+              body:
+                body.toString()
+            }
+          );
+
+        const text =
+          await response.text();
+
+        if (!response.ok) {
+
+          throw new Error(
+            'HTTP '
+            + response.status
+            + ' : '
+            + text.slice(0, 800)
+          );
+
+        }
+
+        try {
+
+          ajaxData =
+            JSON.parse(text);
+
+        } catch (error) {
+
+          throw new Error(
+            'Réponse AjaxIssueAction non JSON : '
+            + text.slice(0, 800)
+          );
+
+        }
+
+      } catch (error) {
+
+        errors.push({
+          source:
+            'greenhopper-epics-issue-web-panel',
+          epicKey,
+          error:
+            String(
+              error?.message ||
+              error
+            )
+        });
+
       }
 
-      queries.push({
-        source:
-          `${field.name} (${fieldId})`,
-        jql:
-          `"${escapeJqlString(fieldId)}" = "${escapeJqlString(epicKey)}"`
-      });
+      // -------------------------------------------------------
+      // 2. Trouver le HTML du panneau
+      //    "Tickets dans l'epic".
+      // -------------------------------------------------------
 
-    }
+      let panelHtml = '';
 
-  } catch (error) {
+      if (ajaxData) {
 
-    errors.push({
-      epicKey,
-      jql:
-        '<discoverEpicRelationFields>',
-      error:
-        String(
-          error?.message ||
-          error
-        )
-    });
+        const candidates = [];
 
-  }
+        const visit = value => {
 
-  let names = {};
+          if (!value) {
+            return;
+          }
 
-  for (
-    const query
-    of queries
-  ) {
+          if (Array.isArray(value)) {
 
-    try {
+            for (const item of value) {
+              visit(item);
+            }
 
-      const value =
-        await executeJql(
-          cdp,
-          baseUrl,
-          query.jql
+            return;
+          }
+
+          if (
+            typeof value === 'object'
+          ) {
+
+            const completeKey =
+              String(
+                value.completeKey ||
+                value.key ||
+                value.id ||
+                ''
+              );
+
+            const html =
+              String(
+                value.html ||
+                value.content ||
+                ''
+              );
+
+            if (
+              completeKey.includes(
+                'greenhopper-epics-issue-web-panel'
+              )
+              || html.includes(
+                'ghx-issues-in-epic-table'
+              )
+              || html.includes(
+                'data-issuekey='
+              )
+            ) {
+
+              candidates.push({
+                completeKey,
+                html
+              });
+
+            }
+
+            for (
+              const child
+              of Object.values(value)
+            ) {
+
+              visit(child);
+
+            }
+
+          }
+
+        };
+
+        visit(ajaxData);
+
+        candidates.sort(
+          (a, b) =>
+            b.html.length
+            - a.html.length
         );
 
-      names =
-        Object.assign(
-          names,
-          value.names || {}
-        );
+        panelHtml =
+          candidates[0]?.html || '';
 
-      const found =
-        value.issues || [];
+        diagnostics.push({
+          source:
+            'greenhopper-panel',
+          epicKey,
+          candidates:
+            candidates.length,
+          htmlLength:
+            panelHtml.length
+        });
 
-      diagnostics.push({
-        source:
-          query.source,
-        jql:
-          query.jql,
-        count:
-          found.length
-      });
+      }
 
-      console.log(
-        '  [JIRA CHILD QUERY]',
-        query.source,
-        '=>',
-        found.length,
-        'issue(s)'
-      );
+      // -------------------------------------------------------
+      // 3. Extraire toutes les clés N2 depuis le HTML.
+      // -------------------------------------------------------
 
-      for (
-        const issue
-        of found
-      ) {
+      const childKeys = [];
 
-        if (issue.key) {
+      if (panelHtml) {
 
-          issueMap.set(
-            issue.key,
-            issue
+        const parser =
+          new DOMParser();
+
+        const document =
+          parser.parseFromString(
+            panelHtml,
+            'text/html'
           );
+
+        const rows =
+          document.querySelectorAll(
+            '[data-issuekey]'
+          );
+
+        for (const row of rows) {
+
+          const key =
+            String(
+              row.getAttribute(
+                'data-issuekey'
+              )
+              || ''
+            ).trim();
+
+          if (
+            key
+            && key !== epicKey
+            && !childKeys.includes(key)
+          ) {
+
+            childKeys.push(key);
+
+          }
 
         }
 
       }
 
-    } catch (error) {
-
-      const row = {
-        epicKey,
+      diagnostics.push({
         source:
-          query.source,
-        jql:
-          query.jql,
-        error:
-          String(
-            error?.message ||
-            error
-          )
+          'greenhopper-children',
+        epicKey,
+        count:
+          childKeys.length,
+        keys:
+          childKeys
+      });
+
+      // -------------------------------------------------------
+      // 4. N3 : pour chaque ticket découvert,
+      //    récupérer le vrai détail Jira.
+      // -------------------------------------------------------
+
+      for (
+        const childKey
+        of childKeys
+      ) {
+
+        try {
+
+          const response =
+            await fetch(
+              baseUrl
+              + '/rest/api/2/issue/'
+              + encodeURIComponent(
+                  childKey
+                )
+              + '?expand=names',
+              {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                  'Accept':
+                    'application/json'
+                }
+              }
+            );
+
+          const text =
+            await response.text();
+
+          if (!response.ok) {
+
+            throw new Error(
+              'HTTP '
+              + response.status
+              + ' : '
+              + text.slice(0, 500)
+            );
+
+          }
+
+          const issue =
+            JSON.parse(text);
+
+          issueMap[childKey] =
+            issue;
+
+        } catch (error) {
+
+          errors.push({
+            source:
+              'issue-detail',
+            epicKey,
+            childKey,
+            error:
+              String(
+                error?.message ||
+                error
+              )
+          });
+
+          // On conserve au minimum la clé découverte
+          // même si le détail REST échoue.
+          issueMap[childKey] = {
+            key:
+              childKey,
+            fields: {}
+          };
+
+        }
+
+      }
+
+      return {
+        issues:
+          Object.values(
+            issueMap
+          ),
+        names: {},
+        errors,
+        diagnostics,
+        source:
+          'greenhopper'
       };
 
-      errors.push(row);
+    })()
+  `;
 
-      console.log(
-        '  [JIRA CHILD QUERY ERROR]',
-        query.source,
-        '=>',
-        row.error
-      );
+  const result =
+    await cdp.send(
+      'Runtime.evaluate',
+      {
+        expression,
+        awaitPromise: true,
+        returnByValue: true
+      }
+    );
 
-    }
+  if (result.exceptionDetails) {
+
+    const detail =
+      result.exceptionDetails
+        .exception
+        ?.description
+      || result.exceptionDetails.text;
+
+    throw new Error(
+      detail
+      || 'Erreur extraction dynamique enfants Jira'
+    );
 
   }
 
-  return {
-    issues: [
-      ...issueMap.values()
-    ],
-    names,
-    errors,
-    diagnostics
-  };
+  const dynamicResult =
+    result.result?.value
+    || {
+      issues: [],
+      names: {},
+      errors: [],
+      diagnostics: []
+    };
+
+  console.log(
+    '  [JIRA][N2][GREENHOPPER]',
+    epicKey,
+    '=>',
+    (
+      dynamicResult.issues
+      || []
+    ).length,
+    'ticket(s)'
+  );
+
+  for (
+    const diagnostic
+    of dynamicResult.diagnostics || []
+  ) {
+
+    console.log(
+      '  [JIRA][N2][DIAG]',
+      JSON.stringify(
+        diagnostic
+      )
+    );
+
+  }
+
+  for (
+    const issue
+    of dynamicResult.issues || []
+  ) {
+
+    console.log(
+      '  [JIRA][N3]',
+      issue.key || '',
+      '|',
+      issue.fields?.summary || '',
+      '| status =',
+      issue.fields?.status?.name || '',
+      '| type =',
+      issue.fields?.issuetype?.name || ''
+    );
+
+  }
+
+  // ==========================================================
+  // Fallback diagnostic.
+  //
+  // On ne l'utilise que si le panneau GreenHopper
+  // ne retourne réellement aucun ticket.
+  // ==========================================================
+
+  if (
+    (
+      dynamicResult.issues
+      || []
+    ).length > 0
+  ) {
+
+    return dynamicResult;
+
+  }
+
+  console.log(
+    '  [JIRA][N2][FALLBACK]',
+    epicKey,
+    '- panneau GreenHopper vide, fallback parent'
+  );
+
+  try {
+
+    const fallback =
+      await executeJql(
+        cdp,
+        baseUrl,
+        `parent = "${escapeJqlString(epicKey)}"`
+      );
+
+    const issues =
+      fallback.issues || [];
+
+    return {
+      issues,
+      names:
+        fallback.names || {},
+      errors:
+        dynamicResult.errors || [],
+      diagnostics: [
+        ...(
+          dynamicResult.diagnostics
+          || []
+        ),
+        {
+          source:
+            'parent-fallback',
+          epicKey,
+          count:
+            issues.length
+        }
+      ],
+      source:
+        'parent-fallback'
+    };
+
+  } catch (error) {
+
+    return {
+      issues: [],
+      names: {},
+      errors: [
+        ...(
+          dynamicResult.errors
+          || []
+        ),
+        {
+          source:
+            'parent-fallback',
+          epicKey,
+          error:
+            String(
+              error?.message ||
+              error
+            )
+        }
+      ],
+      diagnostics:
+        dynamicResult.diagnostics
+        || [],
+      source:
+        'none'
+    };
+
+  }
 
 }
+
 
 
 // ============================================================
