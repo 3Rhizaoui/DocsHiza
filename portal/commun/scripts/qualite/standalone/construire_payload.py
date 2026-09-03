@@ -71,6 +71,19 @@ def normalize_key_part(value) -> str:
 
     value = value.lower()
 
+    # Matching métier :
+    #
+    #   [FEATURE GIL] - Aliasing ...
+    #   Aliasing ...
+    #
+    # doivent produire la même clé.
+    value = re.sub(
+        r"^\s*\[\s*feature\s+gil\s*\]\s*[-:–—]*\s*",
+        "",
+        value,
+        flags=re.IGNORECASE,
+    )
+
     value = re.sub(
         r"\s+",
         " ",
@@ -99,6 +112,7 @@ def index_octane(
 
     exact = {}
     without_environment = {}
+    by_capability = {}
 
     for row in qualifications:
 
@@ -114,11 +128,21 @@ def index_octane(
             row.get("environnement")
         )
 
-        # Capability + Release restent obligatoires.
-        # L'environnement peut être absent dans Octane :
-        # dans ce cas la qualification reste visible,
-        # mais elle ne sera jamais considérée cohérente.
-        if not capability or not release:
+        # La capability est la clé métier minimale.
+        if not capability:
+            continue
+
+        # Index par capability.
+        #
+        # Il permet de retrouver Octane lorsque la Feature
+        # JIRA n'a pas encore de Version renseignée.
+        by_capability.setdefault(
+            capability,
+            [],
+        ).append(row)
+
+        # Les index plus stricts nécessitent une Release.
+        if not release:
             continue
 
         if environment:
@@ -143,9 +167,14 @@ def index_octane(
             ).append(row)
 
     return {
-        "exact": exact,
+        "exact":
+            exact,
+
         "withoutEnvironment":
             without_environment,
+
+        "byCapability":
+            by_capability,
     }
 
 
@@ -215,21 +244,29 @@ def build_row(
 
     version_release_match = (
         octane_found
-        and normalize_key_part(
-            jira_version
-        )
-        == normalize_key_part(
-            octane_release
+        and (
+            not jira_version
+            or not octane_release
+            or normalize_key_part(
+                jira_version
+            )
+            == normalize_key_part(
+                octane_release
+            )
         )
     )
 
     environment_match = (
         octane_found
-        and normalize_key_part(
-            jira_environment
-        )
-        == normalize_key_part(
-            octane_environment
+        and (
+            not jira_environment
+            or not octane_environment
+            or normalize_key_part(
+                jira_environment
+            )
+            == normalize_key_part(
+                octane_environment
+            )
         )
     )
 
@@ -609,6 +646,73 @@ def build_payload(
                         [],
                     )
                 )
+
+            # 3. Fallback métier par Feature / Capability.
+            #
+            # Utilisé notamment pour les anciennes Features
+            # JIRA qui n'ont pas encore de Version renseignée.
+            #
+            # Ce fallback n'est accepté que si UNE SEULE
+            # qualification Octane correspond à la capability.
+            if not matches:
+
+                capability_key = (
+                    normalize_key_part(
+                        jira.get("capability")
+                    )
+                )
+
+                capability_matches = (
+                    octane_index
+                    .get(
+                        "byCapability",
+                        {},
+                    )
+                    .get(
+                        capability_key,
+                        [],
+                    )
+                )
+
+                if len(capability_matches) == 1:
+                    matches = capability_matches
+
+            # ------------------------------------------------
+            # 3. Fallback métier par Capability uniquement.
+            #
+            # Cas visé :
+            # - Feature JIRA sans Version
+            # - Feature Octane équivalente avec Release
+            #
+            # Exemple :
+            #   JIRA   : Aliasing of internal IDs - V0
+            #   OCTANE : [FEATURE GIL] - Aliasing of internal IDs - V0
+            #
+            # Le fallback n'est accepté que lorsqu'une seule
+            # qualification Octane correspond à la capability.
+            # ------------------------------------------------
+            if not matches:
+
+                capability_key = (
+                    normalize_key_part(
+                        jira.get("capability")
+                    )
+                )
+
+                capability_matches = (
+                    octane_index
+                    .get(
+                        "byCapability",
+                        {},
+                    )
+                    .get(
+                        capability_key,
+                        [],
+                    )
+                )
+
+                if len(capability_matches) == 1:
+                    matches = capability_matches
 
             row = build_row(
                 jira,

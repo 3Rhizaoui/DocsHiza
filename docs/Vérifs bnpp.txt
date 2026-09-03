@@ -1,47 +1,76 @@
-Sur BNP, exécute :
 
-cat \
-portal/commun/scripts/qualite/standalone/standalone_config.json
+============================================================
+VERSION TEST BNP : MATCHING-JIRA-MASTER-V02
+Date : 04/09/2026
+============================================================
 
-Puis :
+OBJECTIF
+--------
+Activer le matching JIRA / OCTANE avec JIRA comme inventaire maitre.
 
-sed -n '530,675p' \
-portal/commun/scripts/qualite/standalone/construire_payload.py
+REGLE
+-----
+Une Feature JIRA = une ligne principale.
 
-Et enfin, pour vérifier les vraies quantités d'entrée :
+Une qualification OCTANE correspondante enrichit la meme ligne.
 
-python - <<'PY'
-import json
-from pathlib import Path
+Aucune ligne OCTANE autonome ne doit etre ajoutee au tableau principal.
 
-base = Path("portal/commun/data/standalone")
+Le nombre total de lignes principales doit donc rester egal
+au nombre de Features JIRA.
 
-for rel, key in [
-    ("jira/capabilities.json", "capabilities"),
-    ("octane/qualifications.json", "qualifications"),
-]:
-    p = base / rel
-    data = json.loads(
-        p.read_text(
-            encoding="utf-8",
-            errors="replace"
-        )
-    )
-    rows = data.get(key) or []
+MATCHING
+--------
+Priorite :
 
-    print()
-    print(rel)
-    print("COUNT =", len(rows))
+1. Capability + Version/Release + Environnement
 
-    for r in rows:
-        print(
-            "-",
-            r.get("capability"),
-            "|",
-            r.get("version")
-            or r.get("release"),
-            "|",
-            r.get("environnement")
-        )
-PY
+2. Capability + Version/Release si environnement Octane absent
 
+3. Fallback par Capability uniquement si UNE SEULE
+   qualification OCTANE correspond.
+
+Le prefixe :
+
+[FEATURE GIL]
+
+est ignore uniquement dans la cle de matching.
+
+Il reste conserve dans le titre JIRA affiche.
+
+VERSION / ENVIRONNEMENT
+-----------------------
+Une Version JIRA absente ne bloque pas le matching par Capability.
+
+Un Environnement absent d'un cote ne bloque pas le matching.
+
+Aucune valeur n'est inventee.
+
+RESULTAT ATTENDU BNP
+--------------------
+JIRA : 14 Features
+
+TOTAL lignes principales : 14
+
+Pour les Features ayant un equivalent OCTANE :
+SOURCE = MATCHED
+octane != null
+
+Pour les Features sans equivalent OCTANE :
+SOURCE = JIRA
+octane = null
+
+Exemples attendus :
+
+Aliasing of internal IDs - V0
+-> OCTANE trouve
+
+Aliasing of internal IDs - V1
+-> OCTANE trouve
+
+Une qualification OCTANE sans Feature JIRA correspondante
+ne doit pas creer une ligne supplementaire.
+
+============================================================
+FIN MATCHING-JIRA-MASTER-V02
+============================================================

@@ -1,5 +1,5 @@
 {
   "schemaVersion": 1,
-  "matching_enabled": false,
+  "matching_enabled": true,
   "description": "Mode inventaire complet : affichage indépendant de toutes les données JIRA et de toutes les données Octane, sans rapprochement entre les deux sources."
 }
