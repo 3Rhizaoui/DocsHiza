@@ -62,6 +62,25 @@
   }
 
 
+  function hasJira(row) {
+
+    return Boolean(
+      row?.jira
+      || row?.jiraKey
+      || sourceType(row) === "JIRA"
+    );
+  }
+
+
+  function hasOctane(row) {
+
+    return Boolean(
+      row?.octane
+      || sourceType(row) === "OCTANE"
+    );
+  }
+
+
   function isJiraRow(row) {
 
     return sourceType(row) === "JIRA";
@@ -71,6 +90,15 @@
   function isOctaneRow(row) {
 
     return sourceType(row) === "OCTANE";
+  }
+
+
+  function isMatchedRow(row) {
+
+    return (
+      hasJira(row)
+      && hasOctane(row)
+    );
   }
 
 
@@ -137,19 +165,18 @@
 
   function jiraTaskStats(rows) {
 
+    const jiraRows =
+      rows.filter(hasJira);
+
     const tasks =
-      rows
-        .filter(
-          isJiraRow
-        )
-        .flatMap(
-          row =>
-            Array.isArray(
-              row?.jira?.taches
-            )
-              ? row.jira.taches
-              : []
-        );
+      jiraRows.flatMap(
+        row =>
+          Array.isArray(
+            row?.jira?.taches
+          )
+            ? row.jira.taches
+            : []
+      );
 
     const ready =
       tasks.filter(
@@ -158,39 +185,51 @@
       ).length;
 
     return {
-      total:
-        tasks.length,
+      total: tasks.length,
       ready,
       nonReady:
-        tasks.length - ready
+        tasks.length - ready,
+      capabilitiesReady:
+        jiraRows.filter(
+          jiraReady
+        ).length
     };
   }
 
 
   function renderKpis(rows) {
 
-    const total =
-      rows.length;
+    const jiraRows =
+      rows.filter(hasJira);
+
+    const octaneRows =
+      rows.filter(hasOctane);
+
+    const matchedRows =
+      rows.filter(isMatchedRow);
 
     const jiraStats =
       jiraTaskStats(rows);
 
-    const octaneCount =
-      rows.filter(
-        isOctaneRow
-      ).length;
-
     byId("kpiTotal").textContent =
-      total;
+      jiraRows.length;
 
     byId("kpiReadyTest").textContent =
-      jiraStats.ready;
+      jiraRows.length;
 
     byId("kpiReadyUse").textContent =
-      octaneCount;
+      octaneRows.length;
+
+    const matched =
+      byId("kpiMatched");
+
+    if (matched) {
+      matched.textContent =
+        matchedRows.length;
+    }
 
     byId("kpiNonReady").textContent =
-      jiraStats.nonReady;
+      jiraStats.capabilitiesReady;
   }
 
 
@@ -713,214 +752,205 @@
         const octane =
           row?.octane || null;
 
-        const jiraOnly =
-          isJiraRow(row);
-
-        const octaneOnly =
-          isOctaneRow(row);
-
-        const sourceBadge =
-          jiraOnly
-            ? '<span class="status green">JIRA</span>'
-            : octaneOnly
-              ? '<span class="status orange">OCTANE</span>'
-              : '<span class="status">MATCHED</span>';
-
         const suite =
           octane?.testSuite || {};
 
-        const octaneCapability =
-          octane?.capability
-          || row?.capability
+        const jiraPresent =
+          hasJira(row);
+
+        const octanePresent =
+          hasOctane(row);
+
+        const capabilityJira =
+          row?.capability
+          || row?.jira?.capability
           || "";
 
-        const octaneStatus =
-          octane?.statut
+        const capabilityOctane =
+          octane?.capability
+          || octane?.octaneFeature?.nom
+          || "";
+
+        const jiraVersion =
+          row?.jira?.version
+          || row?.version
+          || "";
+
+        const jiraEnvironment =
+          row?.jira?.environnement
+          || row?.environnement
+          || "";
+
+        const octaneEnvironment =
+          octane?.environnement
+          || "";
+
+        const octaneRelease =
+          octane?.release
           || "";
 
         const octaneDate =
           octane?.dateExecution
           || octane?.derniereExecution
+          || octane?.suiteRun?.dateDebut
           || "";
 
-        const octaneSprint =
-          octane?.sprint
-          || "";
-
-        const octaneState =
-          octane?.etat
-          || "";
-
-        const plannedTests =
+        const totalTasks =
           Number(
-            suite.testsPlanifies || 0
+            readiness.total || 0
           );
 
-        const executedTests =
-          Array.isArray(
-            octane?.executions
-          )
-            ? octane.executions.length
-            : Number(
-                results.total || 0
-              );
+        const readyTasks =
+          Number(
+            readiness.readyForTest || 0
+          );
+
+        const octanePass =
+          Boolean(
+            results?.tousPass === true
+          );
+
+        const octaneFail =
+          Number(
+            results?.fail || 0
+          ) > 0;
+
+        let globalStatus = "—";
+
+        if (octanePresent) {
+
+          if (octanePass) {
+            globalStatus =
+              '<span class="status green">PASS</span>';
+          } else if (octaneFail) {
+            globalStatus =
+              '<span class="status red">ÉCHEC</span>';
+          } else if (octane?.statut) {
+            globalStatus =
+              '<span class="status">'
+              + escapeHtml(octane.statut)
+              + '</span>';
+          }
+
+        }
+
+        let readyFlux =
+          '<span class="status gray">—</span>';
+
+        if (row?.readyForFlux === true) {
+
+          readyFlux =
+            '<span class="status green">✓ PRÊT</span>';
+
+        } else if (
+          row?.readyForFlux === false
+        ) {
+
+          readyFlux =
+            '<span class="status orange">⚠ NON PRÊT</span>';
+
+        }
 
         const main =
           document.createElement("tr");
 
         main.className =
-          "mainRow";
+          "mainRow "
+          + (
+            index % 2 === 0
+              ? "mainRowBlueA"
+              : "mainRowBlueB"
+          );
 
         main.dataset.index =
           String(index);
 
         main.innerHTML = `
-          <td>
-            <div style="margin-bottom:6px">
-              ${sourceBadge}
-            </div>
-
+          <td class="jiraCell">
+            <span class="rowToggle">⌄</span>
             <strong>
-              ${
-                jiraOnly
-                  ? escapeHtml(row.capability)
-                  : "—"
-              }
+              ${escapeHtml(
+                capabilityJira || "—"
+              )}
             </strong>
           </td>
 
-          <td>
-            ${escapeHtml(row.jiraKey || "—")}
-          </td>
-
-          <td>
+          <td class="jiraCell">
             ${escapeHtml(
-              row?.jira?.version
-              || row.version
-              || "—"
+              jiraVersion || "—"
             )}
           </td>
 
-          <td>
+          <td class="jiraCell">
             ${escapeHtml(
-              row?.jira?.environnement
-              || row.environnement
-              || "—"
+              jiraEnvironment || "—"
             )}
           </td>
 
-          <td>
-            ${
-              Number(
-                readiness.readyForTest || 0
-              )
-            }
-            /
-            ${
-              Number(
-                readiness.total || 0
-              )
-            }
+          <td class="jiraCell">
+            <strong>
+              ${readyTasks} / ${totalTasks}
+            </strong>
           </td>
 
-          <td>
+          <td class="jiraCell">
             ${
-              jiraOnly
+              jiraPresent
                 ? statusBadge(
                     jiraReady(row),
-                    "Ready for Test",
-                    "Non Ready"
-                  )
-                : '<span class="status">—</span>'
-            }
-          </td>
-
-          <td>
-            ${
-              octaneOnly || octane
-                ? escapeHtml(
-                    suite.nom || "—"
+                    "✓ PRÊT",
+                    "⚠ NON PRÊT"
                   )
                 : "—"
             }
           </td>
 
-          <td>
+          <td class="octaneCell">
+            ${escapeHtml(
+              suite.nom || "—"
+            )}
             ${
-              octaneOnly || octane
-                ? escapeHtml(
-                    octaneCapability || "—"
-                  )
-                : "—"
+              suite.id
+                ? " (" + escapeHtml(suite.id) + ")"
+                : ""
             }
           </td>
 
-          <td>
-            ${
-              octaneOnly || octane
-                ? escapeHtml(
-                    octane?.environnement || "—"
-                  )
-                : "—"
-            }
+          <td class="octaneCell">
+            ${escapeHtml(
+              capabilityOctane || "—"
+            )}
           </td>
 
-          <td>
-            ${
-              octaneOnly || octane
-                ? escapeHtml(
-                    octane?.release || "—"
-                  )
-                : "—"
-            }
+          <td class="octaneCell">
+            ${escapeHtml(
+              octaneEnvironment || "—"
+            )}
           </td>
 
-          <td>
-            ${
-              octaneOnly || octane
-                ? escapeHtml(
-                    octaneStatus || "—"
-                  )
-                : "—"
-            }
+          <td class="octaneCell">
+            ${escapeHtml(
+              octaneRelease || "—"
+            )}
           </td>
 
-          <td>
-            ${
-              octaneOnly || octane
-                ? escapeHtml(
-                    formatDate(
-                      octaneDate
-                    )
-                  )
-                : "—"
-            }
+          <td class="octaneCell">
+            ${globalStatus}
           </td>
 
-          <td>
-            ${
-              octaneOnly || octane
-                ? escapeHtml(
-                    octaneSprint || "—"
-                  )
-                : "—"
-            }
+          <td class="octaneCell">
+            ${escapeHtml(
+              formatDate(
+                octaneDate
+              )
+            )}
           </td>
 
-          <td>
-            ${
-              octaneState === "Validé"
-                ? '<span class="status green">VALIDÉ</span>'
-                : octaneState === "Non validé"
-                  ? '<span class="status red">NON VALIDÉ</span>'
-                  : octaneState
-                    ? '<span class="status">'
-                      + escapeHtml(octaneState)
-                      + '</span>'
-                    : "—"
-            }
+          <td class="octaneCell">
+            ${readyFlux}
           </td>
         `;
+
 
         const detail =
           document.createElement("tr");
@@ -929,100 +959,103 @@
           "detailRow";
 
         detail.innerHTML = `
-          <td colspan="14">
+          <td colspan="12">
 
             <div class="detail">
 
-              <div class="detailGrid">
+              <div class="detailGridMatched">
 
-                <div class="detailBox">
+                <div class="detailBox detailBoxJira">
 
                   <h3>
-                    JIRA - Capability et tâches
+                    DÉTAILS JIRA
                   </h3>
 
-                  <div style="margin-bottom:12px">
+                  <div class="detailMeta">
 
                     <strong>Epic :</strong>
-                    ${escapeHtml(row.jiraKey || "—")}
+                    ${escapeHtml(
+                      row.jiraKey || "—"
+                    )}
 
                     &nbsp;&nbsp;
 
                     <strong>Version :</strong>
-                    ${
-                      escapeHtml(
-                        row?.jira?.version
-                        || row.version
-                        || "—"
-                      )
-                    }
+                    ${escapeHtml(
+                      jiraVersion || "—"
+                    )}
 
                     &nbsp;&nbsp;
 
                     <strong>Environnement :</strong>
-                    ${
-                      escapeHtml(
-                        row?.jira?.environnement
-                        || row.environnement
-                        || "—"
-                      )
-                    }
+                    ${escapeHtml(
+                      jiraEnvironment || "—"
+                    )}
 
                   </div>
+
+                  <div class="jiraDescription">
+
+                    <strong>Description Epic</strong>
+
+                    <div>
+                      ${escapeHtml(
+                        row?.jira?.description
+                        || row?.description
+                        || "—"
+                      )}
+                    </div>
+
+                  </div>
+
+                  <h4>
+                    Tâches JIRA (${totalTasks})
+                  </h4>
 
                   ${buildTaskRows(row)}
 
                 </div>
 
 
-                <div class="detailBox">
+                <div class="detailBox detailBoxOctane">
 
                   <h3>
-                    OCTANE - Qualification
+                    DÉTAILS OCTANE
                   </h3>
 
-                  <div style="margin-bottom:12px">
+                  <div class="detailMeta">
 
                     <strong>Feature :</strong>
-                    ${
-                      escapeHtml(
-                        octane
-                          ?.octaneFeature
-                          ?.nom
-                        || "—"
-                      )
-                    }
+                    ${escapeHtml(
+                      octane
+                        ?.octaneFeature
+                        ?.nom
+                      || capabilityOctane
+                      || "—"
+                    )}
 
                     &nbsp;&nbsp;
 
                     <strong>Release :</strong>
-                    ${
-                      escapeHtml(
-                        octane?.release
-                        || "—"
-                      )
-                    }
+                    ${escapeHtml(
+                      octaneRelease || "—"
+                    )}
 
                     &nbsp;&nbsp;
 
                     <strong>Environnement :</strong>
-                    ${
-                      escapeHtml(
-                        octane?.environnement
-                        || "—"
-                      )
-                    }
+                    ${escapeHtml(
+                      octaneEnvironment || "—"
+                    )}
 
                   </div>
 
-                  <div style="margin-bottom:12px">
+                  <div class="detailMeta">
 
                     <strong>Test Suite :</strong>
-                    ${
-                      escapeHtml(
-                        suite.nom || "—"
-                      )
-                    }
+                    ${escapeHtml(
+                      suite.nom || "—"
+                    )}
 
                     ${
                       suite.id
@@ -1033,14 +1066,10 @@
                     &nbsp;&nbsp;
 
                     <strong>Suite Run :</strong>
-                    ${
-                      escapeHtml(
-                        octane
-                          ?.suiteRun
-                          ?.id
-                        || "—"
-                      )
-                    }
+                    ${escapeHtml(
+                      octane?.suiteRun?.id
+                      || "—"
+                    )}
 
                     ${
                       octane?.suiteRun?.nom
@@ -1053,92 +1082,50 @@
 
                   </div>
 
-                  <div style="margin-bottom:12px">
+                  <div class="detailMeta">
 
-                    <strong>Statut SR :</strong>
-                    ${
-                      escapeHtml(
-                        octane?.suiteRun?.statut
-                        || "—"
-                      )
-                    }
+                    <strong>Résultat :</strong>
+                    ${globalStatus}
 
                     &nbsp;&nbsp;
 
                     <strong>Démarré :</strong>
-                    ${
-                      escapeHtml(
-                        formatDate(
-                          octane
-                            ?.suiteRun
-                            ?.dateDebut
-                        )
+                    ${escapeHtml(
+                      formatDate(
+                        octane?.suiteRun?.dateDebut
+                        || octaneDate
                       )
-                    }
+                    )}
 
                     &nbsp;&nbsp;
 
                     <strong>Sprint :</strong>
-                    ${
-                      escapeHtml(
-                        octane?.suiteRun?.sprint
-                        || "—"
-                      )
-                    }
+                    ${escapeHtml(
+                      octane?.suiteRun?.sprint
+                      || octane?.sprint
+                      || "—"
+                    )}
 
                     &nbsp;&nbsp;
 
                     <strong>Jalon :</strong>
-                    ${
-                      escapeHtml(
-                        octane?.suiteRun?.jalon
-                        || "—"
-                      )
-                    }
+                    ${escapeHtml(
+                      octane?.suiteRun?.jalon
+                      || octane?.jalon
+                      || "—"
+                    )}
 
                     &nbsp;&nbsp;
 
                     <strong>Exécuté par :</strong>
-                    ${
-                      escapeHtml(
-                        octane
-                          ?.suiteRun
-                          ?.executePar
-                        || "—"
-                      )
-                    }
+                    ${escapeHtml(
+                      octane?.suiteRun?.executePar
+                      || "—"
+                    )}
 
                   </div>
 
                   ${buildExecutionRows(row)}
-
-                </div>
-
-
-                <div class="detailBox">
-
-                  <h3>
-                    Inventaire de la source
-                  </h3>
-
-                  <div style="margin-bottom:12px">
-                    <strong>Source :</strong>
-                    ${sourceBadge}
-                  </div>
-
-                  <div style="margin-bottom:12px">
-                    <strong>État :</strong>
-                    <span class="status">
-                      Non rapproché
-                    </span>
-                  </div>
-
-                  <div>
-                    Les données JIRA et Octane sont
-                    volontairement affichées indépendamment.
-                    Aucun rapprochement métier n'est appliqué
-                    à ce stade.
-                  </div>
 
                 </div>
 
@@ -1156,6 +1143,20 @@
             detail.classList.toggle(
               "open"
             );
+
+            const toggle =
+              main.querySelector(
+                ".rowToggle"
+              );
+
+            if (toggle) {
+              toggle.textContent =
+                detail.classList.contains(
+                  "open"
+                )
+                  ? "⌄"
+                  : "›";
+            }
 
           }
         );
@@ -1205,14 +1206,14 @@
 
         if (
           source === "jira"
-          && !isJiraRow(row)
+          && !hasJira(row)
         ) {
           return false;
         }
 
         if (
           source === "octane"
-          && !isOctaneRow(row)
+          && !hasOctane(row)
         ) {
           return false;
         }

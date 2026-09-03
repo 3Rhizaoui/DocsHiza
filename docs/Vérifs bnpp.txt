@@ -1,203 +1,90 @@
-python - <<'PY'
-import json
-from pathlib import Path
 
-p = Path(
-    "portal/commun/data/standalone/octane/"
-    "qualifications_brut.json"
-)
-
-data = json.loads(
-    p.read_text(encoding="utf-8")
-)
-
-print("TYPE RACINE =", type(data).__name__)
-
-if isinstance(data, dict):
-    print("CLES RACINE =", list(data.keys()))
-
-rows = (
-    data.get("qualifications")
-    or data.get("features")
-    or []
-)
-
-print("QUALIFICATIONS =", len(rows))
-
-for i, row in enumerate(rows[:3], 1):
-    print()
-    print("=" * 70)
-    print("QUALIFICATION", i)
-    print("=" * 70)
-    print(
-        json.dumps(
-            row,
-            ensure_ascii=False,
-            indent=2
-        )
-    )
-PY
 ============================================================
-VERSION TEST BNP : OCTANE-QUALIFICATION-GROUP-V01
-Date : 03/09/2026
+VERSION TEST BNP : STANDALONE-MATCHING-UI-V01
+Date : 04/09/2026
 ============================================================
 
 OBJECTIF
 --------
-Valider la normalisation Octane au niveau qualification.
+Valider le contrat d'interface Standalone JIRA / OCTANE.
 
-Avant :
-1 execution Octane = 1 qualification / 1 ligne principale.
+RESULTAT ATTENDU
+----------------
+Pour 14 Features JIRA :
 
-Maintenant :
-1 qualification Octane
--> Test Suite
--> Suite Run
--> plusieurs executions[]
+Total inventaire : 14
+JIRA : 14
 
-Pour Exchange layer sur BNP, resultat attendu :
+Si les 14 Features Octane équivalentes sont présentes :
+OCTANE : 14
+MATCHEES : 14
 
-QUALIFICATIONS = 1
+Une Feature = une ligne principale.
 
-Capability :
-Exchange layer
+Partie gauche :
+- Epic JIRA / Feature
+- Version JIRA
+- Env. JIRA
+- Taches Ready
+- Ready for Test
 
-Release :
-Release-GIL Lot 1
+Partie droite :
+- Test Suite Octane
+- Capability Octane
+- Env. Octane
+- Release Octane
+- Statut Global
+- Date execution
+- Ready for Flux
 
-Environnement :
-valeur reelle Octane.
-Si vide dans Octane, conserver vide.
+DETAIL
+------
+Au clic sur une ligne :
 
-Test Suite :
-TS-GIL - Exchange layer
-
-Suite Run :
-Suite Run reelle extraite
-
-Executions :
-6
-
-Resultats :
-total = 6
-pass = 4
-fail = 2
-
-IMPORTANT
----------
-Ne pas inventer :
+Gauche :
+DETAILS JIRA
+- Epic
+- Version
 - Environnement
+- Description
+- Toutes les taches JIRA
+
+Droite :
+DETAILS OCTANE
+- Feature
+- Release
+- Environnement
+- Test Suite
+- Suite Run
+- Resultat
+- Date
 - Sprint
 - Jalon
 - Execute par
+- toutes les executions Octane
+- erreurs
+- bugs lies
 
-Ces valeurs doivent rester vides si Octane ne les fournit pas.
+COULEURS
+--------
+Lignes principales :
+alternance de deux intensites de bleu.
 
+Details JIRA :
+bleu clair.
 
-------------------------------------------------------------
-TEST BNP
-------------------------------------------------------------
+Details OCTANE :
+vert clair.
 
-1. Mettre a jour :
+IMPORTANT
+---------
+Une ligne MATCHED appartient a la fois a JIRA et OCTANE.
 
-git pull origin GIL-General
+Le filtre JIRA doit donc conserver les lignes matchees.
+Le filtre OCTANE doit egalement conserver les lignes matchees.
 
+Ready for Flux ne doit pas etre invente.
+Si le payload ne fournit pas readyForFlux,
+la valeur affichee reste "-".
 
-2. Lancer la normalisation Octane :
-
-python \
-portal/commun/scripts/qualite/standalone/normalisation/normaliser_octane.py
-
-
-3. Controler le resultat :
-
-python - <<'PY'
-import json
-from pathlib import Path
-
-p = Path(
-    "portal/commun/data/standalone/octane/"
-    "qualifications.json"
-)
-
-data = json.loads(
-    p.read_text(
-        encoding="utf-8"
-    )
-)
-
-rows = (
-    data.get("qualifications")
-    or []
-)
-
-print(
-    "QUALIFICATIONS =",
-    len(rows)
-)
-
-for q in rows:
-
-    print()
-    print(
-        "CAPABILITY =",
-        q.get("capability")
-    )
-
-    print(
-        "RELEASE =",
-        repr(
-            q.get("release")
-        )
-    )
-
-    print(
-        "ENV =",
-        repr(
-            q.get("environnement")
-        )
-    )
-
-    print(
-        "TEST SUITE =",
-        q.get("testSuite")
-    )
-
-    print(
-        "SUITE RUN =",
-        q.get("suiteRun")
-    )
-
-    print(
-        "EXECUTIONS =",
-        len(
-            q.get("executions")
-            or []
-        )
-    )
-
-    print(
-        "RESULTATS =",
-        q.get("resultats")
-    )
-PY
-
-
-RESULTAT BNP ATTENDU
---------------------
-
-Pour la qualification Exchange layer :
-
-EXECUTIONS = 6
-
-RESULTATS :
-total = 6
-pass = 4
-fail = 2
-
-La qualification ne doit plus etre dupliquee
-une fois par execution.
-
-============================================================
-FIN OCTANE-QUALIFICATION-GROUP-V01
 ============================================================
