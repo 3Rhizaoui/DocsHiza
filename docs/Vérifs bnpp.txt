@@ -1,53 +1,41 @@
-Contrôle ensuite :
+Puis relancer uniquement l’extraction JIRA réelle :
 
-ls -lh \
-  portal/commun/data/standalone/octane/octane_hierarchy_diagnostic.json
+node \
+  portal/commun/scripts/qualite/standalone/extraction/jira/extraire_capabilities.js
 
-Puis affiche seulement les éléments utiles :
+Après authentification, vérifie seulement le brut réel :
 
 python - <<'PY'
-from pathlib import Path
 import json
+from pathlib import Path
 
 p = Path(
-    "portal/commun/data/standalone/octane/"
-    "octane_hierarchy_diagnostic.json"
+    "portal/commun/data/standalone/jira/"
+    "capabilities_brut.json"
 )
 
 data = json.loads(
     p.read_text(
         encoding="utf-8",
-        errors="replace",
+        errors="replace"
     )
 )
 
-print("EPIC")
-print(
-    data.get("epic", {}).get("id"),
-    "|",
-    data.get("epic", {}).get("name"),
-)
+rows = data.get("capabilities") or []
 
-print()
-print(
-    "FEATURES =",
-    len(data.get("features") or [])
-)
+print("CAPABILITIES =", len(rows))
 
-for row in data.get("features") or []:
+for row in rows:
+    epic = row.get("epic") or {}
+    fields = epic.get("fields") or {}
+
     print(
-        row.get("id"),
+        epic.get("key"),
         "|",
-        row.get("name"),
+        fields.get("summary"),
+        "| enfants =",
+        len(row.get("children") or [])
     )
-
-print()
-print("FEATURE SELECTIONNEE")
-row = data.get("selectedFeature") or {}
-
-print(
-    row.get("id"),
-    "|",
-    row.get("name"),
-)
 PY
+
+À cette étape, on veut juste confirmer les 13 vraies Capabilities BNP et notamment AERL_GIL-206 avec ses enfants. Ensuite on inspectera uniquement ses vrais champs JIRA avant tout patch.
