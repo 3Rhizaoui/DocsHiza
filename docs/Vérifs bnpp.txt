@@ -1,49 +1,46 @@
-Sur le PC BNP, fais plutôt ce diagnostic exact :
+Sur BNP, exécute :
+
+cat \
+portal/commun/scripts/qualite/standalone/standalone_config.json
+
+Puis :
+
+sed -n '530,675p' \
+portal/commun/scripts/qualite/standalone/construire_payload.py
+
+Et enfin, pour vérifier les vraies quantités d'entrée :
 
 python - <<'PY'
 import json
 from pathlib import Path
 
-p = Path(
-    "portal/commun/data/standalone/"
-    "payload_standalone.json"
-)
+base = Path("portal/commun/data/standalone")
 
-data = json.loads(
-    p.read_text(
-        encoding="utf-8",
-        errors="replace"
+for rel, key in [
+    ("jira/capabilities.json", "capabilities"),
+    ("octane/qualifications.json", "qualifications"),
+]:
+    p = base / rel
+    data = json.loads(
+        p.read_text(
+            encoding="utf-8",
+            errors="replace"
+        )
     )
-)
+    rows = data.get(key) or []
 
-print("TYPE RACINE =", type(data).__name__)
-print("CLES RACINE =", list(data.keys()))
+    print()
+    print(rel)
+    print("COUNT =", len(rows))
 
-for key, value in data.items():
-    if isinstance(value, list):
+    for r in rows:
         print(
-            key,
-            "=> LISTE",
-            len(value)
-        )
-    elif isinstance(value, dict):
-        print(
-            key,
-            "=> DICT",
-            list(value.keys())[:20]
-        )
-    else:
-        print(
-            key,
-            "=>",
-            type(value).__name__,
-            repr(value)[:120]
+            "-",
+            r.get("capability"),
+            "|",
+            r.get("version")
+            or r.get("release"),
+            "|",
+            r.get("environnement")
         )
 PY
-
-Puis fais aussi :
-
-grep -n -E \
-'payload_standalone|rows|qualifications|inventory|items|sources|data' \
-portal/qualite/standalone/standalone.js \
-portal/commun/scripts/qualite/standalone/construire_payload.py
