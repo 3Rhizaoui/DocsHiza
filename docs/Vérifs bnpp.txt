@@ -3,4 +3,47 @@ import json
 from pathlib import Path
 
 p = Path(
-    "portal/commun/data/standalone/jira
+    "portal/commun/data/standalone/jira/"
+    "capabilities_brut.json"
+)
+
+data = json.loads(
+    p.read_text(
+        encoding="utf-8",
+        errors="replace"
+    )
+)
+
+key = "AERL_GIL-206"
+
+for row in data.get("capabilities", []):
+    epic = row.get("epic") or {}
+
+    if epic.get("key") != key:
+        continue
+
+    fields = epic.get("fields") or {}
+
+    print("EPIC =", key)
+    print("SUMMARY =", fields.get("summary"))
+    print()
+
+    print("=== SUBTASKS ===")
+    print(json.dumps(
+        fields.get("subtasks"),
+        ensure_ascii=False,
+        indent=2
+    ))
+
+    print()
+    print("=== ISSUE LINKS ===")
+    print(json.dumps(
+        fields.get("issuelinks"),
+        ensure_ascii=False,
+        indent=2
+    ))
+
+    break
+else:
+    print("EPIC INTROUVABLE :", key)
+PY
