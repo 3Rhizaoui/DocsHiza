@@ -660,45 +660,45 @@
 
     <div class="kpi">
       <div class="kpiLabel">
-        Total inventaire
+        Total Services
       </div>
-      <div class="kpiValue" id="kpiTotal">
+      <div class="kpiValue" id="kpiTotalServices">
         —
       </div>
     </div>
 
     <div class="kpi">
       <div class="kpiLabel">
-        JIRA
+        Réalisation Dev
       </div>
-      <div class="kpiValue" id="kpiReadyTest">
+      <div class="kpiValue" id="kpiDev">
         —
       </div>
     </div>
 
     <div class="kpi">
       <div class="kpiLabel">
-        OCTANE
+        Couverture de test
       </div>
-      <div class="kpiValue" id="kpiReadyUse">
+      <div class="kpiValue" id="kpiCoverage">
         —
       </div>
     </div>
 
     <div class="kpi">
       <div class="kpiLabel">
-        MATCHÉES
+        Validation Test
       </div>
-      <div class="kpiValue" id="kpiMatched">
+      <div class="kpiValue" id="kpiValidation">
         —
       </div>
     </div>
 
     <div class="kpi">
       <div class="kpiLabel">
-        JIRA Ready for Test
+        Services Ready For Flux
       </div>
-      <div class="kpiValue" id="kpiNonReady">
+      <div class="kpiValue" id="kpiReadyFlux">
         —
       </div>
     </div>
@@ -706,6 +706,17 @@
   </section>
 
   <section class="filters">
+
+    <div class="filterGroup">
+      <label for="filterService">
+        Service (Feature JIRA)
+      </label>
+      <select id="filterService">
+        <option value="">
+          Tous les services
+        </option>
+      </select>
+    </div>
 
     <div class="filterGroup">
       <label for="filterVersion">
@@ -733,34 +744,6 @@
           UAT
         </option>
       </select>
-    </div>
-
-    <div class="filterGroup">
-      <label for="filterStatus">
-        Source
-      </label>
-      <select id="filterStatus">
-        <option value="">
-          Toutes
-        </option>
-        <option value="jira">
-          JIRA
-        </option>
-        <option value="octane">
-          OCTANE
-        </option>
-      </select>
-    </div>
-
-    <div class="filterGroup">
-      <label for="filterCapability">
-        Capability
-      </label>
-      <input
-        id="filterCapability"
-        type="search"
-        placeholder="Rechercher..."
-      >
     </div>
 
   </section>
@@ -795,7 +778,7 @@
       id="emptyMessage"
       hidden
     >
-      Aucune Capability ne correspond aux filtres.
+      Aucun service ne correspond aux filtres.
     </div>
 
   </section>

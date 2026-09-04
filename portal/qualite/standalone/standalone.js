@@ -215,39 +215,137 @@
   }
 
 
-  function renderKpis(rows) {
+  function percentDisplay(value, total) {
 
-    const jiraRows =
-      rows.filter(hasJira);
+    const percent =
+      total > 0
+        ? Math.round((value / total) * 100)
+        : 0;
 
-    const octaneRows =
-      rows.filter(hasOctane);
+    return `${value} (${percent}%)`;
+  }
 
-    const matchedRows =
-      rows.filter(isMatchedRow);
 
-    const jiraStats =
-      jiraTaskStats(rows);
+  function hasTestExecution(row) {
 
-    byId("kpiTotal").textContent =
-      jiraRows.length;
+    const octane =
+      row?.octane || null;
 
-    byId("kpiReadyTest").textContent =
-      jiraRows.length;
-
-    byId("kpiReadyUse").textContent =
-      octaneRows.length;
-
-    const matched =
-      byId("kpiMatched");
-
-    if (matched) {
-      matched.textContent =
-        matchedRows.length;
+    if (!octane) {
+      return false;
     }
 
-    byId("kpiNonReady").textContent =
-      jiraStats.capabilitiesReady;
+    const suite =
+      octane?.testSuite || null;
+
+    if (!suite) {
+      return false;
+    }
+
+    const results =
+      octaneResults(row);
+
+    const hasResults =
+      Boolean(
+        results
+        && (
+          Number(results?.pass || 0) > 0
+          || Number(results?.fail || 0) > 0
+          || Number(results?.blocked || 0) > 0
+          || Number(results?.total || 0) > 0
+          || results?.tousPass === true
+        )
+      );
+
+    const hasExecutionDate =
+      Boolean(
+        octane?.dateExecution
+        || octane?.derniereExecution
+        || octane?.suiteRun?.dateDebut
+      );
+
+    return hasResults || hasExecutionDate;
+  }
+
+
+  function renderKpis(rows) {
+
+    /*
+     * Le service de référence est la Feature JIRA.
+     * Les KPI sont donc calculés uniquement sur les lignes
+     * possédant un service JIRA.
+     */
+
+    const services =
+      rows.filter(hasJira);
+
+    const total =
+      services.length;
+
+    const devReady =
+      services.filter(
+        row => jiraReady(row)
+      ).length;
+
+    const testCovered =
+      services.filter(
+        row =>
+          hasOctane(row)
+          && Boolean(row?.octane?.testSuite)
+          && hasTestExecution(row)
+      ).length;
+
+    const testValidated =
+      services.filter(
+        row => {
+          if (
+            !hasOctane(row)
+            || !row?.octane?.testSuite
+            || !hasTestExecution(row)
+          ) {
+            return false;
+          }
+
+          const results =
+            octaneResults(row);
+
+          return results?.tousPass === true;
+        }
+      ).length;
+
+    const readyFlux =
+      services.filter(
+        row => {
+          if (!jiraReady(row)) {
+            return false;
+          }
+
+          const results =
+            octaneResults(row);
+
+          return (
+            hasOctane(row)
+            && Boolean(row?.octane?.testSuite)
+            && hasTestExecution(row)
+            && results?.tousPass === true
+          );
+        }
+      ).length;
+
+    byId("kpiTotalServices").textContent =
+      String(total);
+
+    byId("kpiDev").textContent =
+      percentDisplay(devReady, total);
+
+    byId("kpiCoverage").textContent =
+      percentDisplay(testCovered, total);
+
+    byId("kpiValidation").textContent =
+      percentDisplay(testValidated, total);
+
+    byId("kpiReadyFlux").textContent =
+      percentDisplay(readyFlux, total);
   }
 
 
@@ -1205,7 +1303,21 @@
   }
 
 
+  function rowService(row) {
+
+    return String(
+      row?.jira?.titre
+      || row?.capability
+      || row?.jira?.capability
+      || ""
+    ).trim();
+  }
+
+
   function applyFilters() {
+
+    const service =
+      byId("filterService").value;
 
     const version =
       byId("filterVersion").value;
@@ -1213,55 +1325,26 @@
     const env =
       byId("filterEnv").value;
 
-    const source =
-      byId("filterStatus").value;
-
-    const capability =
-      byId("filterCapability")
-        .value
-        .trim()
-        .toLowerCase();
-
     const rows =
       sourceRows.filter(row => {
 
         if (
+          service
+          && rowService(row) !== service
+        ) {
+          return false;
+        }
+
+        if (
           version
-          && rowVersionRelease(row)
-          !== version
+          && rowVersionRelease(row) !== version
         ) {
           return false;
         }
 
         if (
           env
-          && rowEnvironment(row)
-          !== env
-        ) {
-          return false;
-        }
-
-        if (
-          source === "jira"
-          && !hasJira(row)
-        ) {
-          return false;
-        }
-
-        if (
-          source === "octane"
-          && !hasOctane(row)
-        ) {
-          return false;
-        }
-
-        if (
-          capability
-          && !String(
-            row.capability || ""
-          )
-            .toLowerCase()
-            .includes(capability)
+          && rowEnvironment(row) !== env
         ) {
           return false;
         }
@@ -1271,6 +1354,40 @@
 
     renderKpis(rows);
     renderRows(rows);
+  }
+
+
+  function populateServices() {
+
+    const select =
+      byId("filterService");
+
+    const values = [
+      ...new Set(
+        sourceRows
+          .filter(hasJira)
+          .map(rowService)
+          .filter(Boolean)
+      )
+    ].sort(
+      (a, b) =>
+        a.localeCompare(
+          b,
+          "fr",
+          { sensitivity: "base" }
+        )
+    );
+
+    values.forEach(value => {
+
+      const option =
+        document.createElement("option");
+
+      option.value = value;
+      option.textContent = value;
+
+      select.appendChild(option);
+    });
   }
 
 
@@ -1336,6 +1453,7 @@
         ? data.capabilities
         : [];
 
+    populateServices();
     populateVersions();
 
     renderKpis(sourceRows);
@@ -1350,18 +1468,15 @@
 
 
   [
+    "filterService",
     "filterVersion",
-    "filterEnv",
-    "filterStatus",
-    "filterCapability"
+    "filterEnv"
   ].forEach(id => {
 
     const element = byId(id);
 
     element.addEventListener(
-      id === "filterCapability"
-        ? "input"
-        : "change",
+      "change",
       applyFilters
     );
   });
