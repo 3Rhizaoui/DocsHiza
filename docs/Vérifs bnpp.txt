@@ -2,54 +2,64 @@ python - <<'PY'
 import json
 from pathlib import Path
 
-paths = [
-    Path("portal/commun/data/standalone/jira/capabilities.json"),
-    Path("portal/commun/data/standalone/jira/capabilities_brut.json"),
-    Path("portal/commun/data/standalone/payload_standalone.json"),
-]
+p = Path(
+    "portal/commun/data/standalone/jira/"
+    "capabilities_brut.json"
+)
 
-for p in paths:
+d = json.loads(
+    p.read_text(
+        encoding="utf-8",
+        errors="replace"
+    )
+)
+
+rows = d.get("capabilities", [])
+
+print("=" * 100)
+print("STRUCTURE COMPLETE D'UNE FEATURE REELLE")
+print("=" * 100)
+
+if not rows:
+    raise SystemExit("Aucune capability")
+
+for i, row in enumerate(rows[:2], 1):
     print()
-    print("=" * 100)
-    print(p)
-    print("=" * 100)
+    print("#" * 100)
+    print("FEATURE", i)
+    print("#" * 100)
 
-    if not p.exists():
-        print("ABSENT")
-        continue
-
-    d = json.loads(
-        p.read_text(
-            encoding="utf-8",
-            errors="replace"
-        )
+    print(
+        json.dumps(
+            row,
+            ensure_ascii=False,
+            indent=2
+        )[:20000]
     )
 
-    if isinstance(d, dict):
-        print("CLES =", list(d.keys()))
+print()
+print("=" * 100)
+print("FIELDS DECLARES PAR L'EXTRACTEUR")
+print("=" * 100)
 
-        for key in (
-            "capabilities",
-            "features",
-            "issues",
-            "items",
-        ):
-            rows = d.get(key)
+print(
+    json.dumps(
+        d.get("fields", {}),
+        ensure_ascii=False,
+        indent=2
+    )[:20000]
+)
 
-            if isinstance(rows, list):
-                print(key, "COUNT =", len(rows))
+print()
+print("=" * 100)
+print("BUSINESS RULES")
+print("=" * 100)
 
-                for r in rows[:20]:
-                    if isinstance(r, dict):
-                        epic = r.get("epic") or {}
-
-                        print(
-                            "- jiraKey =",
-                            r.get("jiraKey")
-                            or epic.get("key"),
-                            "| capability =",
-                            r.get("capability"),
-                            "| summary =",
-                            (epic.get("fields") or {}).get("summary")
-                        )
+print(
+    json.dumps(
+        d.get("businessRules", {}),
+        ensure_ascii=False,
+        indent=2
+    )[:10000]
+)
 PY
