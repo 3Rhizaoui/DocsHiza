@@ -1,1 +1,67 @@
-sed -n '630,735p' portal/commun/scripts/qualite/standalone/construire_payload.py
+python - <<'PY'
+import json
+from pathlib import Path
+
+files = [
+    Path("portal/commun/data/standalone/jira/features.json"),
+    Path("portal/commun/data/standalone/octane/qualifications_brut.json"),
+    Path("portal/commun/data/standalone/octane/qualifications.json"),
+]
+
+for p in files:
+    print()
+    print("=" * 80)
+    print("FICHIER :", p)
+    print("=" * 80)
+
+    if not p.exists():
+        print("ABSENT")
+        continue
+
+    try:
+        d = json.loads(
+            p.read_text(
+                encoding="utf-8",
+                errors="replace"
+            )
+        )
+    except Exception as e:
+        print("ERREUR JSON :", e)
+        continue
+
+    if isinstance(d, dict):
+        print("CLES :", list(d.keys()))
+
+        rows = (
+            d.get("features")
+            or d.get("qualifications")
+            or d.get("items")
+            or d.get("rows")
+            or []
+        )
+    elif isinstance(d, list):
+        rows = d
+    else:
+        rows = []
+
+    print("NB LIGNES :", len(rows))
+
+    for i, r in enumerate(rows, 1):
+        if not isinstance(r, dict):
+            continue
+
+        octane_feature = r.get("octaneFeature") or {}
+
+        print()
+        print(f"[{i}]")
+        print("capability      =", r.get("capability"))
+        print("nom             =", r.get("nom"))
+        print("summary         =", r.get("summary"))
+        print("version         =", r.get("version"))
+        print("release         =", r.get("release"))
+        print("environment     =", r.get("environment"))
+        print("octaneFeature   =", octane_feature.get("nom"))
+        print("octaneFeatureId =", octane_feature.get("id"))
+        print("testSuite       =", (r.get("testSuite") or {}).get("nom"))
+        print("executions      =", len(r.get("executions") or []))
+PY
