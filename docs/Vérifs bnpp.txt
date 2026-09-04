@@ -1,13 +1,12 @@
-D’abord, comptons vraiment les qualifications :
+Fais maintenant, toujours sur BNPP, ces deux commandes ciblées :
 
-node -e "const fs=require('fs'); for(const f of ['portal/commun/data/standalone/octane/qualifications.json','portal/commun/data/standalone/octane/qualifications_brut.json']){const x=JSON.parse(fs.readFileSync(f,'utf8')); console.log('\n'+f); console.log('qualifications=',Array.isArray(x.qualifications)?x.qualifications.length:'absent'); if(Array.isArray(x.qualifications)){x.qualifications.forEach((q,i)=>console.log(i+1, q.featureName||q.name||q.capabilityName||q.feature?.name||'SANS NOM'));}}"
+grep -Rni \
+--exclude-dir=.octane_sso_profile_standalone \
+"qualifications_brut.json\|qualifications.json" \
+portal/commun/scripts/qualite/standalone
 
-Ensuite affiche le bloc de sélection :
+puis :
 
-sed -n '880,1065p' \
-portal/commun/scripts/qualite/standalone/extraction/octane/diagnostiquer_hierarchie_octane.js
+node -e "const fs=require('fs'); for(const f of ['portal/commun/data/standalone/octane/qualifications.json','portal/commun/data/standalone/octane/qualifications_brut.json']){const x=JSON.parse(fs.readFileSync(f,'utf8')); console.log('\n===',f,'==='); console.log(JSON.stringify(x.qualifications,null,2));}"
 
-Puis affiche la partie où les données finales sont construites :
-
-sed -n '1220,1320p' \
-portal/commun/scripts/qualite/standalone/extraction/octane/diagnostiquer_hierarchie_octane.js
+La deuxième commande va enfin nous montrer les 3 qualifications réelles et leur structure exacte.
