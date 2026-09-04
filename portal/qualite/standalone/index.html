@@ -637,7 +637,196 @@
     }
 
 
-  </style>
+  
+
+  /* =========================================================
+     SECTIONS GIL
+     ========================================================= */
+
+  .gilSectionBanner {
+    margin: 8px 0 14px;
+    padding: 10px 16px;
+
+    background:
+      linear-gradient(
+        90deg,
+        #153454 0%,
+        #1f5f99 100%
+      );
+
+    color: #ffffff;
+
+    border-radius: 8px;
+
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.2;
+
+    box-shadow:
+      0 2px 7px rgba(15, 23, 42, .12);
+  }
+
+  .gilSectionBanner + .kpis {
+    margin-top: 0;
+  }
+
+  .fluxTestingBlock {
+    margin-top: 28px;
+  }
+
+  .fluxTestingKpis {
+    display: grid;
+    grid-template-columns:
+      repeat(4, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .fluxTestingKpi {
+    position: relative;
+    background: #ffffff;
+    border: 1px solid #d8e1ea;
+    border-radius: 9px;
+    padding: 12px 14px;
+    min-height: 78px;
+
+    box-shadow:
+      0 1px 3px rgba(15, 23, 42, .08);
+  }
+
+  .fluxTestingKpi::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 4px;
+
+    border-radius: 9px 0 0 9px;
+    background: #1f5f99;
+  }
+
+  .fluxTestingKpi:nth-child(3)::before {
+    background: #15803d;
+  }
+
+  .fluxTestingKpi:nth-child(4)::before {
+    background: #f59e0b;
+  }
+
+  .fluxTestingKpiLabel {
+    color: #5f7182;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    padding-left: 3px;
+  }
+
+  .fluxTestingKpiValue {
+    color: #153454;
+    font-size: 24px;
+    font-weight: 800;
+    padding-left: 3px;
+  }
+
+  .fluxTestingFilters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .fluxTestingFilters .filterGroup {
+    min-width: 180px;
+  }
+
+  .fluxTestingTableCard {
+    background: #ffffff;
+    border-radius: 12px;
+    overflow-x: auto;
+
+    box-shadow:
+      0 2px 9px rgba(0,0,0,.07);
+  }
+
+  #fluxTestingTable {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+  }
+
+  #fluxTestingTable th {
+    background: #153454;
+    color: #ffffff;
+
+    font-size: 11px;
+    font-weight: 800;
+
+    padding: 8px 7px;
+    border: 1px solid #294d70;
+
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  #fluxTestingTable td {
+    padding: 7px 8px;
+    border: 1px solid #d7e0ea;
+
+    color: #102a43;
+    font-size: 11px;
+    line-height: 1.25;
+
+    vertical-align: middle;
+  }
+
+  #fluxTestingTable tbody tr:nth-child(even) td {
+    background: #f8fbff;
+  }
+
+  #fluxTestingTable tbody tr:hover td {
+    background: #eef5fb;
+  }
+
+  .fluxReadyTesting {
+    display: inline-block;
+    padding: 4px 7px;
+    border-radius: 999px;
+
+    font-size: 10px;
+    font-weight: 800;
+
+    white-space: nowrap;
+  }
+
+  .fluxReadyTesting.ready {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .fluxReadyTesting.waitDev {
+    background: #fff7ed;
+    color: #c2410c;
+  }
+
+  .fluxReadyTesting.waitTest {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .fluxReadyTesting.unknown {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  @media (max-width: 900px) {
+    .fluxTestingKpis {
+      grid-template-columns:
+        repeat(2, minmax(160px, 1fr));
+    }
+  }
+
+</style>
 </head>
 
 <body>
@@ -708,6 +897,11 @@
 </section>
 
 <main class="page">
+
+  <div class="gilSectionBanner">
+    Suivi des services GIL
+  </div>
+
 
   <section class="kpis">
 
@@ -841,6 +1035,177 @@
     id="generatedAt"
   >
   </div>
+
+
+
+  <section
+    class="fluxTestingBlock"
+    id="fluxTestingSection"
+  >
+
+    <div class="gilSectionBanner">
+      Suivi des demandes des flux – Prêts au testing
+    </div>
+
+    <div class="fluxTestingKpis">
+
+      <div class="fluxTestingKpi">
+        <div class="fluxTestingKpiLabel">
+          Total demandes / flux
+        </div>
+        <div
+          class="fluxTestingKpiValue"
+          id="fluxKpiTotal"
+        >
+          —
+        </div>
+      </div>
+
+      <div class="fluxTestingKpi">
+        <div class="fluxTestingKpiLabel">
+          Services identifiés
+        </div>
+        <div
+          class="fluxTestingKpiValue"
+          id="fluxKpiMatched"
+        >
+          —
+        </div>
+      </div>
+
+      <div class="fluxTestingKpi">
+        <div class="fluxTestingKpiLabel">
+          Ready For Testing
+        </div>
+        <div
+          class="fluxTestingKpiValue"
+          id="fluxKpiReady"
+        >
+          —
+        </div>
+      </div>
+
+      <div class="fluxTestingKpi">
+        <div class="fluxTestingKpiLabel">
+          En attente
+        </div>
+        <div
+          class="fluxTestingKpiValue"
+          id="fluxKpiWaiting"
+        >
+          —
+        </div>
+      </div>
+
+    </div>
+
+    <div class="fluxTestingFilters">
+
+      <div class="filterGroup">
+        <label for="fluxFilterDomain">
+          Domaine
+        </label>
+
+        <select id="fluxFilterDomain">
+          <option value="">
+            Tous les domaines
+          </option>
+        </select>
+      </div>
+
+      <div class="filterGroup">
+        <label for="fluxFilterSubdomain">
+          Sous-domaine
+        </label>
+
+        <select id="fluxFilterSubdomain">
+          <option value="">
+            Tous les sous-domaines
+          </option>
+        </select>
+      </div>
+
+      <div class="filterGroup">
+        <label for="fluxFilterEnv">
+          Environnement
+        </label>
+
+        <select id="fluxFilterEnv">
+          <option value="">
+            Tous
+          </option>
+          <option value="SIT">
+            SIT
+          </option>
+          <option value="UAT">
+            UAT
+          </option>
+          <option value="PROD">
+            PROD
+          </option>
+        </select>
+      </div>
+
+      <div class="filterGroup">
+        <label for="fluxFilterReady">
+          Ready For Testing
+        </label>
+
+        <select id="fluxFilterReady">
+          <option value="">
+            Tous
+          </option>
+          <option value="READY">
+            Prêt pour testing
+          </option>
+          <option value="WAIT_DEV">
+            En attente Dev
+          </option>
+          <option value="WAIT_TEST">
+            En attente Tests
+          </option>
+          <option value="UNKNOWN">
+            Service non identifié
+          </option>
+        </select>
+      </div>
+
+    </div>
+
+    <div class="fluxTestingTableCard">
+
+      <table id="fluxTestingTable">
+
+        <thead>
+          <tr>
+            <th>Domaine / Sous-domaine</th>
+            <th>Flux</th>
+            <th>Référence Jira</th>
+            <th>Pattern</th>
+            <th>Version</th>
+            <th>Environnement / Date</th>
+            <th>Statut JIRA</th>
+            <th>Service GIL</th>
+            <th>Ready For Testing</th>
+          </tr>
+        </thead>
+
+        <tbody id="fluxTestingBody">
+        </tbody>
+
+      </table>
+
+    </div>
+
+    <div
+      id="fluxTestingEmpty"
+      class="emptyMessage"
+      hidden
+    >
+      Aucune demande de flux ne correspond aux filtres.
+    </div>
+
+  </section>
 
 </main>
 

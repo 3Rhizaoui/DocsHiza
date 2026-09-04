@@ -24,7 +24,639 @@
     "../../commun/data/standalone/"
     + "payload_standalone.json";
 
+
+  const FLUX_DATA_URL =
+    "../../commun/data/payload_base.json";
+
+  let fluxSourceRows = [];
+
   let sourceRows = [];
+
+
+
+  function normalizeFluxText(value) {
+
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toUpperCase();
+  }
+
+
+  function fluxPercent(value, total) {
+
+    const pct =
+      total > 0
+        ? Math.round((value / total) * 100)
+        : 0;
+
+    return `${value} (${pct}%)`;
+  }
+
+
+  function currentFluxRows(data) {
+
+    if (!data || typeof data !== "object") {
+      return [];
+    }
+
+    const week =
+      data.semaineCourante
+      || data?.tendanceHebdo?.current?.semaine
+      || "";
+
+    const sprint =
+      data.sprintCourant || "";
+
+    const histo =
+      Array.isArray(data.histoFlux)
+        ? data.histoFlux
+        : [];
+
+    let rows =
+      histo.filter(row => {
+
+        const type =
+          normalizeFluxText(row?.type);
+
+        if (type.includes("ANOMAL")) {
+          return false;
+        }
+
+        const rowWeek =
+          row?.semaine
+          || row?.week
+          || "";
+
+        const rowSprint =
+          row?.sprint
+          || "";
+
+        const weekOk =
+          !week
+          || !rowWeek
+          || rowWeek === week
+          || (
+            Array.isArray(row?.semaines)
+            && row.semaines.includes(week)
+          );
+
+        const sprintOk =
+          !sprint
+          || !rowSprint
+          || rowSprint === sprint;
+
+        return weekOk && sprintOk;
+      });
+
+    if (!rows.length) {
+
+      rows =
+        histo.filter(
+          row =>
+            !normalizeFluxText(
+              row?.type
+            ).includes("ANOMAL")
+        );
+    }
+
+    return rows;
+  }
+
+
+  function serviceReadyState(row) {
+
+    if (!row) {
+      return {
+        code: "UNKNOWN",
+        label: "SERVICE NON IDENTIFIÉ"
+      };
+    }
+
+    if (!jiraReady(row)) {
+      return {
+        code: "WAIT_DEV",
+        label: "EN ATTENTE DEV"
+      };
+    }
+
+    const results =
+      octaneResults(row);
+
+    const pass =
+      Boolean(
+        hasOctane(row)
+        && row?.octane?.testSuite
+        && results?.tousPass === true
+      );
+
+    if (!pass) {
+      return {
+        code: "WAIT_TEST",
+        label: "EN ATTENTE TESTS"
+      };
+    }
+
+    return {
+      code: "READY",
+      label: "PRÊT POUR TESTING"
+    };
+  }
+
+
+  function fluxCandidateServiceNames(flux) {
+
+    const values = [
+      flux?.service,
+      flux?.serviceGil,
+      flux?.serviceGIL,
+      flux?.feature,
+      flux?.featureJira,
+      flux?.capability,
+      flux?.capabilityJira
+    ];
+
+    return values
+      .filter(Boolean)
+      .map(normalizeFluxText);
+  }
+
+
+  function fluxCandidateServiceKeys(flux) {
+
+    const values = [
+      flux?.serviceJiraKey,
+      flux?.featureJiraKey,
+      flux?.capabilityJiraKey,
+      flux?.parentFeatureKey,
+      flux?.parentCapabilityKey
+    ];
+
+    return values
+      .filter(Boolean)
+      .map(normalizeFluxText);
+  }
+
+
+  function findServiceForFlux(flux) {
+
+    const names =
+      fluxCandidateServiceNames(flux);
+
+    const keys =
+      fluxCandidateServiceKeys(flux);
+
+    return sourceRows.find(row => {
+
+      const serviceName =
+        normalizeFluxText(
+          rowService(row)
+        );
+
+      const jiraKey =
+        normalizeFluxText(
+          row?.jira?.jiraKey
+          || row?.jira?.key
+          || row?.jiraKey
+          || ""
+        );
+
+      if (
+        keys.length
+        && jiraKey
+        && keys.includes(jiraKey)
+      ) {
+        return true;
+      }
+
+      if (
+        names.length
+        && serviceName
+        && names.includes(serviceName)
+      ) {
+        return true;
+      }
+
+      return false;
+    }) || null;
+  }
+
+
+  function enrichFluxRows(rows) {
+
+    return rows.map(flux => {
+
+      const service =
+        findServiceForFlux(flux);
+
+      const ready =
+        serviceReadyState(service);
+
+      return {
+        ...flux,
+        _serviceRow: service,
+        _serviceName:
+          service
+            ? rowService(service)
+            : "",
+        _readyCode:
+          ready.code,
+        _readyLabel:
+          ready.label
+      };
+    });
+  }
+
+
+  function fluxReadyBadge(row) {
+
+    const code =
+      row?._readyCode || "UNKNOWN";
+
+    const label =
+      row?._readyLabel
+      || "SERVICE NON IDENTIFIÉ";
+
+    let cls = "unknown";
+
+    if (code === "READY") {
+      cls = "ready";
+    } else if (code === "WAIT_DEV") {
+      cls = "waitDev";
+    } else if (code === "WAIT_TEST") {
+      cls = "waitTest";
+    }
+
+    return (
+      '<span class="fluxReadyTesting '
+      + cls
+      + '">'
+      + escapeHtml(label)
+      + '</span>'
+    );
+  }
+
+
+  function populateFluxSelect(
+    id,
+    values
+  ) {
+
+    const select =
+      byId(id);
+
+    if (!select) {
+      return;
+    }
+
+    const current =
+      select.value;
+
+    while (
+      select.options.length > 1
+    ) {
+      select.remove(1);
+    }
+
+    [
+      ...new Set(
+        values
+          .map(value =>
+            String(value || "").trim()
+          )
+          .filter(Boolean)
+      )
+    ]
+      .sort(
+        (a, b) =>
+          a.localeCompare(
+            b,
+            "fr",
+            { sensitivity: "base" }
+          )
+      )
+      .forEach(value => {
+
+        const option =
+          document.createElement(
+            "option"
+          );
+
+        option.value = value;
+        option.textContent = value;
+
+        select.appendChild(option);
+      });
+
+    select.value = current;
+  }
+
+
+  function renderFluxKpis(rows) {
+
+    const total =
+      rows.length;
+
+    const matched =
+      rows.filter(
+        row => Boolean(row._serviceRow)
+      ).length;
+
+    const ready =
+      rows.filter(
+        row => row._readyCode === "READY"
+      ).length;
+
+    const waiting =
+      total - ready;
+
+    byId("fluxKpiTotal").textContent =
+      String(total);
+
+    byId("fluxKpiMatched").textContent =
+      fluxPercent(
+        matched,
+        total
+      );
+
+    byId("fluxKpiReady").textContent =
+      fluxPercent(
+        ready,
+        total
+      );
+
+    byId("fluxKpiWaiting").textContent =
+      fluxPercent(
+        waiting,
+        total
+      );
+  }
+
+
+  function renderFluxRows(rows) {
+
+    const body =
+      byId("fluxTestingBody");
+
+    const empty =
+      byId("fluxTestingEmpty");
+
+    if (!body || !empty) {
+      return;
+    }
+
+    body.innerHTML = "";
+
+    empty.hidden =
+      rows.length > 0;
+
+    rows.forEach(row => {
+
+      const tr =
+        document.createElement("tr");
+
+      const domain =
+        row?.domaine
+        || row?.domain
+        || "—";
+
+      const sub =
+        row?.sousDomaine
+        || row?.subdomain
+        || "—";
+
+      const flux =
+        row?.flux
+        || row?.id
+        || row?.demande
+        || "—";
+
+      const jiraRef =
+        row?.jiraKey
+        || row?.epicKey
+        || row?.cle
+        || row?.referenceFlux
+        || row?.reference
+        || "—";
+
+      const pattern =
+        row?.pattern
+        || row?.typeFlux
+        || row?.type
+        || "—";
+
+      const version =
+        row?.version
+        || "—";
+
+      const env =
+        row?.environnement
+        || row?.environment
+        || "—";
+
+      const date =
+        row?.dateCible
+        || row?.dateMaj
+        || "";
+
+      const statut =
+        row?.statutJira
+        || row?.statut
+        || row?.status
+        || row?.decision
+        || "—";
+
+      tr.innerHTML = `
+        <td>
+          ${escapeHtml(domain)}
+          /
+          ${escapeHtml(sub)}
+        </td>
+
+        <td>
+          <strong>
+            ${escapeHtml(flux)}
+          </strong>
+        </td>
+
+        <td>
+          ${escapeHtml(jiraRef)}
+        </td>
+
+        <td>
+          ${escapeHtml(pattern)}
+        </td>
+
+        <td>
+          ${escapeHtml(version)}
+        </td>
+
+        <td>
+          <strong>
+            ${escapeHtml(env)}
+          </strong>
+          ${
+            date
+              ? "<br>"
+                + escapeHtml(date)
+              : ""
+          }
+        </td>
+
+        <td>
+          ${escapeHtml(statut)}
+        </td>
+
+        <td>
+          ${
+            row._serviceName
+              ? "<strong>"
+                + escapeHtml(
+                    row._serviceName
+                  )
+                + "</strong>"
+              : "—"
+          }
+        </td>
+
+        <td>
+          ${fluxReadyBadge(row)}
+        </td>
+      `;
+
+      body.appendChild(tr);
+    });
+  }
+
+
+  function applyFluxFilters() {
+
+    const domain =
+      byId("fluxFilterDomain")?.value
+      || "";
+
+    const sub =
+      byId("fluxFilterSubdomain")?.value
+      || "";
+
+    const env =
+      byId("fluxFilterEnv")?.value
+      || "";
+
+    const ready =
+      byId("fluxFilterReady")?.value
+      || "";
+
+    const rows =
+      fluxSourceRows.filter(row => {
+
+        if (
+          domain
+          && String(
+            row?.domaine
+            || row?.domain
+            || ""
+          ) !== domain
+        ) {
+          return false;
+        }
+
+        if (
+          sub
+          && String(
+            row?.sousDomaine
+            || row?.subdomain
+            || ""
+          ) !== sub
+        ) {
+          return false;
+        }
+
+        if (
+          env
+          && String(
+            row?.environnement
+            || row?.environment
+            || ""
+          ).toUpperCase() !==
+          env.toUpperCase()
+        ) {
+          return false;
+        }
+
+        if (
+          ready
+          && row._readyCode !== ready
+        ) {
+          return false;
+        }
+
+        return true;
+      });
+
+    renderFluxKpis(rows);
+    renderFluxRows(rows);
+  }
+
+
+  function initFluxFilters() {
+
+    populateFluxSelect(
+      "fluxFilterDomain",
+      fluxSourceRows.map(
+        row =>
+          row?.domaine
+          || row?.domain
+      )
+    );
+
+    populateFluxSelect(
+      "fluxFilterSubdomain",
+      fluxSourceRows.map(
+        row =>
+          row?.sousDomaine
+          || row?.subdomain
+      )
+    );
+  }
+
+
+  async function loadFluxData() {
+
+    const response =
+      await fetch(
+        FLUX_DATA_URL,
+        {
+          cache: "no-store"
+        }
+      );
+
+    if (!response.ok) {
+      throw new Error(
+        "Impossible de charger "
+        + FLUX_DATA_URL
+      );
+    }
+
+    const data =
+      await response.json();
+
+    fluxSourceRows =
+      enrichFluxRows(
+        currentFluxRows(data)
+      );
+
+    initFluxFilters();
+
+    renderFluxKpis(
+      fluxSourceRows
+    );
+
+    renderFluxRows(
+      fluxSourceRows
+    );
+  }
 
 
   function byId(id) {
@@ -1482,7 +2114,9 @@
   });
 
 
-  load().catch(error => {
+  load()
+    .then(() => loadFluxData())
+    .catch(error => {
 
     console.error(
       "[GIL Standalone]",
@@ -1495,5 +2129,27 @@
     byId("emptyMessage").textContent =
       error.message;
   });
+
+
+  [
+    "fluxFilterDomain",
+    "fluxFilterSubdomain",
+    "fluxFilterEnv",
+    "fluxFilterReady"
+  ].forEach(id => {
+
+    const element =
+      byId(id);
+
+    if (!element) {
+      return;
+    }
+
+    element.addEventListener(
+      "change",
+      applyFluxFilters
+    );
+  });
+
 
 })();
