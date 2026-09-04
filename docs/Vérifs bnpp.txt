@@ -1,11 +1,10 @@
-Ne patchons pas encore. Sur le PC BNP, lance exactement ceci pour voir la construction de qualification et son push :
+Lance sur BNP :
 
-grep -n -A90 -B90 \
-'qualifications.push(qualification)' \
+sed -n '1660,1795p' \
 portal/commun/scripts/qualite/standalone/extraction/octane/diagnostiquer_hierarchie_octane.js
 
-Puis montre-moi aussi où qualifications est initialisé et où la boucle principale commence :
+Et aussi :
 
-grep -n -A40 -B20 \
-'const qualifications\|let qualifications\|for (const feature of capabilityFeatures)' \
+grep -n -A25 -B25 \
+'qualifications.push(qualification)' \
 portal/commun/scripts/qualite/standalone/extraction/octane/diagnostiquer_hierarchie_octane.js
