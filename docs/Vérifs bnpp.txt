@@ -1,76 +1,26 @@
+python - <<'PY'
+import json
+from pathlib import Path
 
-============================================================
-VERSION TEST BNP : MATCHING-JIRA-MASTER-V02
-Date : 04/09/2026
-============================================================
+p = Path(
+    "portal/commun/data/standalone/jira/"
+    "capabilities.json"
+)
 
-OBJECTIF
---------
-Activer le matching JIRA / OCTANE avec JIRA comme inventaire maitre.
+d = json.loads(
+    p.read_text(
+        encoding="utf-8",
+        errors="replace",
+    )
+)
 
-REGLE
------
-Une Feature JIRA = une ligne principale.
+rows = d.get("capabilities") or []
 
-Une qualification OCTANE correspondante enrichit la meme ligne.
+print("JIRA =", len(rows))
 
-Aucune ligne OCTANE autonome ne doit etre ajoutee au tableau principal.
-
-Le nombre total de lignes principales doit donc rester egal
-au nombre de Features JIRA.
-
-MATCHING
---------
-Priorite :
-
-1. Capability + Version/Release + Environnement
-
-2. Capability + Version/Release si environnement Octane absent
-
-3. Fallback par Capability uniquement si UNE SEULE
-   qualification OCTANE correspond.
-
-Le prefixe :
-
-[FEATURE GIL]
-
-est ignore uniquement dans la cle de matching.
-
-Il reste conserve dans le titre JIRA affiche.
-
-VERSION / ENVIRONNEMENT
------------------------
-Une Version JIRA absente ne bloque pas le matching par Capability.
-
-Un Environnement absent d'un cote ne bloque pas le matching.
-
-Aucune valeur n'est inventee.
-
-RESULTAT ATTENDU BNP
---------------------
-JIRA : 14 Features
-
-TOTAL lignes principales : 14
-
-Pour les Features ayant un equivalent OCTANE :
-SOURCE = MATCHED
-octane != null
-
-Pour les Features sans equivalent OCTANE :
-SOURCE = JIRA
-octane = null
-
-Exemples attendus :
-
-Aliasing of internal IDs - V0
--> OCTANE trouve
-
-Aliasing of internal IDs - V1
--> OCTANE trouve
-
-Une qualification OCTANE sans Feature JIRA correspondante
-ne doit pas creer une ligne supplementaire.
-
-============================================================
-FIN MATCHING-JIRA-MASTER-V02
-============================================================
+for r in rows:
+    print()
+    print("KEY        =", r.get("jiraKey"))
+    print("CAPABILITY =", r.get("capability"))
+    print("TITRE      =", r.get("titre"))
+PY
