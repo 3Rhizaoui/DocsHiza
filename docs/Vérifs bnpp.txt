@@ -1,18 +1,1 @@
-Toujours sur BNP, lance cette commande ciblée :
-
-grep -Rni \
---exclude-dir=.octane_sso_profile_standalone \
---exclude-dir=.jira_sso_profile_standalone \
-"octaneFeature\|qualifications.json\|matched\|matchées\|jiraFeature\|capability" \
-portal/commun/scripts/qualite/standalone \
-portal/qualite/standalone
-
-Si la sortie est trop longue, lance aussi :
-
-grep -Rni \
---exclude-dir=.octane_sso_profile_standalone \
---exclude-dir=.jira_sso_profile_standalone \
-"qualifications.json" \
-portal | head -40
-
-Le but maintenant est de trouver le code ressemblant à :
+sed -n '630,735p' portal/commun/scripts/qualite/standalone/construire_payload.py
