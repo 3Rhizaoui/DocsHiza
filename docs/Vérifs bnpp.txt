@@ -1,21 +1,17 @@
 python - <<'PY'
-import json
 from pathlib import Path
+import json
 
-files = [
-    Path("portal/commun/data/standalone/jira/features.json"),
-    Path("portal/commun/data/standalone/octane/qualifications_brut.json"),
-    Path("portal/commun/data/standalone/octane/qualifications.json"),
-]
+root = Path("portal/commun/data/standalone")
 
-for p in files:
-    print()
-    print("=" * 80)
-    print("FICHIER :", p)
-    print("=" * 80)
+print("=" * 80)
+print("1. FICHIERS JSON JIRA / PAYLOAD")
+print("=" * 80)
 
-    if not p.exists():
-        print("ABSENT")
+for p in sorted(root.rglob("*.json")):
+    s = str(p).lower()
+
+    if "jira" not in s and "payload" not in s:
         continue
 
     try:
@@ -25,43 +21,117 @@ for p in files:
                 errors="replace"
             )
         )
-    except Exception as e:
-        print("ERREUR JSON :", e)
+    except Exception:
         continue
 
+    print()
+    print("FICHIER =", p)
+
     if isinstance(d, dict):
-        print("CLES :", list(d.keys()))
+        print("CLES =", list(d.keys())[:20])
 
-        rows = (
-            d.get("features")
-            or d.get("qualifications")
-            or d.get("items")
-            or d.get("rows")
-            or []
-        )
+        candidates = []
+
+        for key, value in d.items():
+            if isinstance(value, list):
+                candidates.extend(value[:100])
+
     elif isinstance(d, list):
-        rows = d
+        print("LISTE DIRECTE")
+        candidates = d[:100]
+
     else:
-        rows = []
+        continue
 
-    print("NB LIGNES :", len(rows))
+    found = []
 
-    for i, r in enumerate(rows, 1):
+    for r in candidates:
         if not isinstance(r, dict):
             continue
 
-        octane_feature = r.get("octaneFeature") or {}
+        txt = " ".join(
+            str(v)
+            for v in r.values()
+            if isinstance(v, (str, int))
+        )
 
+        if (
+            "[FEATURE GIL]" in txt
+            or "Aliasing of internal IDs" in txt
+            or "API2API" in txt
+        ):
+            found.append(r)
+
+    if found:
+        print(">>> FEATURES GIL TROUVEES =", len(found))
+
+        for r in found[:10]:
+            print(
+                "  capability =",
+                r.get("capability"),
+                "| summary =",
+                r.get("summary"),
+                "| nom =",
+                r.get("nom"),
+                "| key =",
+                r.get("key"),
+                "| id =",
+                r.get("id"),
+            )
+
+
+print()
+print("=" * 80)
+print("2. SCRIPTS QUI APPELLENT L'EXTRACTION OCTANE")
+print("=" * 80)
+
+scripts = Path(
+    "portal/commun/scripts/qualite/standalone"
+)
+
+needles = [
+    "extraire_qualifications_octane",
+    "qualifications_brut",
+    "qualifications.json",
+]
+
+for p in sorted(scripts.rglob("*")):
+
+    if not p.is_file():
+        continue
+
+    if p.suffix.lower() not in {
+        ".py", ".js", ".json",
+        ".bat", ".cmd", ".ps1",
+        ".sh"
+    }:
+        continue
+
+    try:
+        text = p.read_text(
+            encoding="utf-8",
+            errors="replace"
+        )
+    except Exception:
+        continue
+
+    hits = [
+        n
+        for n in needles
+        if n in text
+    ]
+
+    if hits:
         print()
-        print(f"[{i}]")
-        print("capability      =", r.get("capability"))
-        print("nom             =", r.get("nom"))
-        print("summary         =", r.get("summary"))
-        print("version         =", r.get("version"))
-        print("release         =", r.get("release"))
-        print("environment     =", r.get("environment"))
-        print("octaneFeature   =", octane_feature.get("nom"))
-        print("octaneFeatureId =", octane_feature.get("id"))
-        print("testSuite       =", (r.get("testSuite") or {}).get("nom"))
-        print("executions      =", len(r.get("executions") or []))
+        print("FICHIER =", p)
+        print("HITS =", hits)
+
+        for i, line in enumerate(
+            text.splitlines(),
+            1
+        ):
+            if any(n in line for n in needles):
+                print(
+                    f"{i}: {line[:220]}"
+                )
 PY
