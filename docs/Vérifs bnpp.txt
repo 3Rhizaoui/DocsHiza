@@ -1,66 +1,17 @@
-Avant de patcher, vérifions précisément où les 12 autres sont perdues. Sur le PC BNP, lance :
+Sur le PC BNP, lance maintenant ces trois blocs.
 
-python - <<'PY'
-import json
-from pathlib import Path
+D’abord la zone où la liste des Features Octane est construite :
 
-files = [
-    Path("portal/commun/data/standalone/octane/qualifications_brut.json"),
-    Path("portal/commun/data/standalone/octane/qualifications.json"),
-]
+sed -n '830,1045p' \
+portal/commun/scripts/qualite/standalone/extraction/octane/diagnostiquer_hierarchie_octane.js
 
-for p in files:
-    print()
-    print("=" * 70)
-    print(p)
-    print("=" * 70)
+Puis la zone où la Feature sélectionnée est utilisée pour chercher les Test Suites :
 
-    if not p.exists():
-        print("ABSENT")
-        continue
+sed -n '1035,1345p' \
+portal/commun/scripts/qualite/standalone/extraction/octane/diagnostiquer_hierarchie_octane.js
 
-    d = json.loads(
-        p.read_text(
-            encoding="utf-8",
-            errors="replace"
-        )
-    )
+Enfin, cherche où qualifications est réellement alimenté ou écrit :
 
-    print("CLES =", list(d.keys()))
-
-    rows = (
-        d.get("qualifications")
-        or d.get("features")
-        or d.get("items")
-        or []
-    )
-
-    print("COUNT =", len(rows))
-
-    for r in rows:
-        feature = r.get("octaneFeature") or {}
-
-        print(
-            "- capability =",
-            r.get("capability"),
-            "| feature =",
-            feature.get("nom"),
-            "| featureId =",
-            feature.get("id"),
-            "| executions =",
-            len(r.get("executions") or []),
-        )
-PY
-
-Ensuite, cherche également si l’extracteur Octane récupère séparément les Features :
-
-grep -RniE \
-'GIL - Capabilities|octaneFeature|features|feature.*id|testSuite|qualifications' \
-portal/commun/scripts/qualite/standalone/extraction/octane \
-portal/commun/scripts/qualite/standalone \
-| head -n 200
-
-Et surtout :
-
-find portal/commun/data/standalone/octane \
--type f -maxdepth 2 -print
+grep -n -E \
+'qualifications\.push|qualifications =|qualification =|writeFile|qualifications_brut|JSON\.stringify' \
+portal/commun/scripts/qualite/standalone/extraction/octane/diagnostiquer_hierarchie_octane.js
