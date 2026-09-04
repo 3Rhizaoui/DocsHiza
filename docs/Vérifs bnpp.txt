@@ -1,137 +1,104 @@
 python - <<'PY'
 from pathlib import Path
-import json
 
-root = Path("portal/commun/data/standalone")
+p = Path(
+    "portal/commun/scripts/qualite/standalone/"
+    "extraction/octane/extraire_qualifications_octane.js"
+)
 
 print("=" * 80)
-print("1. FICHIERS JSON JIRA / PAYLOAD")
+print("FICHIER :", p)
 print("=" * 80)
 
-for p in sorted(root.rglob("*.json")):
-    s = str(p).lower()
+if not p.exists():
+    raise SystemExit("FICHIER ABSENT")
 
-    if "jira" not in s and "payload" not in s:
-        continue
+lines = p.read_text(
+    encoding="utf-8",
+    errors="replace"
+).splitlines()
 
-    try:
-        d = json.loads(
-            p.read_text(
-                encoding="utf-8",
-                errors="replace"
-            )
-        )
-    except Exception:
-        continue
+print("NB LIGNES =", len(lines))
 
-    print()
-    print("FICHIER =", p)
+# ------------------------------------------------------------
+# Afficher les zones intéressantes avec contexte
+# ------------------------------------------------------------
 
-    if isinstance(d, dict):
-        print("CLES =", list(d.keys())[:20])
+needles = [
+    "capabilit",
+    "feature",
+    "qualif",
+    "770019",
+    "859040",
+    "860043",
+    "Release-GIL",
+    "Exchange layer",
+    "Aliasing",
+    "process.argv",
+    "config",
+    "fetch(",
+    "axios",
+    "query",
+]
 
-        candidates = []
+hits = set()
 
-        for key, value in d.items():
-            if isinstance(value, list):
-                candidates.extend(value[:100])
+for i, line in enumerate(lines):
+    low = line.lower()
 
-    elif isinstance(d, list):
-        print("LISTE DIRECTE")
-        candidates = d[:100]
-
-    else:
-        continue
-
-    found = []
-
-    for r in candidates:
-        if not isinstance(r, dict):
-            continue
-
-        txt = " ".join(
-            str(v)
-            for v in r.values()
-            if isinstance(v, (str, int))
-        )
-
-        if (
-            "[FEATURE GIL]" in txt
-            or "Aliasing of internal IDs" in txt
-            or "API2API" in txt
+    if any(
+        needle.lower() in low
+        for needle in needles
+    ):
+        for j in range(
+            max(0, i - 5),
+            min(len(lines), i + 10)
         ):
-            found.append(r)
-
-    if found:
-        print(">>> FEATURES GIL TROUVEES =", len(found))
-
-        for r in found[:10]:
-            print(
-                "  capability =",
-                r.get("capability"),
-                "| summary =",
-                r.get("summary"),
-                "| nom =",
-                r.get("nom"),
-                "| key =",
-                r.get("key"),
-                "| id =",
-                r.get("id"),
-            )
-
+            hits.add(j)
 
 print()
 print("=" * 80)
-print("2. SCRIPTS QUI APPELLENT L'EXTRACTION OCTANE")
+print("ZONES PERTINENTES")
 print("=" * 80)
 
-scripts = Path(
-    "portal/commun/scripts/qualite/standalone"
-)
+previous = None
 
-needles = [
-    "extraire_qualifications_octane",
-    "qualifications_brut",
-    "qualifications.json",
+for i in sorted(hits):
+
+    if previous is not None and i > previous + 1:
+        print()
+        print("...")
+
+    print(
+        f"{i + 1:04d}: {lines[i]}"
+    )
+
+    previous = i
+
+
+# ------------------------------------------------------------
+# Vérifier explicitement si le script lit capabilities.json
+# ------------------------------------------------------------
+
+text = "\n".join(lines)
+
+print()
+print("=" * 80)
+print("CONTROLES")
+print("=" * 80)
+
+checks = [
+    "capabilities.json",
+    "capabilities_brut.json",
+    "qualifications_brut.json",
+    "octane_config_standalone.json",
+    "jira_config_standalone.json",
 ]
 
-for p in sorted(scripts.rglob("*")):
-
-    if not p.is_file():
-        continue
-
-    if p.suffix.lower() not in {
-        ".py", ".js", ".json",
-        ".bat", ".cmd", ".ps1",
-        ".sh"
-    }:
-        continue
-
-    try:
-        text = p.read_text(
-            encoding="utf-8",
-            errors="replace"
-        )
-    except Exception:
-        continue
-
-    hits = [
-        n
-        for n in needles
-        if n in text
-    ]
-
-    if hits:
-        print()
-        print("FICHIER =", p)
-        print("HITS =", hits)
-
-        for i, line in enumerate(
-            text.splitlines(),
-            1
-        ):
-            if any(n in line for n in needles):
-                print(
-                    f"{i}: {line[:220]}"
-                )
+for value in checks:
+    print(
+        f"{value:35}",
+        "=>",
+        "OUI" if value in text else "NON"
+    )
 PY
