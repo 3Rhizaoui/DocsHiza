@@ -1,19 +1,13 @@
-Fais maintenant uniquement ces 3 commandes sur BNPP
+D’abord, comptons vraiment les qualifications :
 
-1. Trouver la logique exacte qui limite Octane :
+node -e "const fs=require('fs'); for(const f of ['portal/commun/data/standalone/octane/qualifications.json','portal/commun/data/standalone/octane/qualifications_brut.json']){const x=JSON.parse(fs.readFileSync(f,'utf8')); console.log('\n'+f); console.log('qualifications=',Array.isArray(x.qualifications)?x.qualifications.length:'absent'); if(Array.isArray(x.qualifications)){x.qualifications.forEach((q,i)=>console.log(i+1, q.featureName||q.name||q.capabilityName||q.feature?.name||'SANS NOM'));}}"
 
-grep -nE \
-"qualifications\.push|selectedFeature|selectedExchangeLayer|capabilityFeatures" \
+Ensuite affiche le bloc de sélection :
+
+sed -n '880,1065p' \
 portal/commun/scripts/qualite/standalone/extraction/octane/diagnostiquer_hierarchie_octane.js
 
-2. Afficher le bloc autour de qualifications.push :
+Puis affiche la partie où les données finales sont construites :
 
-grep -n -A40 -B40 \
-"qualifications.push" \
+sed -n '1220,1320p' \
 portal/commun/scripts/qualite/standalone/extraction/octane/diagnostiquer_hierarchie_octane.js
-
-3. Et surtout, comptons ce qu'Octane a réellement produit :
-
-node -e "const fs=require('fs'); for(const f of ['portal/commun/data/standalone/octane/qualifications.json','portal/commun/data/standalone/octane/qualifications_brut.json']){const x=JSON.parse(fs.readFileSync(f,'utf8')); console.log(f); console.log('type=',Array.isArray(x)?'array':'object'); console.log('length=',Array.isArray(x)?x.length:'n/a'); console.log('keys=',Array.isArray(x)&&x[0]?Object.keys(x[0]):Object.keys(x));}"
-
-Cette troisième commande est importante : elle va nous dire immédiatement si le problème est :
