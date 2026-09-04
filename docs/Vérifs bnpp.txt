@@ -1,12 +1,18 @@
-Fais maintenant, toujours sur BNPP, ces deux commandes ciblées :
+Toujours sur BNP, lance cette commande ciblée :
 
 grep -Rni \
 --exclude-dir=.octane_sso_profile_standalone \
-"qualifications_brut.json\|qualifications.json" \
-portal/commun/scripts/qualite/standalone
+--exclude-dir=.jira_sso_profile_standalone \
+"octaneFeature\|qualifications.json\|matched\|matchées\|jiraFeature\|capability" \
+portal/commun/scripts/qualite/standalone \
+portal/qualite/standalone
 
-puis :
+Si la sortie est trop longue, lance aussi :
 
-node -e "const fs=require('fs'); for(const f of ['portal/commun/data/standalone/octane/qualifications.json','portal/commun/data/standalone/octane/qualifications_brut.json']){const x=JSON.parse(fs.readFileSync(f,'utf8')); console.log('\n===',f,'==='); console.log(JSON.stringify(x.qualifications,null,2));}"
+grep -Rni \
+--exclude-dir=.octane_sso_profile_standalone \
+--exclude-dir=.jira_sso_profile_standalone \
+"qualifications.json" \
+portal | head -40
 
-La deuxième commande va enfin nous montrer les 3 qualifications réelles et leur structure exacte.
+Le but maintenant est de trouver le code ressemblant à :
