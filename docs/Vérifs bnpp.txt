@@ -1,17 +1,19 @@
-Depuis la racine du projet, exécute ceci :
+Fais maintenant uniquement ces 3 commandes sur BNPP
 
-grep -Rni \
-"qualifications.push\|selectedFeature\|selectedExchangeLayer\|capabilityFeatures" \
-portal/common/scripts/qualite/standalone/extraction/octane
+1. Trouver la logique exacte qui limite Octane :
 
-Puis :
+grep -nE \
+"qualifications\.push|selectedFeature|selectedExchangeLayer|capabilityFeatures" \
+portal/commun/scripts/qualite/standalone/extraction/octane/diagnostiquer_hierarchie_octane.js
 
-grep -Rni \
-"executionSummary\|automatedRuns\|testSuite\|suiteRun" \
-portal/common/scripts/qualite/standalone/extraction/octane
+2. Afficher le bloc autour de qualifications.push :
 
-Et surtout retrouve le JSON produit par le diagnostic :
+grep -n -A40 -B40 \
+"qualifications.push" \
+portal/commun/scripts/qualite/standalone/extraction/octane/diagnostiquer_hierarchie_octane.js
 
-find portal -type f -name "*.json" | grep -Ei "octane|diagnostic|qualification"
+3. Et surtout, comptons ce qu'Octane a réellement produit :
 
-Envoie-moi la sortie de ces commandes.
+node -e "const fs=require('fs'); for(const f of ['portal/commun/data/standalone/octane/qualifications.json','portal/commun/data/standalone/octane/qualifications_brut.json']){const x=JSON.parse(fs.readFileSync(f,'utf8')); console.log(f); console.log('type=',Array.isArray(x)?'array':'object'); console.log('length=',Array.isArray(x)?x.length:'n/a'); console.log('keys=',Array.isArray(x)&&x[0]?Object.keys(x[0]):Object.keys(x));}"
+
+Cette troisième commande est importante : elle va nous dire immédiatement si le problème est :
