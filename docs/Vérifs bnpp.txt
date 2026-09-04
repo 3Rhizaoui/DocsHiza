@@ -1,79 +1,66 @@
+Avant de patcher, vérifions précisément où les 12 autres sont perdues. Sur le PC BNP, lance :
+
 python - <<'PY'
 import json
 from pathlib import Path
 
-p = Path(
-    "portal/commun/data/standalone/jira/"
-    "capabilities.json"
-)
+files = [
+    Path("portal/commun/data/standalone/octane/qualifications_brut.json"),
+    Path("portal/commun/data/standalone/octane/qualifications.json"),
+]
 
-d = json.loads(
-    p.read_text(
-        encoding="utf-8",
-        errors="replace",
-    )
-)
-
-rows = d.get("capabilities") or []
-
-print("JIRA =", len(rows))
-
-for r in rows:
+for p in files:
     print()
-    print("KEY        =", r.get("jiraKey"))
-    print("CAPABILITY =", r.get("capability"))
-    print("TITRE      =", r.get("titre"))
+    print("=" * 70)
+    print(p)
+    print("=" * 70)
+
+    if not p.exists():
+        print("ABSENT")
+        continue
+
+    d = json.loads(
+        p.read_text(
+            encoding="utf-8",
+            errors="replace"
+        )
+    )
+
+    print("CLES =", list(d.keys()))
+
+    rows = (
+        d.get("qualifications")
+        or d.get("features")
+        or d.get("items")
+        or []
+    )
+
+    print("COUNT =", len(rows))
+
+    for r in rows:
+        feature = r.get("octaneFeature") or {}
+
+        print(
+            "- capability =",
+            r.get("capability"),
+            "| feature =",
+            feature.get("nom"),
+            "| featureId =",
+            feature.get("id"),
+            "| executions =",
+            len(r.get("executions") or []),
+        )
 PY
-============================================================
-VERSION TEST BNP : JIRA-TITLE-DISPLAY-V03
-Date : 04/09/2026
-============================================================
 
-OBJECTIF
---------
-Corriger uniquement l'affichage de la colonne :
+Ensuite, cherche également si l’extracteur Octane récupère séparément les Features :
 
-Epic JIRA / Feature
+grep -RniE \
+'GIL - Capabilities|octaneFeature|features|feature.*id|testSuite|qualifications' \
+portal/commun/scripts/qualite/standalone/extraction/octane \
+portal/commun/scripts/qualite/standalone \
+| head -n 200
 
-REGLE
------
-La première colonne doit afficher le véritable titre JIRA :
+Et surtout :
 
-[FEATURE GIL] - <nom feature>
-
-Exemple :
-
-[FEATURE GIL] - Aliasing of internal IDs - V0
-
-IMPORTANT
----------
-Le moteur de matching n'est pas modifié.
-
-Pour le matching uniquement, le préfixe :
-
-[FEATURE GIL] -
-
-est neutralisé par normalize_key_part().
-
-Ainsi :
-
-JIRA :
-[FEATURE GIL] - Aliasing of internal IDs - V0
-
-OCTANE :
-Aliasing of internal IDs - V0
-
-doivent rester MATCHED.
-
-RESULTAT ATTENDU BNP
---------------------
-- Total inventaire : 14
-- JIRA : 14
-- lignes principales : 14
-- V0 et V1 Aliasing toujours MATCHED
-- première colonne affichée avec [FEATURE GIL]
-- aucune ligne Octane supplémentaire créée
-
-============================================================
-FIN JIRA-TITLE-DISPLAY-V03
-============================================================
+find portal/commun/data/standalone/octane \
+-type f -maxdepth 2 -print
