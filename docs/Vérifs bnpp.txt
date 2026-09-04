@@ -1,10 +1,17 @@
-Lance sur BNP :
+Depuis la racine du projet, exécute ceci :
 
-sed -n '1660,1795p' \
-portal/commun/scripts/qualite/standalone/extraction/octane/diagnostiquer_hierarchie_octane.js
+grep -Rni \
+"qualifications.push\|selectedFeature\|selectedExchangeLayer\|capabilityFeatures" \
+portal/common/scripts/qualite/standalone/extraction/octane
 
-Et aussi :
+Puis :
 
-grep -n -A25 -B25 \
-'qualifications.push(qualification)' \
-portal/commun/scripts/qualite/standalone/extraction/octane/diagnostiquer_hierarchie_octane.js
+grep -Rni \
+"executionSummary\|automatedRuns\|testSuite\|suiteRun" \
+portal/common/scripts/qualite/standalone/extraction/octane
+
+Et surtout retrouve le JSON produit par le diagnostic :
+
+find portal -type f -name "*.json" | grep -Ei "octane|diagnostic|qualification"
+
+Envoie-moi la sortie de ces commandes.
