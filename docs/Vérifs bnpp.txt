@@ -24,3 +24,56 @@ for r in rows:
     print("CAPABILITY =", r.get("capability"))
     print("TITRE      =", r.get("titre"))
 PY
+============================================================
+VERSION TEST BNP : JIRA-TITLE-DISPLAY-V03
+Date : 04/09/2026
+============================================================
+
+OBJECTIF
+--------
+Corriger uniquement l'affichage de la colonne :
+
+Epic JIRA / Feature
+
+REGLE
+-----
+La première colonne doit afficher le véritable titre JIRA :
+
+[FEATURE GIL] - <nom feature>
+
+Exemple :
+
+[FEATURE GIL] - Aliasing of internal IDs - V0
+
+IMPORTANT
+---------
+Le moteur de matching n'est pas modifié.
+
+Pour le matching uniquement, le préfixe :
+
+[FEATURE GIL] -
+
+est neutralisé par normalize_key_part().
+
+Ainsi :
+
+JIRA :
+[FEATURE GIL] - Aliasing of internal IDs - V0
+
+OCTANE :
+Aliasing of internal IDs - V0
+
+doivent rester MATCHED.
+
+RESULTAT ATTENDU BNP
+--------------------
+- Total inventaire : 14
+- JIRA : 14
+- lignes principales : 14
+- V0 et V1 Aliasing toujours MATCHED
+- première colonne affichée avec [FEATURE GIL]
+- aucune ligne Octane supplémentaire créée
+
+============================================================
+FIN JIRA-TITLE-DISPLAY-V03
+============================================================

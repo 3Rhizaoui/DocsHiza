@@ -762,7 +762,8 @@
           hasOctane(row);
 
         const capabilityJira =
-          row?.capability
+          row?.jira?.titre
+          || row?.capability
           || row?.jira?.capability
           || "";
 
