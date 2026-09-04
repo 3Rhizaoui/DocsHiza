@@ -2,6 +2,24 @@
 
   "use strict";
 
+  function tasksReadyDisplay(readiness) {
+    const ready = Number(
+      readiness?.readyForTest || 0
+    );
+  
+    const total = Number(
+      readiness?.total || 0
+    );
+  
+    const percent =
+      total > 0
+        ? Math.round((ready / total) * 100)
+        : 0;
+  
+    return `${ready} / ${total} (${percent}%)`;
+  }
+
+
   const DATA_URL =
     "../../commun/data/standalone/"
     + "payload_standalone.json";
@@ -836,19 +854,31 @@
         }
 
         let readyFlux =
-          '<span class="status gray">—</span>';
+          '<strong><span class="status gray">—</span></strong>';
 
-        if (row?.readyForFlux === true) {
+        const readyForTest =
+          jiraReady(row);
 
-          readyFlux =
-            '<span class="status green">✓ PRÊT</span>';
-
-        } else if (
-          row?.readyForFlux === false
-        ) {
+        if (!readyForTest) {
 
           readyFlux =
-            '<span class="status orange">⚠ NON PRÊT</span>';
+            '<strong><span class="status orange">'
+            + 'EN ATTENTE DEV'
+            + '</span></strong>';
+
+        } else if (octanePass) {
+
+          readyFlux =
+            '<strong><span class="status green">'
+            + 'PRÊT POUR FLUX'
+            + '</span></strong>';
+
+        } else {
+
+          readyFlux =
+            '<strong><span class="status orange">'
+            + 'EN ATTENTE TESTS'
+            + '</span></strong>';
 
         }
 
@@ -890,20 +920,24 @@
 
           <td class="jiraCell">
             <strong>
-              ${readyTasks} / ${totalTasks}
+              ${escapeHtml(
+                tasksReadyDisplay(readiness)
+              )}
             </strong>
           </td>
 
           <td class="jiraCell">
-            ${
-              jiraPresent
-                ? statusBadge(
-                    jiraReady(row),
-                    "✓ PRÊT",
-                    "⚠ NON PRÊT"
-                  )
-                : "—"
-            }
+            <strong>
+              ${
+                jiraPresent
+                  ? statusBadge(
+                      jiraReady(row),
+                      "✓ PRÊT",
+                      "⚠ NON PRÊT"
+                    )
+                  : "—"
+              }
+            </strong>
           </td>
 
           <td class="octaneCell">
@@ -936,7 +970,9 @@
           </td>
 
           <td class="octaneCell">
-            ${globalStatus}
+            <strong>
+              ${globalStatus}
+            </strong>
           </td>
 
           <td class="octaneCell">
