@@ -1,17 +1,11 @@
-Sur le PC BNP, lance maintenant ces trois blocs.
+Ne patchons pas encore. Sur le PC BNP, lance exactement ceci pour voir la construction de qualification et son push :
 
-D’abord la zone où la liste des Features Octane est construite :
-
-sed -n '830,1045p' \
+grep -n -A90 -B90 \
+'qualifications.push(qualification)' \
 portal/commun/scripts/qualite/standalone/extraction/octane/diagnostiquer_hierarchie_octane.js
 
-Puis la zone où la Feature sélectionnée est utilisée pour chercher les Test Suites :
+Puis montre-moi aussi où qualifications est initialisé et où la boucle principale commence :
 
-sed -n '1035,1345p' \
-portal/commun/scripts/qualite/standalone/extraction/octane/diagnostiquer_hierarchie_octane.js
-
-Enfin, cherche où qualifications est réellement alimenté ou écrit :
-
-grep -n -E \
-'qualifications\.push|qualifications =|qualification =|writeFile|qualifications_brut|JSON\.stringify' \
+grep -n -A40 -B20 \
+'const qualifications\|let qualifications\|for (const feature of capabilityFeatures)' \
 portal/commun/scripts/qualite/standalone/extraction/octane/diagnostiquer_hierarchie_octane.js
