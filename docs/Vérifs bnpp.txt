@@ -1,85 +1,55 @@
-Ensuite lance l’extracteur Octane :
-
-node portal/commun/scripts/qualite/standalone/extraction/octane/extraire_qualifications_octane.js
-
-Le script devrait ouvrir/utiliser la session Octane et te demander au besoin de te connecter. Laisse-le aller jusqu’au bout.
-
-Après l’exécution, lance ce bloc pour résumer le résultat généré :
-
 python - <<'PY'
 import json
 from pathlib import Path
 
-p = Path(
-    "portal/commun/data/standalone/octane/qualifications_brut.json"
-)
+paths = [
+    Path("portal/commun/data/standalone/jira/capabilities.json"),
+    Path("portal/commun/data/standalone/jira/capabilities_brut.json"),
+    Path("portal/commun/data/standalone/payload_standalone.json"),
+]
 
-d = json.loads(
-    p.read_text(
-        encoding="utf-8",
-        errors="replace"
-    )
-)
-
-rows = d.get("qualifications") or []
-
-print()
-print("=" * 80)
-print("RESUME OCTANE")
-print("=" * 80)
-
-print("source =", d.get("source"))
-print("epic =", d.get("epic"))
-print("qualifications =", len(rows))
-
-features = {}
-
-for q in rows:
-    f = q.get("octaneFeature") or {}
-    name = f.get("nom") or ""
-    fid = f.get("id") or ""
-
-    features.setdefault(
-        (fid, name),
-        0
-    )
-
-    features[(fid, name)] += 1
-
-print("features distinctes =", len(features))
-
-for i, ((fid, name), count) in enumerate(
-    features.items(),
-    1
-):
-    print(
-        i,
-        "| id =",
-        fid,
-        "| feature =",
-        name,
-        "| qualifications =",
-        count,
-    )
-
-print()
-print("=" * 80)
-print("DETAIL PAR QUALIFICATION")
-print("=" * 80)
-
-for i, q in enumerate(rows, 1):
-    f = q.get("octaneFeature") or {}
-    ts = q.get("testSuite") or {}
-    sr = q.get("suiteRun") or {}
-
+for p in paths:
     print()
-    print(f"[{i}]")
-    print("feature       =", f.get("nom"))
-    print("featureId     =", f.get("id"))
-    print("capability    =", q.get("capability"))
-    print("release       =", q.get("release"))
-    print("environnement =", q.get("environnement"))
-    print("testSuite     =", ts.get("nom"))
-    print("suiteRun      =", sr.get("nom"))
-    print("executions    =", len(q.get("executions") or []))
+    print("=" * 100)
+    print(p)
+    print("=" * 100)
+
+    if not p.exists():
+        print("ABSENT")
+        continue
+
+    d = json.loads(
+        p.read_text(
+            encoding="utf-8",
+            errors="replace"
+        )
+    )
+
+    if isinstance(d, dict):
+        print("CLES =", list(d.keys()))
+
+        for key in (
+            "capabilities",
+            "features",
+            "issues",
+            "items",
+        ):
+            rows = d.get(key)
+
+            if isinstance(rows, list):
+                print(key, "COUNT =", len(rows))
+
+                for r in rows[:20]:
+                    if isinstance(r, dict):
+                        epic = r.get("epic") or {}
+
+                        print(
+                            "- jiraKey =",
+                            r.get("jiraKey")
+                            or epic.get("key"),
+                            "| capability =",
+                            r.get("capability"),
+                            "| summary =",
+                            (epic.get("fields") or {}).get("summary")
+                        )
 PY
