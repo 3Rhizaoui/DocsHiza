@@ -241,27 +241,80 @@
       display: grid;
       grid-template-columns:
         repeat(5, minmax(150px, 1fr));
-      gap: 16px;
-      margin-bottom: 20px;
+      gap: 12px;
+      margin-bottom: 18px;
     }
 
     .kpi {
-      background: white;
-      border-radius: 12px;
-      padding: 18px;
-      box-shadow: 0 2px 9px rgba(0,0,0,.07);
+      position: relative;
+      background: #ffffff;
+      border: 1px solid #d8e1ea;
+      border-radius: 9px;
+      padding: 12px 14px;
+      min-height: 78px;
+
+      box-shadow:
+        0 1px 3px rgba(15, 23, 42, .08);
+
+      transition:
+        box-shadow .16s ease,
+        border-color .16s ease,
+        transform .16s ease;
+    }
+
+    .kpi::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      border-radius: 9px 0 0 9px;
+      background: #1f5f99;
+    }
+
+    .kpi:hover {
+      border-color: #a9bfd2;
+      box-shadow:
+        0 3px 10px rgba(15, 23, 42, .12);
+      transform: translateY(-1px);
     }
 
     .kpiLabel {
-      font-size: 13px;
-      color: #708090;
-      margin-bottom: 8px;
+      font-size: 12px;
+      line-height: 1.25;
+      font-weight: 700;
+      color: #5f7182;
+      margin-bottom: 5px;
+      padding-left: 3px;
     }
 
     .kpiValue {
-      font-size: 30px;
-      font-weight: 700;
-      color: #16324f;
+      font-size: 24px;
+      line-height: 1.1;
+      font-weight: 800;
+      color: #153454;
+      padding-left: 3px;
+    }
+
+    .kpi:nth-child(1)::before {
+      background: #153454;
+    }
+
+    .kpi:nth-child(2)::before {
+      background: #1f5f99;
+    }
+
+    .kpi:nth-child(3)::before {
+      background: #2879a9;
+    }
+
+    .kpi:nth-child(4)::before {
+      background: #2f7d67;
+    }
+
+    .kpi:nth-child(5)::before {
+      background: #243447;
     }
 
     .filters {
