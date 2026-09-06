@@ -1,0 +1,195 @@
+
+/* GIL GLOBAL SHELL V11 SAFE */
+
+:root {
+  --gil-global-header: 92px;
+  --gil-global-footer: 64px;
+}
+
+body.gilNormalizedPage {
+  margin: 0 !important;
+  padding-top: var(--gil-global-header) !important;
+  padding-bottom: var(--gil-global-footer) !important;
+  box-sizing: border-box !important;
+
+  background:
+    #edf8ff
+    url("dashboard_bg_full.png")
+    center center / cover
+    fixed
+    no-repeat !important;
+}
+
+.gilGlobalHeader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  height: var(--gil-global-header);
+
+  display: grid;
+  grid-template-columns: 230px minmax(0,1fr) 210px;
+  align-items: center;
+  gap: 20px;
+
+  padding: 10px 30px;
+  box-sizing: border-box;
+
+  background: rgba(239,248,255,.92);
+  border-bottom: 1px solid rgba(70,135,185,.18);
+  box-shadow: 0 4px 16px rgba(15,61,100,.06);
+
+  z-index: 99990;
+}
+
+.gilGlobalHeaderBnp img {
+  width: 210px;
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.gilGlobalHeaderCenter {
+  text-align: center;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.gilGlobalHeaderCenter h1 {
+  margin: 0;
+  color: #073d72;
+  font-size: 25px;
+  font-weight: 800;
+}
+
+.gilGlobalHeaderCenter p {
+  margin: 5px 0 0;
+  color: #3977a8;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.gilGlobalHeaderBrand {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.gilGlobalHeaderBrand img {
+  width: 170px;
+  max-width: 100%;
+  height: auto;
+}
+
+.gilGlobalFooter {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  height: var(--gil-global-footer);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 6px 30px;
+  box-sizing: border-box;
+
+  background:
+    linear-gradient(
+      rgba(239,249,255,.76),
+      rgba(215,239,255,.82)
+    ),
+    url("dashboard_bg_full.png")
+    center bottom / cover
+    no-repeat;
+
+  border-top: 1px solid rgba(70,135,185,.20);
+  box-shadow: 0 -4px 16px rgba(15,61,100,.07);
+
+  z-index: 99990;
+}
+
+.gilGlobalFooterBnp {
+  width: 185px;
+  height: auto;
+}
+
+.gilGlobalFooterBrand {
+  width: 155px;
+  height: auto;
+}
+
+body.gilGhostHidden .gilGlobalGhost {
+  display: none !important;
+}
+
+body:not(.gilGhostHidden) .gilGlobalGilReplacement {
+  display: none !important;
+}
+
+body.gilGhostHidden .gilGlobalGilReplacement {
+  display: block !important;
+}
+
+.gilPlaceholderPage {
+  width: min(1180px, calc(100% - 64px));
+  margin: 35px auto;
+  padding: 30px;
+
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.80);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.985),
+      rgba(237,248,255,.94)
+    );
+
+  box-shadow:
+    0 12px 26px rgba(31,95,153,.12);
+
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.gilPlaceholderPage h1 {
+  margin: 0 0 12px;
+  color: #073d72;
+  font-size: 28px;
+}
+
+.gilPlaceholderPage p {
+  color: #405c75;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.gilPlaceholderPage a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+
+  padding: 0 17px;
+
+  border-radius: 9px;
+
+  color: white;
+  background: #0878ca;
+
+  text-decoration: none;
+  font-weight: 700;
+}
+
+@media print {
+  .gilGlobalHeader,
+  .gilGlobalFooter {
+    display: none !important;
+  }
+
+  body.gilNormalizedPage {
+    padding: 0 !important;
+    background: white !important;
+  }
+}
