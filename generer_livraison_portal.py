@@ -4,6 +4,7 @@ import shutil
 import re
 import json
 import zipfile
+import hashlib
 
 ROOT = Path(__file__).resolve().parent
 
@@ -55,8 +56,30 @@ timestamp = datetime.now().strftime(
     "%Y-%m-%d_%H%M%S"
 )
 
+payload_meta = json.loads(
+    PAYLOAD_BASE.read_text(
+        encoding="utf-8",
+        errors="replace"
+    )
+)
+
+sprint_name = str(
+    payload_meta.get(
+        "sprintCourant",
+        "Sprint_Inconnu"
+    )
+).strip()
+
+sprint_slug = re.sub(
+    r"[^A-Za-z0-9_-]+",
+    "_",
+    sprint_name
+).strip("_")
+
 delivery_name = (
     "GIL_Portal_"
+    + sprint_slug
+    + "_"
     + timestamp
 )
 
@@ -67,7 +90,7 @@ destination = (
 
 
 print("=" * 72)
-print("GENERATION LIVRAISON PORTAL GIL - V3 SHAREPOINT")
+print("GENERATION LIVRAISON PORTAL GIL - V4.2 SHAREPOINT")
 print("=" * 72)
 
 print("Source      :", SOURCE)
@@ -818,6 +841,69 @@ standalone_data_dir = (
 # Dans V4 ils pourront être supprimés du package.
 
 
+
+# ============================================================
+# 6.1 NETTOYAGE FINAL SHAREPOINT
+# ============================================================
+
+technical_files = [
+    destination / "Lancer_Portal.cmd",
+    destination / "serveur_portal.py",
+]
+
+for technical_file in technical_files:
+
+    if technical_file.exists():
+
+        technical_file.unlink()
+
+        print(
+            "supprimé livraison     =>",
+            technical_file.name
+        )
+
+
+technical_dirs = [
+    destination / "logs",
+]
+
+for technical_dir in technical_dirs:
+
+    if technical_dir.exists():
+
+        shutil.rmtree(
+            technical_dir
+        )
+
+        print(
+            "supprimé livraison     =>",
+            technical_dir.name + "/"
+        )
+
+
+# ------------------------------------------------------------
+# Supprimer les fichiers uniquement utiles à Git.
+# ------------------------------------------------------------
+
+for pattern in (
+    ".gitignore",
+    ".gitkeep",
+):
+
+    for file in list(
+        destination.rglob(pattern)
+    ):
+
+        if file.is_file():
+
+            file.unlink()
+
+
+print(
+    "fichiers Git internes  => supprimés"
+)
+
+
 # ============================================================
 # 7. ANALYSE HTML + JS
 # ============================================================
@@ -1006,7 +1092,7 @@ js_count = len(
 
 lines = [
 
-    "LIVRAISON PORTAL GIL - V3 SHAREPOINT",
+    "LIVRAISON PORTAL GIL - V4.2 SHAREPOINT",
 
     "=" * 70,
 
@@ -1210,13 +1296,301 @@ with zipfile.ZipFile(
             )
 
 
+
+# ============================================================
+# 11. MANIFESTE
+# ============================================================
+
+manifest_files = []
+
+for file in destination.rglob("*"):
+
+    if not file.is_file():
+        continue
+
+    rel = file.relative_to(
+        destination
+    ).as_posix()
+
+    try:
+        raw = file.read_bytes()
+
+        sha256 = hashlib.sha256(
+            raw
+        ).hexdigest()
+
+        size = len(raw)
+
+    except Exception:
+        sha256 = ""
+        size = 0
+
+    manifest_files.append(
+        {
+            "path": rel,
+            "size": size,
+            "sha256": sha256,
+        }
+    )
+
+
+manifest = {
+    "application": "GIL Portal",
+    "deliveryVersion": "V4.2",
+    "generatedAt": datetime.now().isoformat(
+        timespec="seconds"
+    ),
+    "sprint": sprint_name,
+    "deliveryName": delivery_name,
+    "sharePointSafe": sharepoint_ready,
+    "htmlFiles": html_count,
+    "jsFiles": js_count,
+    "blockingDependencies": len(problems),
+    "missingLinks": len(missing_links),
+    "files": manifest_files,
+}
+
+
+manifest_path = (
+    destination
+    / "manifest.json"
+)
+
+manifest_path.write_text(
+    json.dumps(
+        manifest,
+        ensure_ascii=False,
+        indent=2
+    ),
+    encoding="utf-8"
+)
+
+print(
+    "manifest.json          => OK"
+)
+
+
+# ============================================================
+# 12. CONTROLE PAGES PRINCIPALES
+# ============================================================
+
+expected_pages = [
+    "index.html",
+    "cartographie/index.html",
+    "reporting/general/index.html",
+    "reporting/sprint/index.html",
+    "qualite/standalone/index.html",
+    "qualite/suivi-quotidien/index.html",
+    "qualite/ateliers/index.html",
+]
+
+missing_pages = []
+
+for rel in expected_pages:
+
+    if not (
+        destination
+        / rel
+    ).exists():
+
+        missing_pages.append(
+            rel
+        )
+
+
+if missing_pages:
+
+    print()
+    print(
+        "ATTENTION - pages principales manquantes :"
+    )
+
+    for page in missing_pages:
+        print(" -", page)
+
+    sharepoint_ready = False
+
+else:
+
+    print(
+        "pages principales     => OK"
+    )
+
+
+
+# ============================================================
+# 12.1 README LIVRAISON
+# ============================================================
+
+readme = (
+    destination
+    / "README_LIVRAISON.txt"
+)
+
+readme_content = f"""PORTAIL GIL - LIVRAISON SHAREPOINT
+============================================================
+
+Sprint :
+{sprint_name}
+
+Livraison :
+{delivery_name}
+
+Point d'entrée :
+index.html
+
+Contenu principal :
+- Accueil
+- Cycle opérationnel
+- Reporting général
+- Reporting Sprint
+- Tests Standalone
+- Suivi quotidien
+- Ateliers
+
+Mode de fonctionnement :
+- portail statique et autoporteur
+- aucun serveur Python requis
+- aucun appel JIRA
+- aucun appel Octane
+- aucun fetch réseau
+- aucune authentification SSO requise
+
+Pour consulter le portail :
+ouvrir index.html
+
+Généré le :
+{datetime.now().strftime("%d/%m/%Y %H:%M:%S")}
+"""
+
+readme.write_text(
+    readme_content,
+    encoding="utf-8"
+)
+
+print(
+    "README_LIVRAISON.txt   => OK"
+)
+
+
+# ============================================================
+# 13. DOSSIER latest
+# ============================================================
+
+latest_dir = (
+    OUT_ROOT
+    / "latest"
+)
+
+if latest_dir.exists():
+
+    shutil.rmtree(
+        latest_dir
+    )
+
+
+shutil.copytree(
+    destination,
+    latest_dir
+)
+
+print(
+    "livraisons/latest      => OK"
+)
+
+
+# ============================================================
+# 14. ZIP latest
+# ============================================================
+
+latest_zip = (
+    OUT_ROOT
+    / "GIL_Portal_latest.zip"
+)
+
+if latest_zip.exists():
+
+    latest_zip.unlink()
+
+
+with zipfile.ZipFile(
+    latest_zip,
+    "w",
+    compression=zipfile.ZIP_DEFLATED,
+) as archive:
+
+    for file in latest_dir.rglob("*"):
+
+        if file.is_file():
+
+            archive.write(
+                file,
+                Path("GIL_Portal_latest")
+                / file.relative_to(
+                    latest_dir
+                )
+            )
+
+
+print(
+    "GIL_Portal_latest.zip  => OK"
+)
+
+
+
+# ============================================================
+# 15. ZIP METIER STABLE
+# ============================================================
+
+business_zip = (
+    OUT_ROOT
+    / (
+        "GIL_Portal_"
+        + sprint_slug
+        + ".zip"
+    )
+)
+
+if business_zip.exists():
+
+    business_zip.unlink()
+
+
+with zipfile.ZipFile(
+    business_zip,
+    "w",
+    compression=zipfile.ZIP_DEFLATED,
+) as archive:
+
+    for file in destination.rglob("*"):
+
+        if file.is_file():
+
+            archive.write(
+                file,
+                Path(
+                    "GIL_Portal_"
+                    + sprint_slug
+                )
+                / file.relative_to(
+                    destination
+                )
+            )
+
+
+print(
+    "ZIP métier             =>",
+    business_zip.name
+)
+
+
 # ============================================================
 # RESULTAT
 # ============================================================
 
 print()
 print("=" * 72)
-print("RESULTAT V3")
+print("RESULTAT V4.2")
 print("=" * 72)
 
 print(
