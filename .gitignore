@@ -40,3 +40,9 @@ jira/sprint_precedent.json
 # Profil navigateur local Jira / SSO
 jira/.jira_sso_profile_manuel/
 audit_reports/
+
+old/
+portal/.v11_backup_before_normalisation/
+
+old/
+portal/.v11_backup_before_normalisation/
