@@ -1,37 +1,1368 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8">
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
-  >
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>GIL - Suivi quotidien des tests d’arrimage</title>
+  <title>GIL - Suivi quotidien des tests d'arrimage</title>
 
-  <link
-    rel="stylesheet"
-    href="../../assets/gil-global-shell.css"
-  >
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f4f6f8;
+      color: #1f2933;
+    }
+
+    /* ==========================================================
+       GIL STANDALONE - IDENTITE VISUELLE PORTAL
+       Alignée sur le Rapport général GIL
+       ========================================================== */
+
+    .gilPortalBack {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      width: max-content;
+
+      margin:
+        12px
+        22px
+        14px;
+
+      padding:
+        9px
+        13px;
+
+      border:
+        1px solid
+        #b9c8d8;
+
+      border-radius: 7px;
+
+      background: #fff;
+
+      color: #174d7b;
+
+      font-size: 13px;
+      font-weight: 800;
+
+      text-decoration: none;
+    }
+
+    .gilPortalBack:hover {
+      background: #f4f8fc;
+    }
+
+
+    .gilStandaloneHeader {
+      display: grid;
+
+      grid-template-columns:
+        minmax(250px, .55fr)
+        minmax(500px, 1.35fr)
+        auto;
+
+      align-items: center;
+
+      gap: 30px;
+
+      width: calc(100% - 44px);
+
+      margin:
+        14px
+        22px
+        16px;
+
+      padding:
+        22px
+        30px;
+
+      border-radius: 10px;
+
+      color: #fff;
+
+      background:
+        linear-gradient(
+          110deg,
+          #28679c 0%,
+          #28679c 65%,
+          #24608f 100%
+        );
+
+      box-shadow:
+        0 5px 16px
+        rgba(15,39,71,.12);
+    }
+
+
+    .gilStandaloneLogoWrap {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .gilStandaloneLogo {
+      display: block;
+
+      width: auto;
+      max-width: 245px;
+      max-height: 105px;
+
+      object-fit: contain;
+      object-position: left center;
+
+      filter:
+        drop-shadow(
+          0 4px 7px
+          rgba(0,0,0,.22)
+        );
+    }
+
+
+    .gilStandaloneHeading {
+      min-width: 0;
+    }
+
+    .gilStandaloneHeading h1 {
+      margin: 0;
+
+      color: #fff;
+
+      font-size: 27px;
+      font-weight: 800;
+
+      line-height: 1.15;
+    }
+
+    .gilStandaloneHeading p {
+      margin:
+        7px
+        0
+        0;
+
+      color: rgba(255,255,255,.95);
+
+      font-size: 14px;
+      font-weight: 600;
+
+      line-height: 1.4;
+    }
+
+
+    .gilStandaloneActions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .gilStandalonePdfButton {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+
+      padding:
+        10px
+        14px;
+
+      border:
+        1px solid
+        rgba(255,255,255,.65);
+
+      border-radius: 7px;
+
+      background:
+        rgba(255,255,255,.08);
+
+      color: #fff;
+
+      font-weight: 800;
+      font-size: 13px;
+
+      cursor: pointer;
+    }
+
+    .gilStandalonePdfButton:hover {
+      background:
+        rgba(255,255,255,.16);
+    }
+
+    .gilStandalonePdfIcon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      min-width: 27px;
+      height: 27px;
+
+      padding:
+        0
+        5px;
+
+      border-radius: 4px;
+
+      background: #fff;
+
+      color: #28679c;
+
+      font-size: 9px;
+      font-weight: 900;
+    }
+
+
+    .page {
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 10px 22px 26px;
+    }
+
+    .title {
+      margin-bottom: 20px;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 26px;
+      color: #16324f;
+    }
+
+    .title p {
+      margin: 6px 0 0;
+      color: #66788a;
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns:
+        repeat(5, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .kpi {
+      position: relative;
+      background: #ffffff;
+      border: 1px solid #d8e1ea;
+      border-radius: 9px;
+      padding: 12px 14px;
+      min-height: 78px;
+
+      box-shadow:
+        0 1px 3px rgba(15, 23, 42, .08);
+
+      transition:
+        box-shadow .16s ease,
+        border-color .16s ease,
+        transform .16s ease;
+    }
+
+    .kpi::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      border-radius: 9px 0 0 9px;
+      background: #1f5f99;
+    }
+
+    .kpi:hover {
+      border-color: #a9bfd2;
+      box-shadow:
+        0 3px 10px rgba(15, 23, 42, .12);
+      transform: translateY(-1px);
+    }
+
+    .kpiLabel {
+      font-size: 12px;
+      line-height: 1.25;
+      font-weight: 700;
+      color: #5f7182;
+      margin-bottom: 5px;
+      padding-left: 3px;
+    }
+
+    .kpiValue {
+      font-size: 24px;
+      line-height: 1.1;
+      font-weight: 800;
+      color: #153454;
+      padding-left: 3px;
+    }
+
+    .kpi:nth-child(1)::before {
+      background: #153454;
+    }
+
+    .kpi:nth-child(2)::before {
+      background: #1f5f99;
+    }
+
+    .kpi:nth-child(3)::before {
+      background: #2879a9;
+    }
+
+    .kpi:nth-child(4)::before {
+      background: #2f7d67;
+    }
+
+    .kpi:nth-child(5)::before {
+      background: #243447;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: end;
+
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 18px;
+      box-shadow: 0 2px 9px rgba(0,0,0,.07);
+    }
+
+    .filterGroup {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .filterGroup label {
+      font-size: 12px;
+      color: #66788a;
+      font-weight: 600;
+    }
+
+    select,
+    input {
+      min-width: 170px;
+      border: 1px solid #ccd4dc;
+      border-radius: 7px;
+      padding: 8px 10px;
+      background: white;
+    }
+
+    .tableCard {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 9px rgba(0,0,0,.07);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      background: #eef3f6;
+      text-align: left;
+      color: #46596b;
+      padding: 12px 10px;
+      border-bottom: 1px solid #dbe2e8;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 11px 10px;
+      border-bottom: 1px solid #edf1f4;
+      vertical-align: middle;
+    }
+
+    tr.mainRow {
+      cursor: pointer;
+    }
+
+    tr.mainRow:hover {
+      background: #f8fafb;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .green {
+      background: #dff6e9;
+      color: #177245;
+    }
+
+    .red {
+      background: #fde5e3;
+      color: #b42318;
+    }
+
+    .orange {
+      background: #fff1d6;
+      color: #a15c00;
+    }
+
+    .gray {
+      background: #edf1f4;
+      color: #5d6b78;
+    }
+
+    .detailRow {
+      display: none;
+      background: #fafcfd;
+    }
+
+    .detailRow.open {
+      display: table-row;
+    }
+
+    .detail {
+      padding: 18px 20px 22px;
+    }
+
+    .detailGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .detailBox {
+      background: white;
+      border: 1px solid #e1e7ec;
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .detailBox h3 {
+      margin: 0 0 12px;
+      font-size: 15px;
+      color: #16324f;
+    }
+
+    .miniTable {
+      width: 100%;
+      font-size: 12px;
+    }
+
+    .miniTable th,
+    .miniTable td {
+      padding: 7px 6px;
+    }
+
+    .empty {
+      padding: 30px;
+      text-align: center;
+      color: #778899;
+    }
+
+    .footerInfo {
+      margin-top: 14px;
+      font-size: 12px;
+      color: #778899;
+      text-align: right;
+    }
+
+    @media (max-width: 1100px) {
+
+      .gilStandaloneHeader {
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+
+      .gilStandaloneActions {
+        justify-content: flex-start;
+      }
+
+      .kpis {
+        grid-template-columns:
+          repeat(2, 1fr);
+      }
+
+      .detailGrid {
+        grid-template-columns: 1fr;
+      }
+
+      .tableCard {
+        overflow-x: auto;
+      }
+    }
+    @media print {
+
+      .gilPortalBack,
+      .gilStandaloneActions,
+      .filters {
+        display: none !important;
+      }
+
+      body {
+        background: #fff;
+      }
+
+      .gilStandaloneHeader {
+        box-shadow: none;
+      }
+    }
+
+
+
+    /* ======================================================
+       MATCHING JIRA / OCTANE - CONTRAT UI V01
+       ====================================================== */
+
+    .mainRow {
+      cursor: pointer;
+      transition:
+        background-color .12s ease;
+    }
+
+    .mainRowBlueA > td {
+      background:
+        #e8f3fc;
+    }
+
+    .mainRowBlueB > td {
+      background:
+        #d9ecfa;
+    }
+
+    .mainRow:hover > td {
+      filter:
+        brightness(.985);
+    }
+
+    .rowToggle {
+      display:
+        inline-block;
+      width:
+        18px;
+      margin-right:
+        5px;
+      color:
+        #365d7e;
+      font-size:
+        17px;
+      font-weight:
+        900;
+    }
+
+    .jiraCell {
+      border-right-color:
+        #c9dced !important;
+    }
+
+    .octaneCell {
+      border-left-color:
+        #d4e5ef !important;
+    }
+
+    .detailGridMatched {
+      display:
+        grid;
+      grid-template-columns:
+        minmax(0, 1fr)
+        minmax(0, 1.15fr);
+      gap:
+        14px;
+      align-items:
+        start;
+    }
+
+    .detailBoxJira {
+      background:
+        #edf6fd !important;
+      border:
+        1px solid #c7dff1;
+    }
+
+    .detailBoxOctane {
+      background:
+        #edf9f0 !important;
+      border:
+        1px solid #c5e6ce;
+    }
+
+    .detailBoxJira h3 {
+      color:
+        #245d8c;
+    }
+
+    .detailBoxOctane h3 {
+      color:
+        #287943;
+    }
+
+    .detailMeta {
+      margin-bottom:
+        12px;
+      line-height:
+        1.7;
+    }
+
+    .jiraDescription {
+      margin:
+        12px 0;
+      padding:
+        10px 12px;
+      border-radius:
+        6px;
+      background:
+        rgba(255,255,255,.58);
+      line-height:
+        1.55;
+    }
+
+    @media (max-width: 1200px) {
+
+      .detailGridMatched {
+        grid-template-columns:
+          1fr;
+      }
+
+      .kpis {
+        grid-template-columns:
+          repeat(2, minmax(180px, 1fr));
+      }
+
+    }
+
+
+  
+
+  /* =========================================================
+     SECTIONS GIL
+     ========================================================= */
+
+  .gilSectionBanner {
+    margin: 8px 0 14px;
+    padding: 10px 16px;
+
+    background:
+      linear-gradient(
+        90deg,
+        #153454 0%,
+        #1f5f99 100%
+      );
+
+    color: #ffffff;
+
+    border-radius: 8px;
+
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.2;
+
+    box-shadow:
+      0 2px 7px rgba(15, 23, 42, .12);
+  }
+
+  .gilSectionBanner + .kpis {
+    margin-top: 0;
+  }
+
+  .fluxTestingBlock {
+    margin-top: 28px;
+  }
+
+  .fluxTestingKpis {
+    display: grid;
+    grid-template-columns:
+      repeat(4, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .fluxTestingKpi {
+    position: relative;
+    background: #ffffff;
+    border: 1px solid #d8e1ea;
+    border-radius: 9px;
+    padding: 12px 14px;
+    min-height: 78px;
+
+    box-shadow:
+      0 1px 3px rgba(15, 23, 42, .08);
+  }
+
+  .fluxTestingKpi::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 4px;
+
+    border-radius: 9px 0 0 9px;
+    background: #1f5f99;
+  }
+
+  .fluxTestingKpi:nth-child(3)::before {
+    background: #15803d;
+  }
+
+  .fluxTestingKpi:nth-child(4)::before {
+    background: #f59e0b;
+  }
+
+  .fluxTestingKpiLabel {
+    color: #5f7182;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    padding-left: 3px;
+  }
+
+  .fluxTestingKpiValue {
+    color: #153454;
+    font-size: 24px;
+    font-weight: 800;
+    padding-left: 3px;
+  }
+
+  .fluxTestingFilters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .fluxTestingFilters .filterGroup {
+    min-width: 180px;
+  }
+
+  .fluxTestingTableCard {
+    background: #ffffff;
+    border-radius: 12px;
+    overflow-x: auto;
+
+    box-shadow:
+      0 2px 9px rgba(0,0,0,.07);
+  }
+
+  #fluxTestingTable {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+  }
+
+  #fluxTestingTable th {
+    background: #153454;
+    color: #ffffff;
+
+    font-size: 11px;
+    font-weight: 800;
+
+    padding: 8px 7px;
+    border: 1px solid #294d70;
+
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  #fluxTestingTable td {
+    padding: 7px 8px;
+    border: 1px solid #d7e0ea;
+
+    color: #102a43;
+    font-size: 11px;
+    line-height: 1.25;
+
+    vertical-align: middle;
+  }
+
+  #fluxTestingTable tbody tr:nth-child(even) td {
+    background: #f8fbff;
+  }
+
+  #fluxTestingTable tbody tr:hover td {
+    background: #eef5fb;
+  }
+
+  .fluxReadyTesting {
+    display: inline-block;
+    padding: 4px 7px;
+    border-radius: 999px;
+
+    font-size: 10px;
+    font-weight: 800;
+
+    white-space: nowrap;
+  }
+
+  .fluxReadyTesting.ready {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .fluxReadyTesting.waitDev {
+    background: #fff7ed;
+    color: #c2410c;
+  }
+
+  .fluxReadyTesting.waitTest {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .fluxReadyTesting.unknown {
+    background: #f1f5f9;
+    color: #475569;
+  }
+
+  @media (max-width: 900px) {
+    .fluxTestingKpis {
+      grid-template-columns:
+        repeat(2, minmax(160px, 1fr));
+    }
+  }
+
+</style>
+
+<!-- GIL_GLOBAL_SHELL_CSS_V11 -->
+<link rel="stylesheet" href="../../assets/gil-global-shell.css">
+
+<style id="suivi-quotidien-v121">
+  #suiviSprintBar {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:24px;
+    padding:16px 20px;
+    margin:0 0 20px 0;
+    border:1px solid rgba(18,76,140,.14);
+    border-radius:16px;
+    background:rgba(255,255,255,.94);
+    box-shadow:
+      0 10px 28px rgba(15,48,86,.10);
+  }
+
+  .suiviSprintInfo {
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+    min-width:190px;
+  }
+
+  .suiviSprintInfo strong {
+    color:#123f73;
+    font-size:18px;
+  }
+
+  .suiviSprintInfo span {
+    color:#60758d;
+    font-size:12px;
+  }
+
+  .suiviWeekButtons {
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    gap:8px;
+  }
+
+  .suiviWeekButton {
+    border:1px solid #c8d8e9;
+    border-radius:10px;
+    padding:8px 13px;
+    background:#fff;
+    color:#234d78;
+    font-weight:700;
+    cursor:pointer;
+  }
+
+  .suiviWeekButton:hover {
+    background:#eef6ff;
+  }
+
+  .suiviWeekButton.active {
+    background:#123f73;
+    border-color:#123f73;
+    color:#fff;
+    box-shadow:
+      0 5px 12px rgba(18,63,115,.20);
+  }
+
+  @media (max-width:900px) {
+    #suiviSprintBar {
+      align-items:flex-start;
+      flex-direction:column;
+    }
+
+    .suiviWeekButtons {
+      justify-content:flex-start;
+    }
+  }
+</style>
+
+
+<style id="suivi-v124">
+
+  /*
+   * Vue opérationnelle :
+   * JIRA/Service complet reste dans Tests Standalone.
+   */
+
+  #fluxTestingSection table th:nth-child(3),
+  #fluxTestingSection table td:nth-child(3),
+  #fluxTestingSection table th:nth-child(8),
+  #fluxTestingSection table td:nth-child(8),
+  #fluxTestingSection table th:nth-child(9),
+  #fluxTestingSection table td:nth-child(9) {
+    display:none !important;
+  }
+
+
+  /* Tableau périmètres */
+
+  #standaloneBody td {
+    vertical-align:middle;
+  }
+
+  #standaloneBody td:first-child {
+    font-weight:700;
+    color:#123f73;
+  }
+
+
+  /* KPI plus homogènes */
+
+  .kpis,
+  .fluxTestingKpis {
+    align-items:stretch;
+  }
+
+  .kpi,
+  .fluxTestingKpi {
+    min-height:72px;
+  }
+
+
+  /* Statuts synthétiques */
+
+  .suiviState {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+
+    min-width:88px;
+
+    padding:5px 10px;
+
+    border-radius:999px;
+
+    font-weight:800;
+    font-size:12px;
+  }
+
+  .suiviStateProgress {
+    background:#fff3cd;
+    color:#9a6500;
+  }
+
+  .suiviStateKo {
+    background:#fde2e2;
+    color:#c62828;
+  }
+
+  .suiviStateMixed {
+    background:#e8f2ff;
+    color:#155da0;
+  }
+
+</style>
+
 </head>
 
-<body data-gil-page-title="Suivi quotidien des tests d’arrimage">
+<body data-gil-page-title="Suivi quotidien des tests d'arrimage">
 
-  <main class="gilPlaceholderPage">
+<a
+  class="gilPortalBack"
+  href="../../index.html"
+>
+  ← Retour à l’accueil GIL
+</a>
 
-    <h1>Suivi quotidien des tests d’arrimage</h1>
+
+<section
+  class="gilStandaloneHeader"
+  aria-label="Suivi quotidien des tests d'arrimage"
+>
+
+  <div class="gilStandaloneLogoWrap">
+
+    <img
+      class="gilStandaloneLogo"
+      src="../../assets/gil_logo.png"
+      alt="GIL - Group Integration Layer"
+    >
+
+  </div>
+
+
+  <div class="gilStandaloneHeading">
+
+    <h1>
+      Suivi quotidien des tests d'arrimage
+    </h1>
 
     <p>
-      Suivi quotidien des campagnes, résultats et points de blocage des tests d’arrimage GIL.
+      Qualification des Capabilities GIL —
+      readiness JIRA et validation Octane
+      par version, release et environnement
     </p>
 
-    <a href="../../index.html">
-      ← Retour à l'accueil
-    </a>
+  </div>
 
-  </main>
 
-  <script src="../../assets/gil-global-shell.js"></script>
+  <div class="gilStandaloneActions">
 
+    <button
+      type="button"
+      class="gilStandalonePdfButton"
+      onclick="window.print()"
+      title="Imprimer ou enregistrer le rapport au format PDF"
+    >
+
+      <span
+        class="gilStandalonePdfIcon"
+        aria-hidden="true"
+      >
+        PDF
+      </span>
+
+      <span>
+        Imprimer en PDF
+      </span>
+
+    </button>
+
+  </div>
+
+</section>
+
+<main class="page">
+
+  <div class="gilSectionBanner">
+    Services / périmètres en cours
+  </div>
+
+
+  <section class="kpis">
+
+    <div class="kpi">
+      <div class="kpiLabel">
+        Périmètres actifs
+      </div>
+      <div class="kpiValue" id="kpiTotalServices">
+        —
+      </div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpiLabel">
+        En cours
+      </div>
+      <div class="kpiValue" id="kpiDev">
+        —
+      </div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpiLabel">
+        Flux actifs
+      </div>
+      <div class="kpiValue" id="kpiCoverage">
+        —
+      </div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpiLabel">
+        KO / Bloqués
+      </div>
+      <div class="kpiValue" id="kpiValidation">
+        —
+      </div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpiLabel">
+        Environnements
+      </div>
+      <div class="kpiValue" id="kpiReadyFlux">
+        —
+      </div>
+    </div>
+
+  </section>
+
+  <section class="filters">
+
+    <div class="filterGroup">
+      <label for="filterService">
+        Périmètre
+      </label>
+      <select id="filterService">
+        <option value="">
+          Tous les périmètres
+        </option>
+      </select>
+    </div>
+
+    <div class="filterGroup">
+      <label for="filterVersion">
+        Version / Release
+      </label>
+      <select id="filterVersion">
+        <option value="">
+          Toutes
+        </option>
+      </select>
+    </div>
+
+    <div class="filterGroup">
+      <label for="filterEnv">
+        Environnement
+      </label>
+      <select id="filterEnv">
+        <option value="">
+          Tous
+        </option>
+        <option value="SIT">
+          SIT
+        </option>
+        <option value="UAT">
+          UAT
+        </option>
+      </select>
+    </div>
+
+  </section>
+
+  <section class="tableCard">
+
+    <table>
+      
+    <thead>
+      <tr>
+        <th>Périmètre</th>
+        <th>Flux actifs</th>
+        <th>SIT</th>
+        <th>UAT</th>
+        <th>En cours</th>
+        <th>KO / Bloqués</th>
+        <th>État</th>
+      </tr>
+    </thead>
+
+    <tbody id="standaloneBody"
+>
+      </tbody>
+    </table>
+
+    <div
+      class="empty"
+      id="emptyMessage"
+      hidden
+    >
+      Aucun service ne correspond aux filtres.
+    </div>
+
+  </section>
+
+  <div
+    class="footerInfo"
+    id="generatedAt"
+  >
+  </div>
+
+
+
+  <section
+    class="fluxTestingBlock"
+    id="fluxTestingSection"
+  >
+
+    <div class="gilSectionBanner">
+      Détail des flux en cours du sprint
+    </div>
+
+    <div class="fluxTestingKpis">
+
+      <div class="fluxTestingKpi">
+        <div class="fluxTestingKpiLabel">
+          Flux actifs
+        </div>
+        <div
+          class="fluxTestingKpiValue"
+          id="fluxKpiTotal"
+        >
+          —
+        </div>
+      </div>
+
+      <div class="fluxTestingKpi">
+        <div class="fluxTestingKpiLabel">
+          Périmètres identifiés
+        </div>
+        <div
+          class="fluxTestingKpiValue"
+          id="fluxKpiMatched"
+        >
+          —
+        </div>
+      </div>
+
+      <div class="fluxTestingKpi">
+        <div class="fluxTestingKpiLabel">
+          Prêts au testing
+        </div>
+        <div
+          class="fluxTestingKpiValue"
+          id="fluxKpiReady"
+        >
+          —
+        </div>
+      </div>
+
+      <div class="fluxTestingKpi">
+        <div class="fluxTestingKpiLabel">
+          À traiter
+        </div>
+        <div
+          class="fluxTestingKpiValue"
+          id="fluxKpiWaiting"
+        >
+          —
+        </div>
+      </div>
+
+    </div>
+
+    <div class="fluxTestingFilters">
+
+      <div class="filterGroup">
+        <label for="fluxFilterDomain">
+          Domaine
+        </label>
+
+        <select id="fluxFilterDomain">
+          <option value="">
+            Tous les domaines
+          </option>
+        </select>
+      </div>
+
+      <div class="filterGroup">
+        <label for="fluxFilterSubdomain">
+          Sous-domaine
+        </label>
+
+        <select id="fluxFilterSubdomain">
+          <option value="">
+            Tous les sous-domaines
+          </option>
+        </select>
+      </div>
+
+      <div class="filterGroup">
+        <label for="fluxFilterEnv">
+          Environnement
+        </label>
+
+        <select id="fluxFilterEnv">
+          <option value="">
+            Tous
+          </option>
+          <option value="SIT">
+            SIT
+          </option>
+          <option value="UAT">
+            UAT
+          </option>
+          <option value="PROD">
+            PROD
+          </option>
+        </select>
+      </div>
+
+      <div class="filterGroup">
+        <label for="fluxFilterReady">
+          Prêts au testing
+        </label>
+
+        <select id="fluxFilterReady">
+          <option value="">
+            Tous
+          </option>
+          <option value="READY">
+            Prêt pour testing
+          </option>
+          <option value="WAIT_DEV">
+            À traiter Dev
+          </option>
+          <option value="WAIT_TEST">
+            À traiter Tests
+          </option>
+          <option value="UNKNOWN">
+            Service non identifié
+          </option>
+        </select>
+      </div>
+
+    </div>
+
+    <div class="fluxTestingTableCard">
+
+      <table id="fluxTestingTable">
+
+        <thead>
+          <tr>
+            <th>Domaine / Sous-domaine</th>
+            <th>Flux</th>
+            <th>Référence Jira</th>
+            <th>Pattern</th>
+            <th>Version</th>
+            <th>Environnement</th>
+            <th>Statut</th>
+            <th>Service GIL</th>
+            <th>Prêts au testing</th>
+          </tr>
+        </thead>
+
+        <tbody id="fluxTestingBody">
+        </tbody>
+
+      </table>
+
+    </div>
+
+    <div
+      id="fluxTestingEmpty"
+      class="emptyMessage"
+      hidden
+    >
+      Aucune demande de flux ne correspond aux filtres.
+    </div>
+
+  </section>
+
+</main>
+
+<script src="suivi-quotidien.js"></script>
+
+
+<!-- GIL_GLOBAL_SHELL_JS_V11 -->
+<script src="../../assets/gil-global-shell.js"></script>
 </body>
 </html>
