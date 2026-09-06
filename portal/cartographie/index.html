@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1"
+>
+
+<title>
+  GIL - Cycle opérationnel
+</title>
+
+
+<style>
+
+* {
+  box-sizing:
+    border-box;
+}
+
+
+html,
+body {
+
+  margin:
+    0;
+
+  width:
+    100%;
+
+  min-height:
+    100%;
+
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  color:
+    #103b6c;
+
+  background:
+    #edf8ff
+    url("../assets/dashboard_bg_full.png")
+    center center / cover
+    fixed
+    no-repeat;
+}
+
+
+body {
+
+  min-height:
+    100vh;
+
+  display:
+    flex;
+
+  flex-direction:
+    column;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.gilCycleHeader {
+
+  min-height:
+    92px;
+
+  display:
+    grid;
+
+  grid-template-columns:
+    240px
+    minmax(0,1fr)
+    240px;
+
+  align-items:
+    center;
+
+  gap:
+    20px;
+
+  padding:
+    12px
+    32px;
+
+  background:
+    rgba(245,251,255,.94);
+
+  border-bottom:
+    1px solid rgba(41,103,153,.18);
+
+  box-shadow:
+    0 5px 18px rgba(22,71,112,.08);
+}
+
+
+.gilCycleHeaderLogo img {
+
+  display:
+    block;
+
+  max-width:
+    185px;
+
+  max-height:
+    58px;
+
+  object-fit:
+    contain;
+}
+
+
+.gilCycleTitle {
+
+  text-align:
+    center;
+}
+
+
+.gilCycleTitle h1 {
+
+  margin:
+    0;
+
+  color:
+    #0b356c;
+
+  font-size:
+    clamp(23px,2vw,32px);
+
+  font-weight:
+    800;
+}
+
+
+.gilCycleTitle p {
+
+  margin:
+    5px 0 0;
+
+  color:
+    #23649d;
+
+  font-size:
+    14px;
+
+  font-weight:
+    600;
+}
+
+
+.gilCycleGil {
+
+  display:
+    flex;
+
+  justify-content:
+    flex-end;
+}
+
+
+.gilCycleGil img {
+
+  display:
+    block;
+
+  max-width:
+    170px;
+
+  max-height:
+    58px;
+
+  object-fit:
+    contain;
+}
+
+
+/* =========================================================
+   TOOLBAR
+   ========================================================= */
+
+.gilCycleToolbar {
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    20px;
+
+  padding:
+    12px
+    28px;
+
+  background:
+    rgba(255,255,255,.78);
+
+  border-bottom:
+    1px solid rgba(38,104,159,.12);
+}
+
+
+.gilCycleBack {
+
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  gap:
+    8px;
+
+  padding:
+    9px
+    14px;
+
+  border:
+    1px solid #b8d1e6;
+
+  border-radius:
+    9px;
+
+  color:
+    #104e87;
+
+  background:
+    rgba(255,255,255,.94);
+
+  text-decoration:
+    none;
+
+  font-size:
+    13px;
+
+  font-weight:
+    700;
+
+  box-shadow:
+    0 3px 9px rgba(15,68,110,.07);
+}
+
+
+.gilCycleToolbarInfo {
+
+  color:
+    #607d96;
+
+  font-size:
+    12px;
+}
+
+
+/* =========================================================
+   PAGE
+   ========================================================= */
+
+.gilCycleMain {
+
+  flex:
+    1;
+
+  width:
+    100%;
+
+  padding:
+    18px
+    24px
+    24px;
+}
+
+
+.gilCycleCard {
+
+  position:
+    relative;
+
+  width:
+    min(1600px,100%);
+
+  margin:
+    0 auto;
+
+  padding:
+    14px;
+
+  overflow:
+    hidden;
+
+  border:
+    1px solid rgba(43,109,163,.16);
+
+  border-radius:
+    20px;
+
+  background:
+    rgba(255,255,255,.88);
+
+  box-shadow:
+    0 13px 35px rgba(14,61,100,.14);
+}
+
+
+.gilCycleMap {
+
+  position:
+    relative;
+
+  width:
+    100%;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  overflow:
+    hidden;
+
+  border-radius:
+    13px;
+
+  background:
+    rgba(255,255,255,.58);
+}
+
+
+.gilCycleMap img {
+
+  display:
+    block;
+
+  width:
+    100%;
+
+  height:
+    auto;
+
+  max-height:
+    calc(100vh - 245px);
+
+  object-fit:
+    contain;
+}
+
+
+/*
+ * Cette couche recevra plus tard les zones
+ * interactives des 7 étapes.
+ */
+
+.gilCycleInteractiveLayer {
+
+  position:
+    absolute;
+
+  inset:
+    0;
+
+  pointer-events:
+    none;
+}
+
+
+/* =========================================================
+   VERSION
+   ========================================================= */
+
+.gilCycleVersion {
+
+  position:
+    absolute;
+
+  right:
+    25px;
+
+  bottom:
+    21px;
+
+  padding:
+    6px 10px;
+
+  border-radius:
+    999px;
+
+  color:
+    #4f6f89;
+
+  background:
+    rgba(255,255,255,.88);
+
+  border:
+    1px solid rgba(58,116,164,.16);
+
+  font-size:
+    11px;
+}
+
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.gilCycleFooter {
+
+  min-height:
+    62px;
+
+  display:
+    grid;
+
+  grid-template-columns:
+    220px
+    1fr
+    220px;
+
+  align-items:
+    center;
+
+  gap:
+    20px;
+
+  padding:
+    8px
+    28px;
+
+  background:
+    rgba(238,249,255,.94);
+
+  border-top:
+    1px solid rgba(32,101,157,.14);
+}
+
+
+.gilCycleFooter img {
+
+  max-height:
+    43px;
+
+  max-width:
+    170px;
+
+  object-fit:
+    contain;
+}
+
+
+.gilCycleFooterMessage {
+
+  text-align:
+    center;
+
+  color:
+    #175283;
+
+  font-size:
+    12px;
+
+  font-weight:
+    700;
+}
+
+
+.gilCycleFooter .right {
+
+  text-align:
+    right;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width:900px) {
+
+  .gilCycleHeader {
+
+    grid-template-columns:
+      150px
+      1fr
+      120px;
+
+    padding:
+      10px;
+  }
+
+
+  .gilCycleTitle p {
+
+    display:
+      none;
+  }
+
+
+  .gilCycleMain {
+
+    padding:
+      10px;
+  }
+
+
+  .gilCycleCard {
+
+    padding:
+      6px;
+  }
+
+
+  .gilCycleFooter {
+
+    grid-template-columns:
+      130px
+      1fr
+      130px;
+  }
+
+}
+
+</style>
+
+
+
+
+
+<style id="GIL_CARTO_FULLWIDTH_V133">
+
+/* =========================================================
+   V13.3
+   CARTOGRAPHIE = 100 % DE LA ZONE CENTRALE
+
+   IMPORTANT :
+   La largeur devient prioritaire.
+   On ne limite plus l'image par la hauteur du viewport.
+   ========================================================= */
+
+
+/* ---------------------------------------------------------
+   Zone principale
+   --------------------------------------------------------- */
+
+.gilCycleMain {
+
+  width:
+    100% !important;
+
+  max-width:
+    none !important;
+
+  padding:
+    12px 12px 18px !important;
+
+  margin:
+    0 !important;
+
+}
+
+
+/* ---------------------------------------------------------
+   Carte blanche
+   --------------------------------------------------------- */
+
+.gilCycleCard {
+
+  width:
+    100% !important;
+
+  max-width:
+    none !important;
+
+  margin:
+    0 !important;
+
+  padding:
+    0 !important;
+
+  overflow:
+    hidden !important;
+
+  border-radius:
+    16px !important;
+
+}
+
+
+/* ---------------------------------------------------------
+   Conteneur cartographie
+
+   PLUS DE HAUTEUR FIXE.
+   La hauteur dépend directement de l'image.
+   --------------------------------------------------------- */
+
+.gilCycleMap {
+
+  position:
+    relative !important;
+
+  width:
+    100% !important;
+
+  max-width:
+    none !important;
+
+  height:
+    auto !important;
+
+  min-height:
+    0 !important;
+
+  margin:
+    0 !important;
+
+  padding:
+    0 !important;
+
+  display:
+    block !important;
+
+  overflow:
+    visible !important;
+
+}
+
+
+/* ---------------------------------------------------------
+   IMAGE
+
+   C'est cette règle qui fait réellement la différence :
+   largeur 100 %, hauteur automatique.
+   --------------------------------------------------------- */
+
+.gilCycleMap > img {
+
+  display:
+    block !important;
+
+  width:
+    100% !important;
+
+  max-width:
+    none !important;
+
+  height:
+    auto !important;
+
+  max-height:
+    none !important;
+
+  margin:
+    0 !important;
+
+  padding:
+    0 !important;
+
+  object-fit:
+    initial !important;
+
+  object-position:
+    initial !important;
+
+}
+
+
+/* ---------------------------------------------------------
+   Future couche dynamique
+
+   Elle reste exactement superposée à la cartographie.
+   --------------------------------------------------------- */
+
+.gilCycleInteractiveLayer {
+
+  position:
+    absolute !important;
+
+  inset:
+    0 !important;
+
+  width:
+    100% !important;
+
+  height:
+    100% !important;
+
+}
+
+
+/* ---------------------------------------------------------
+   Badge version
+   --------------------------------------------------------- */
+
+.gilCycleVersion {
+
+  position:
+    absolute !important;
+
+  right:
+    18px !important;
+
+  bottom:
+    14px !important;
+
+  z-index:
+    10 !important;
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<header class="gilCycleHeader">
+
+  <div class="gilCycleHeaderLogo">
+
+    <img
+      src="../assets/bnpp_logo.png"
+      alt="BNP Paribas"
+    >
+
+  </div>
+
+
+  <div class="gilCycleTitle">
+
+    <h1>
+      GIL - Group Integration Layer
+    </h1>
+
+    <p>
+      Cycle opérationnel &amp;
+      Cartographie des interactions
+    </p>
+
+  </div>
+
+
+  <div class="gilCycleGil">
+
+    <img
+      src="../assets/gil_logo.png"
+      alt="GIL"
+    >
+
+  </div>
+
+</header>
+
+
+
+<div class="gilCycleToolbar">
+
+  <a
+    class="gilCycleBack"
+    href="../index.html"
+  >
+    ← Retour à l'accueil GIL
+  </a>
+
+
+  <div class="gilCycleToolbarInfo">
+    Du service GIL jusqu'au reporting projet
+  </div>
+
+</div>
+
+
+
+<main class="gilCycleMain">
+
+
+  <section class="gilCycleCard">
+
+
+    <div class="gilCycleMap">
+
+
+      <img
+        src="../assets/gil_cycle_operationnel.png"
+        alt="Cartographie du cycle opérationnel GIL"
+      >
+
+
+      <!--
+        V13 :
+        couche réservée aux futures interactions.
+
+        V14 pourra contenir :
+        - Service GIL
+        - Qualification N1
+        - Demande Flux
+        - Qualification N2
+        - Atelier
+        - Qualification N3
+        - Reporting
+      -->
+
+      <div
+        class="gilCycleInteractiveLayer"
+        id="gilCycleInteractiveLayer"
+      ></div>
+
+
+    </div>
+
+
+    <div class="gilCycleVersion">
+      Cartographie V13
+    </div>
+
+
+  </section>
+
+
+</main>
+
+
+
+<footer class="gilCycleFooter">
+
+
+  <div>
+
+    <img
+      src="../assets/bnpp_logo.png"
+      alt="BNP Paribas"
+    >
+
+  </div>
+
+
+  <div class="gilCycleFooterMessage">
+
+    Services qualifiés
+    →
+    Flux préparés
+    →
+    Tests
+    →
+    Arrimage
+    →
+    Reporting
+
+  </div>
+
+
+  <div class="right">
+
+    <img
+      src="../assets/gil_logo.png"
+      alt="GIL"
+    >
+
+  </div>
+
+
+</footer>
+
+
+</body>
+
+</html>

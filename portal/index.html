@@ -10017,6 +10017,48 @@ body.gilGhostHidden
 </style>
 
 
+
+<style id="GIL_CYCLE_OPERATIONNEL_STYLE_V13">
+
+  /*
+   * Cycle opérationnel :
+   * entrée indépendante située juste après Accueil.
+   */
+
+  .gilNavCycleOperational,
+  .gilCycleOperationalLink {
+
+    margin-top:
+      6px !important;
+
+    margin-bottom:
+      8px !important;
+
+    border:
+      1px solid rgba(255,255,255,.16) !important;
+
+    background:
+      linear-gradient(
+        135deg,
+        rgba(20,119,209,.32),
+        rgba(5,72,137,.30)
+      ) !important;
+  }
+
+
+  .gilNavCycleOperational:hover,
+  .gilCycleOperationalLink:hover {
+
+    background:
+      linear-gradient(
+        135deg,
+        rgba(35,145,239,.58),
+        rgba(11,92,168,.48)
+      ) !important;
+  }
+
+</style>
+
 </head>
 
 
@@ -10041,6 +10083,16 @@ body.gilGhostHidden
       >
         <span class="gilNavIcon">⌂</span>
         <span>Accueil</span>
+      </a>
+
+
+      <!-- GIL_CYCLE_OPERATIONNEL_MENU_V13 -->
+      <a
+        class="gilNavItem gilCycleOperationalLink"
+        href="cartographie/index.html"
+      >
+        <span class="gilNavIcon">⟳</span>
+        <span>Cycle opérationnel</span>
       </a>
 
       <a
@@ -11094,6 +11146,15 @@ body.gilGhostHidden
         <span>Accueil</span>
       </a>
 
+      <a
+        href="cartographie/index.html"
+        class="gilNavHome gilNavCycleOperational"
+      >
+        <span>⟳</span>
+        <span>Cycle opérationnel</span>
+      </a>
+
+
       ${
         groupHtml(
           "Pilotage & Reporting",
@@ -11950,6 +12011,110 @@ body.gilGhostHidden
 })();
 </script>
 
+
+
+<!-- ========================================================
+     V13.1 - GARANTIE LIEN CYCLE OPERATIONNEL
+     ======================================================== -->
+
+<script id="GIL_CYCLE_OPERATIONNEL_FORCE_V131">
+
+(function () {
+
+  function ensureCycleOperationalLink() {
+
+    const nav =
+      document.querySelector(
+        ".gilSidebar .gilNav"
+      );
+
+    if (!nav) {
+      return;
+    }
+
+    const existing =
+      nav.querySelector(
+        'a[href="cartographie/index.html"]'
+      );
+
+    if (existing) {
+      return;
+    }
+
+    const home =
+      Array.from(
+        nav.querySelectorAll("a")
+      ).find(a =>
+        (a.textContent || "")
+          .trim()
+          .toLowerCase()
+          .includes("accueil")
+      );
+
+    if (!home) {
+      return;
+    }
+
+    const link =
+      document.createElement("a");
+
+    link.href =
+      "cartographie/index.html";
+
+    link.className =
+      "gilNavHome gilNavCycleOperational";
+
+    link.innerHTML = `
+      <span>⟳</span>
+      <span>Cycle opérationnel</span>
+    `;
+
+    home.insertAdjacentElement(
+      "afterend",
+      link
+    );
+  }
+
+
+  function boot() {
+
+    ensureCycleOperationalLink();
+
+    setTimeout(
+      ensureCycleOperationalLink,
+      100
+    );
+
+    setTimeout(
+      ensureCycleOperationalLink,
+      500
+    );
+
+    setTimeout(
+      ensureCycleOperationalLink,
+      1200
+    );
+  }
+
+
+  if (
+    document.readyState === "loading"
+  ) {
+
+    document.addEventListener(
+      "DOMContentLoaded",
+      boot
+    );
+
+  }
+  else {
+
+    boot();
+
+  }
+
+})();
+</script>
 
 </body>
 </html>
