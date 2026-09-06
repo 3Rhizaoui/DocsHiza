@@ -724,6 +724,86 @@ body {
 
 </style>
 
+
+<style id="GIL_CARTO_GHOST_TOGGLE_V134">
+
+/* =========================================================
+   V13.4 - BRANDING GHOST PARTAGE AVEC LA HOME
+   ========================================================= */
+
+.gilCycleGhostLogo {
+  display: none;
+}
+
+.gilCycleGilLogo {
+  display: block;
+}
+
+
+/*
+ * Si le branding GHOST est actif :
+ * on affiche GHOST à la place du logo GIL de droite.
+ */
+
+body.gilGhostVisible .gilCycleGhostLogo {
+  display: block !important;
+}
+
+body.gilGhostVisible .gilCycleGilLogo {
+  display: none !important;
+}
+
+
+/*
+ * Si GHOST est désactivé :
+ * logo GIL conservé.
+ */
+
+body.gilGhostHidden .gilCycleGhostLogo {
+  display: none !important;
+}
+
+body.gilGhostHidden .gilCycleGilLogo {
+  display: block !important;
+}
+
+
+/*
+ * Même logique pour le footer.
+ */
+
+body.gilGhostVisible .gilCycleFooterGhost {
+  display: block !important;
+}
+
+body.gilGhostVisible .gilCycleFooterGil {
+  display: none !important;
+}
+
+body.gilGhostHidden .gilCycleFooterGhost {
+  display: none !important;
+}
+
+body.gilGhostHidden .gilCycleFooterGil {
+  display: block !important;
+}
+
+
+/*
+ * Dimensions homogènes.
+ */
+
+.gilCycleGhostLogo,
+.gilCycleGilLogo,
+.gilCycleFooterGhost,
+.gilCycleFooterGil {
+  max-width: 170px;
+  max-height: 58px;
+  object-fit: contain;
+}
+
+</style>
+
 </head>
 
 
@@ -759,8 +839,15 @@ body {
   <div class="gilCycleGil">
 
     <img
+      class="gilCycleGilLogo"
       src="../assets/gil_logo.png"
       alt="GIL"
+    >
+
+    <img
+      class="gilCycleGhostLogo"
+      src="../assets/ghost_logo.png"
+      alt="GHOST - Test & Quality"
     >
 
   </div>
@@ -868,8 +955,15 @@ body {
   <div class="right">
 
     <img
+      class="gilCycleFooterGil"
       src="../assets/gil_logo.png"
       alt="GIL"
+    >
+
+    <img
+      class="gilCycleFooterGhost"
+      src="../assets/ghost_logo.png"
+      alt="GHOST - Test & Quality"
     >
 
   </div>
@@ -877,6 +971,73 @@ body {
 
 </footer>
 
+
+
+<script id="GIL_CARTO_GHOST_STORAGE_V134">
+
+(function () {
+
+  "use strict";
+
+  const STORAGE_KEY =
+    "gil_show_ghost";
+
+
+  function applyGhostPreference() {
+
+    const saved =
+      localStorage.getItem(
+        STORAGE_KEY
+      );
+
+    /*
+     * Même comportement que la home :
+     * si aucune valeur n'existe encore,
+     * GHOST reste visible par défaut.
+     */
+
+    const visible =
+      saved === null
+        ? true
+        : saved === "1";
+
+
+    document.body.classList.toggle(
+      "gilGhostVisible",
+      visible
+    );
+
+    document.body.classList.toggle(
+      "gilGhostHidden",
+      !visible
+    );
+  }
+
+
+  applyGhostPreference();
+
+
+  /*
+   * Permet aussi de synchroniser la page
+   * si le paramètre est modifié dans un autre onglet.
+   */
+
+  window.addEventListener(
+    "storage",
+    function (event) {
+
+      if (
+        event.key === STORAGE_KEY
+      ) {
+        applyGhostPreference();
+      }
+
+    }
+  );
+
+})();
+
+</script>
 
 </body>
 
