@@ -193,3 +193,120 @@ body.gilGhostHidden .gilGlobalGilReplacement {
     background: white !important;
   }
 }
+
+
+/* =========================================================
+   V11.4 - NORMALISATION ECHELLE DES PAGES
+   ========================================================= */
+
+/*
+ * Certaines pages Reporting historiques utilisent :
+ *
+ *   zoom: 75%;
+ *
+ * ou :
+ *
+ *   transform: scale(.75);
+ *
+ * Le portail normalisé doit toujours être affiché
+ * à l'échelle navigateur 100 %.
+ */
+
+html {
+  zoom: 1 !important;
+
+  transform:
+    none !important;
+
+  scale:
+    none !important;
+}
+
+
+html body.gilNormalizedPage {
+  zoom: 1 !important;
+
+  transform:
+    none !important;
+
+  scale:
+    none !important;
+
+  width:
+    100% !important;
+
+  max-width:
+    none !important;
+
+  font-size:
+    100% !important;
+}
+
+
+/* ---------------------------------------------------------
+   CONTENU METIER
+   --------------------------------------------------------- */
+
+body.gilNormalizedPage main {
+  width:
+    100% !important;
+
+  max-width:
+    none !important;
+
+  transform:
+    none !important;
+
+  scale:
+    none !important;
+
+  box-sizing:
+    border-box !important;
+}
+
+
+/*
+ * Les anciens wrappers éventuels ne doivent plus
+ * limiter artificiellement la largeur du dashboard.
+ */
+
+body.gilNormalizedPage .page,
+body.gilNormalizedPage .container,
+body.gilNormalizedPage .dashboard,
+body.gilNormalizedPage .report {
+  max-width:
+    none !important;
+}
+
+
+/* ---------------------------------------------------------
+   HEADER COMMUN
+   --------------------------------------------------------- */
+
+body.gilNormalizedPage .gilGlobalHeader {
+  zoom:
+    1 !important;
+
+  transform:
+    none !important;
+
+  scale:
+    none !important;
+}
+
+
+/* ---------------------------------------------------------
+   FOOTER COMMUN
+   --------------------------------------------------------- */
+
+body.gilNormalizedPage .gilGlobalFooter {
+  zoom:
+    1 !important;
+
+  transform:
+    none !important;
+
+  scale:
+    none !important;
+}
+
