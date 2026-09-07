@@ -19,6 +19,25 @@ PAYLOAD_BASE = (
     / "payload_base.json"
 )
 
+
+# ============================================================
+# V5 - PUBLICATION REELLE DU PORTAL
+# ============================================================
+
+GIL_PROJECT = (
+    SOURCE
+    / "commun"
+    / "data"
+    / "gil_project.json"
+)
+
+GIL_HOME = (
+    SOURCE
+    / "commun"
+    / "data"
+    / "gil_home.json"
+)
+
 PAYLOAD_STANDALONE = (
     SOURCE
     / "commun"
@@ -34,7 +53,8 @@ PAYLOAD_STANDALONE = (
 
 required = [
     SOURCE,
-    PAYLOAD_BASE,
+    GIL_PROJECT,
+    GIL_HOME,
     PAYLOAD_STANDALONE,
 ]
 
@@ -57,7 +77,7 @@ timestamp = datetime.now().strftime(
 )
 
 payload_meta = json.loads(
-    PAYLOAD_BASE.read_text(
+    GIL_PROJECT.read_text(
         encoding="utf-8",
         errors="replace"
     )
@@ -90,7 +110,7 @@ destination = (
 
 
 print("=" * 72)
-print("GENERATION LIVRAISON PORTAL GIL - V4.2 SHAREPOINT")
+print("GENERATION LIVRAISON PORTAL GIL - V5 SHAREPOINT")
 print("=" * 72)
 
 print("Source      :", SOURCE)
@@ -174,12 +194,24 @@ print("copie portail minimale => OK")
 # 2. CHARGEMENT DES SNAPSHOTS
 # ============================================================
 
-payload_base = json.loads(
-    PAYLOAD_BASE.read_text(
+gil_project = json.loads(
+    GIL_PROJECT.read_text(
         encoding="utf-8",
         errors="replace"
     )
 )
+
+gil_home = json.loads(
+    GIL_HOME.read_text(
+        encoding="utf-8",
+        errors="replace"
+    )
+)
+
+# Compatibilité avec le code V4 :
+# toutes les fonctions utilisant payload_base utilisent
+# désormais la publication réelle.
+payload_base = gil_project
 
 payload_standalone = json.loads(
     PAYLOAD_STANDALONE.read_text(
@@ -189,11 +221,19 @@ payload_standalone = json.loads(
 )
 
 
-payload_base_js = json.dumps(
-    payload_base,
+gil_project_js = json.dumps(
+    gil_project,
     ensure_ascii=False,
     separators=(",", ":")
 )
+
+gil_home_js = json.dumps(
+    gil_home,
+    ensure_ascii=False,
+    separators=(",", ":")
+)
+
+payload_base_js = gil_project_js
 
 payload_standalone_js = json.dumps(
     payload_standalone,
@@ -249,6 +289,37 @@ def patch_reporting(path):
         encoding="utf-8",
         errors="replace"
     )
+
+
+    # ========================================================
+    # V5 - SNAPSHOT REEL REPORTING
+    # ========================================================
+
+    fallback_pattern = re.compile(
+        r"const\s+fallbackData\s*=\s*\{.*?\};"
+        r"\s*(?=let\s+currentData\s*=)",
+        re.S
+    )
+
+    fallback_value = (
+        "const fallbackData = "
+        + gil_project_js
+        + ";\n\n    "
+    )
+
+    text, fallback_count = (
+        fallback_pattern.subn(
+            fallback_value,
+            text,
+            count=1
+        )
+    )
+
+    if fallback_count != 1:
+        raise RuntimeError(
+            "fallbackData réel non injecté : "
+            + str(path)
+        )
 
 
     # --------------------------------------------------------
@@ -370,6 +441,130 @@ def patch_reporting(path):
 
 for page in report_pages:
     patch_reporting(page)
+
+
+
+# ============================================================
+# 3.1 HOME - SNAPSHOT REEL gil_home.json
+# ============================================================
+
+home_page = (
+    destination
+    / "index.html"
+)
+
+if not home_page.exists():
+    raise RuntimeError(
+        "Home Portal absente"
+    )
+
+home_text = home_page.read_text(
+    encoding="utf-8",
+    errors="replace"
+)
+
+home_script = (
+    """
+<script id="GIL_SHAREPOINT_HOME_V5">
+(function () {
+
+  const data =
+"""
+    + gil_home_js
+    + """;
+
+  window.__GIL_HOME_DATA__ =
+    data;
+
+  function setText(id, value) {
+
+    const el =
+      document.getElementById(id);
+
+    if (!el) {
+      return;
+    }
+
+    if (
+      value === undefined
+      || value === null
+    ) {
+      return;
+    }
+
+    el.textContent =
+      String(value);
+  }
+
+
+  const arrimage =
+    data.arrimage
+    || {};
+
+  setText(
+    "homeTotalFlux",
+    arrimage.total
+  );
+
+  setText(
+    "homeDelivered",
+    arrimage.delivered
+  );
+
+  setText(
+    "homeDeliveredPct",
+    arrimage.deliveredPct != null
+      ? String(arrimage.deliveredPct) + "%"
+      : null
+  );
+
+  setText(
+    "homeProgress",
+    arrimage.inProgress
+  );
+
+  setText(
+    "homeProgressPct",
+    arrimage.inProgressPct != null
+      ? String(arrimage.inProgressPct) + "%"
+      : null
+  );
+
+  if (data.generatedAt) {
+
+    setText(
+      "gilHeaderUpdated",
+      data.generatedAt
+    );
+  }
+
+})();
+</script>
+"""
+)
+
+if "GIL_SHAREPOINT_HOME_V5" not in home_text:
+
+    if "</body>" not in home_text:
+        raise RuntimeError(
+            "balise </body> Home introuvable"
+        )
+
+    home_text = home_text.replace(
+        "</body>",
+        home_script
+        + "\n</body>",
+        1
+    )
+
+home_page.write_text(
+    home_text,
+    encoding="utf-8"
+)
+
+print(
+    "Home snapshot réel     => OK"
+)
 
 
 # ============================================================
@@ -1092,7 +1287,7 @@ js_count = len(
 
 lines = [
 
-    "LIVRAISON PORTAL GIL - V4.2 SHAREPOINT",
+    "LIVRAISON PORTAL GIL - V5 SHAREPOINT",
 
     "=" * 70,
 
@@ -1115,9 +1310,10 @@ lines = [
 
     "-" * 70,
 
-    "payload_base.json       : injecté",
+    "gil_project.json        : publication réelle injectée",
 
-    "payload_standalone.json : injecté",
+    "gil_home.json           : publication réelle injectée",
+    "payload_standalone.json : publication réelle injectée",
 
     "",
 
@@ -1125,9 +1321,9 @@ lines = [
 
     "-" * 70,
 
-    "Reporting général : fallbackData local",
+    "Reporting général : snapshot gil_project réel",
 
-    "Reporting sprint  : fallbackData local",
+    "Reporting sprint  : snapshot gil_project réel",
 
     "Actions serveur   : désactivées",
 
@@ -1336,7 +1532,7 @@ for file in destination.rglob("*"):
 
 manifest = {
     "application": "GIL Portal",
-    "deliveryVersion": "V4.2",
+    "deliveryVersion": "V5",
     "generatedAt": datetime.now().isoformat(
         timespec="seconds"
     ),
@@ -1590,7 +1786,7 @@ print(
 
 print()
 print("=" * 72)
-print("RESULTAT V4.2")
+print("RESULTAT V5")
 print("=" * 72)
 
 print(
