@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Programme ESTREEM - Acquisition</title>
+
+  <link rel="stylesheet" href="../detail.css">
+  <link rel="stylesheet" href="acquisition.css">
+</head>
+
+<body>
+
+<header class="acq-topbar">
+
+  <div class="acq-brand">
+    <img
+      src="../../assets/bnpp_logo.png"
+      alt="BNP Paribas"
+      class="acq-logo"
+    >
+
+    <div class="acq-separator"></div>
+
+    <div class="acq-program">
+      <strong>Programme ESTREEM</strong>
+    </div>
+  </div>
+
+  <nav class="acq-nav">
+    <a href="../index.html">Accueil</a>
+    <a class="active" href="index.html">Acquisition</a>
+    <a href="../emission/index.html">Émission</a>
+    <a href="../contestation/index.html">Contestation</a>
+  </nav>
+
+  <div class="acq-user">
+    <div class="acq-search">⌕ Rechercher...</div>
+    <div class="acq-bell">🔔<span>3</span></div>
+    <div class="acq-avatar">HR</div>
+    <div class="acq-name">HIZAOUI⌄</div>
+  </div>
+
+</header>
+
+
+<div class="acq-breadcrumb">
+  ⌂ &nbsp;›&nbsp; Acquisition &nbsp;›&nbsp; Daily Report Tests SIT
+</div>
+
+
+<main class="acq-page">
+
+  <section class="acq-page-head">
+
+    <div>
+      <h1>Daily Report Tests SIT Acquisition</h1>
+      <p>Vue exécutive - Cliquez sur une zone pour plus de détails</p>
+    </div>
+
+    <div class="acq-actions">
+      <button class="acq-date">▣ &nbsp; 02/09/2026 &nbsp;⌄</button>
+      <button class="acq-refresh">↻ &nbsp; Actualiser les données</button>
+      <button class="acq-export">⇩ &nbsp; Exporter &nbsp;⌄</button>
+    </div>
+
+  </section>
+
+
+  <section class="acq-main-card">
+
+    <div class="acq-report-title">
+
+      <div class="acq-dots">⠿</div>
+
+      <h2>DAILY REPORT TESTS SIT ACQUISITION</h2>
+
+      <div class="acq-report-status">
+        <span class="acq-badge-warning">SOUS VIGILANCE</span>
+        <span class="acq-trend-icon">↘</span>
+        <span class="acq-weather">🌧️</span>
+      </div>
+
+    </div>
+
+
+    <div class="acq-summary-text">
+
+      <p>
+        <strong>Les tests SIT Acquisition restent sous vigilance.</strong>
+        Les activités <strong>Onboarding Commerçant</strong> et
+        <strong>SAA</strong> sont fortement impactées par l’indisponibilité
+        des services Estreem et du SAA ESTREEM, des écarts de données eOne/K2,
+        des anomalies bloquantes sur les flux MM5/MM7, et des retards de livraison.
+      </p>
+
+      <p class="critical">
+        <strong>Éléments critiques :</strong>
+        [Onboarding Commerçant] Services Estreem indisponibles
+        (ticket 82469850) | [Test MM7] Evolution du champ ExecutionContract
+        non tracée par Estreem
+      </p>
+
+      <p class="critical">
+        [SAA] Aucune exécution en "Intégration" car l’environnement SIT Estreem
+        est indisponible depuis la livraison du 31/08/26
+      </p>
+
+    </div>
+
+
+    <div class="acq-main-grid">
+
+      <!-- ZONE 1 -->
+      <article class="acq-zone acq-zone-blue">
+
+        <div class="acq-zone-head blue">
+
+          <div class="acq-number blue-num">1</div>
+
+          <h3>Onboarding Commerçant</h3>
+
+          <div class="acq-zone-meta">
+            <div class="delay-box">
+              <span>RETARD SIT</span>
+              <strong>2 sem.</strong>
+              <small>MM5 / MM7</small>
+            </div>
+
+            <span class="risk-pill">
+              RISQUE PRINCIPAL
+            </span>
+          </div>
+
+        </div>
+
+
+        <div class="acq-zone-body">
+
+          <div class="acq-kpis three">
+
+            <div class="acq-kpi">
+              <span>RÉUSSITE / EXÉCUTÉS</span>
+              <strong class="blue-text">71%</strong>
+              <small>117 cas OK / Exécutés: 164</small>
+            </div>
+
+            <div class="acq-kpi">
+              <span>RÉUSSITE / NOMBRE TOTAL DE TEST</span>
+              <strong class="green-text">64%</strong>
+              <small>117 OK / TOTAL (CIBLE FINALE: 184)</small>
+            </div>
+
+            <div class="acq-kpi">
+              <span class="red-label">Anomalies ouvertes ESTREEM</span>
+              <strong class="red-text">5</strong>
+              <small>3 bloquantes, 2 majeur</small>
+            </div>
+
+          </div>
+
+
+          <div class="acq-text-block">
+
+            <p>
+              <strong>TEST INTEGRATION FCC: FCC-BCFM</strong>
+              (Merchant, point de vente, catégorie financière, ...):
+              le lot 1 est complété (100% des cas OK)
+            </p>
+
+            <h4>POINTS MAJEURS</h4>
+
+            <ul>
+              <li>
+                <strong>Le retard de 2 semaines</strong> est lié à la livraison
+                ESTREEM non conforme du 31/07
+              </li>
+            </ul>
+
+            <h4>ÉVOLUTION J-1</h4>
+
+            <ul>
+              <li>Tests Création/Modification/Consultation contrat commerçant :</li>
+              <li class="sub">Tests Acquittements ESTREEM MM5/MM7</li>
+              <li class="sub">
+                Tests MM5 partiellement bloqués par la bascule de l'url APIGEE/GIL
+                → Ticket <strong class="red-text">82469850</strong>
+              </li>
+              <li class="sub">
+                Tests MM7: test en échec après rollback
+              </li>
+            </ul>
+
+          </div>
+
+        </div>
+
+      </article>
+
+
+      <!-- ZONE 2 -->
+      <article class="acq-zone acq-zone-green">
+
+        <div class="acq-zone-head green">
+
+          <div class="acq-number green-num">2</div>
+
+          <h3>SAA</h3>
+
+          <div class="acq-zone-meta">
+            <span class="progress-pill">
+              EN PROGRESSION
+            </span>
+          </div>
+
+        </div>
+
+
+        <div class="acq-zone-body">
+
+          <div class="acq-kpis four">
+
+            <div class="acq-kpi">
+              <span>1. TESTS EXÉCUTÉS</span>
+              <strong>375</strong>
+              <small>Total (cible): 1825</small>
+            </div>
+
+            <div class="acq-kpi">
+              <span>2. RÉUSSITE / EXÉCUTÉS</span>
+              <strong class="blue-text">29%</strong>
+              <small>108 OK / 375 exécutés</small>
+            </div>
+
+            <div class="acq-kpi">
+              <span>3. RÉUSSITE / NOMBRE TOTAL DE TEST</span>
+              <strong class="green-text">6%</strong>
+              <small>108 OK / 1825 cas de test en cible</small>
+            </div>
+
+            <div class="acq-kpi">
+              <span class="red-label">Anomalies ouvertes ESTREEM</span>
+              <strong class="red-text">9</strong>
+              <small>1 bloquante, 8 majeur</small>
+            </div>
+
+          </div>
+
+
+          <div class="acq-text-block">
+
+            <h4>POINTS MAJEURS</h4>
+
+            <ul class="green-bullets">
+              <li class="critical-line">
+                SAA indisponible, impossible d’exécuter les tests
+                → anomalie priorisée (82441663)
+              </li>
+
+              <li>
+                Injection de masse - Nombre important de transactions non abouties
+                → Analyse en cours par Estreem
+              </li>
+
+              <li>
+                Modification des données dans la base reflet commerçant eOne
+                pour être iso K2
+              </li>
+
+              <li>
+                Test d’intégration partiels - contenu des réponses non vérifiables
+                à date
+              </li>
+
+              <li>
+                Contrat commerçant - retrait Guichet (ERT 75)
+                - service non encore ouvert
+              </li>
+            </ul>
+
+          </div>
+
+        </div>
+
+      </article>
+
+    </div>
+
+
+    <div class="acq-bottom-zones">
+
+      <!-- ZONE 3 -->
+      <section class="acq-bottom-card risk">
+
+        <div class="acq-number red-num">3</div>
+
+        <div class="acq-bottom-content">
+          <h3>Risques</h3>
+
+          <ul>
+            <li><strong>Indisponibilité SAA!</strong></li>
+            <li>
+              SAA : risque de couverture fonctionnelle incomplète lié aux écarts eOne/K2
+            </li>
+            <li>
+              Liste des écarts SAA K2 vs SAA eOne en cours de production
+            </li>
+          </ul>
+        </div>
+
+      </section>
+
+
+      <!-- ZONE 4 -->
+      <section class="acq-bottom-card actions">
+
+        <div class="acq-number orange-num">4</div>
+
+        <div class="acq-bottom-content">
+          <h3>Décisions / Arbitrages / Actions attendues</h3>
+
+          <ul>
+            <li>
+              [SAA]: <strong>Obtenir la nouvelle date BHAA</strong>
+            </li>
+            <li>
+              [SAA]: Attente de la structure de réponse prévue pour les cas de rejet
+            </li>
+            <li>
+              [SAA]: Validation des écarts SAA K2 Homol vs SAA EO
+            </li>
+          </ul>
+        </div>
+
+      </section>
+
+
+      <!-- ZONE 5 -->
+      <section class="acq-bottom-card impact">
+
+        <div class="acq-number purple-num">5</div>
+
+        <div class="acq-bottom-content">
+          <h3>Impact programme</h3>
+
+          <p>
+            Les blocages techniques et les livraisons non stabilisées
+            ralentissent l’exécution des tests et compromettent la visibilité
+            sur l’atteinte des objectifs de couverture fonctionnelle et
+            le respect du planning de test.
+          </p>
+        </div>
+
+      </section>
+
+    </div>
+
+  </section>
+
+
+  <section class="acq-summary-kpis">
+
+    <article>
+      <div class="acq-summary-icon blue-icon">▤</div>
+      <div>
+        <span>Tests exécutés</span>
+        <strong>2 111</strong>
+      </div>
+      <small class="positive">↑ +12%<br>vs J-1</small>
+    </article>
+
+    <article>
+      <div class="acq-summary-icon green-icon">✓</div>
+      <div>
+        <span>Taux de réussite</span>
+        <strong>38%</strong>
+      </div>
+      <small class="positive">↑ +4%<br>vs J-1</small>
+    </article>
+
+    <article>
+      <div class="acq-summary-icon red-icon">⚠</div>
+      <div>
+        <span>Anomalies ouvertes</span>
+        <strong>14</strong>
+      </div>
+      <small class="negative">↓ 2<br>vs J-1</small>
+    </article>
+
+    <article>
+      <div class="acq-summary-icon red-icon">!</div>
+      <div>
+        <span>Anomalies bloquantes</span>
+        <strong>4</strong>
+      </div>
+      <small>= 0<br>vs J-1</small>
+    </article>
+
+    <article>
+      <div class="acq-summary-icon blue-icon">♟</div>
+      <div>
+        <span>Équipe impliquée</span>
+        <strong>28</strong>
+      </div>
+      <small class="positive">↑ +1<br>vs J-1</small>
+    </article>
+
+  </section>
+
+
+  <section class="acq-table-card">
+
+    <div class="acq-table-head">
+      <h3>Dernières anomalies bloquantes</h3>
+
+      <a href="#">
+        Voir toutes les anomalies →
+      </a>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Réf. ticket</th>
+          <th>Périmètre</th>
+          <th>Description</th>
+          <th>Statut</th>
+          <th>Criticité</th>
+          <th>Date ouverture</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr>
+          <td><strong>#82469850</strong></td>
+          <td>Onboarding Commerçant</td>
+          <td>Services Estreem indisponibles (Test MM5)</td>
+          <td><span class="table-status">En cours</span></td>
+          <td><span class="table-critical">Bloquant</span></td>
+          <td>02/09/2026</td>
+          <td><button class="table-button">Voir</button></td>
+        </tr>
+      </tbody>
+    </table>
+
+  </section>
+
+</main>
+
+</body>
+</html>

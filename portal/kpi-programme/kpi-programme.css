@@ -1,0 +1,2427 @@
+:root {
+  --page-bg: #f7f9fc;
+  --panel-bg: #ffffff;
+  --text: #17304f;
+  --muted: #667892;
+  --border: #e3e8ef;
+
+  /* ========================================================
+     DOMAINES - COULEURS TRES CLAIRES
+     ======================================================== */
+
+  --acq-bg: #f7fbff;
+  --acq-zone: #eef7ff;
+  --acq-zone-2: #e8f3ff;
+  --acq-border: #cfe6fb;
+  --acq-accent: #4c9fe8;
+  --acq-accent-strong: #1e78c9;
+
+  --iss-bg: #f7fcf9;
+  --iss-zone: #eef9f3;
+  --iss-zone-2: #e8f6ee;
+  --iss-border: #cdebdc;
+  --iss-accent: #4cb98b;
+  --iss-accent-strong: #16845f;
+
+  --disp-bg: #fcfaff;
+  --disp-zone: #f6f0ff;
+  --disp-zone-2: #f0e8ff;
+  --disp-border: #e1d3fa;
+  --disp-accent: #9b7be8;
+  --disp-accent-strong: #744ac8;
+
+  /* ========================================================
+     KPI - COULEURS FONCTIONNELLES
+     ======================================================== */
+
+  --kpi-execution-bg: #f1f7ff;
+  --kpi-execution: #4b9de8;
+
+  --kpi-success-bg: #f0faf5;
+  --kpi-success: #40ad7c;
+
+  --kpi-coverage-bg: #f5f3ff;
+  --kpi-coverage: #8174e8;
+
+  --kpi-anomaly-bg: #fff3f3;
+  --kpi-anomaly: #e56868;
+
+  /* ========================================================
+     STATUTS / METEO
+     ======================================================== */
+
+  --status-good-bg: #eef9f3;
+  --status-good: #16845f;
+
+  --status-warning-bg: #fff8e9;
+  --status-warning: #c88715;
+
+  --status-risk-bg: #fff2e8;
+  --status-risk: #da7818;
+
+  --status-critical-bg: #fff0f0;
+  --status-critical: #d84f4f;
+
+  --status-inactive-bg: #f3f4f7;
+  --status-inactive: #8b94a3;
+}
+
+
+/* ============================================================
+   GLOBAL
+   ============================================================ */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      var(--page-bg) 100%
+    );
+
+  color: var(--text);
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.program-header {
+  min-height: 96px;
+
+  padding:
+    16px 28px;
+
+  background:
+    rgba(255,255,255,.96);
+
+  border-bottom:
+    1px solid var(--border);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.program-brand {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.bnpp-logo {
+  width: 220px;
+  max-height: 65px;
+  object-fit: contain;
+}
+
+.program-title {
+  padding-left: 24px;
+  border-left: 1px solid #d9e1eb;
+}
+
+.program-title h1 {
+  margin: 0;
+
+  font-size: 34px;
+  line-height: 1;
+
+  color: #17345e;
+}
+
+.program-title p {
+  margin: 8px 0 0;
+
+  font-size: 21px;
+  color: #49698d;
+}
+
+.program-header-right {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.report-date {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.report-date strong {
+  font-size: 15px;
+}
+
+.report-date span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.programme-badge {
+  padding:
+    13px 22px;
+
+  border-radius: 11px;
+
+  background:
+    #f0f7ff;
+
+  border:
+    1px solid #d0e5f9;
+
+  color:
+    #1568b8;
+
+  font-weight: 800;
+}
+
+
+/* ============================================================
+   PAGE
+   ============================================================ */
+
+.program-page {
+  max-width: 1680px;
+
+  margin:
+    0 auto;
+
+  padding:
+    18px 22px 28px;
+}
+
+
+/* ============================================================
+   KPI GLOBAUX
+   ============================================================ */
+
+.global-summary {
+  display: grid;
+
+  grid-template-columns:
+    1fr 1fr 1fr 1fr 1.45fr;
+
+  gap: 12px;
+
+  margin-bottom:
+    14px;
+}
+
+.summary-card {
+  min-height: 100px;
+
+  border:
+    1px solid var(--border);
+
+  border-radius:
+    13px;
+
+  padding:
+    16px 18px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    14px;
+
+  background:
+    #fff;
+
+  box-shadow:
+    0 3px 10px rgba(34,72,110,.035);
+}
+
+.summary-icon {
+  min-width:
+    45px;
+
+  font-size:
+    31px;
+
+  text-align:
+    center;
+}
+
+.summary-card span {
+  display:
+    block;
+
+  font-size:
+    13px;
+
+  font-weight:
+    700;
+}
+
+.summary-card strong {
+  display:
+    block;
+
+  margin-top:
+    4px;
+
+  font-size:
+    29px;
+
+  color:
+    #102d52;
+}
+
+.summary-card small {
+  display:
+    block;
+
+  margin-top:
+    4px;
+
+  color:
+    var(--muted);
+}
+
+.summary-tests {
+  background:
+    #f4f9ff;
+}
+
+.summary-success {
+  background:
+    #f3fbf7;
+}
+
+.summary-coverage {
+  background:
+    #f7f5ff;
+}
+
+.summary-anomalies {
+  background:
+    #fff5f5;
+}
+
+.summary-global {
+  background:
+    #fffaf0;
+}
+
+
+/* ============================================================
+   GRILLE DOMAINES
+   ============================================================ */
+
+.domain-grid {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap:
+    14px;
+}
+
+.domain-panel {
+  border:
+    1px solid;
+
+  border-radius:
+    15px;
+
+  padding:
+    14px;
+
+  box-shadow:
+    0 4px 14px rgba(34,72,110,.035);
+}
+
+
+/* ============================================================
+   ACQ
+   ============================================================ */
+
+.domain-acq {
+  background:
+    linear-gradient(
+      180deg,
+      var(--acq-bg),
+      #ffffff 88%
+    );
+
+  border-color:
+    var(--acq-border);
+}
+
+.domain-acq .domain-icon {
+  background:
+    var(--acq-zone-2);
+
+  color:
+    var(--acq-accent-strong);
+}
+
+.domain-acq .environment-block,
+.domain-acq .domain-points {
+  background:
+    var(--acq-zone);
+}
+
+.domain-acq .domain-detail-button {
+  background:
+    linear-gradient(
+      90deg,
+      #ddebfb,
+      #cce5fb
+    );
+
+  color:
+    #166ab6;
+
+  border:
+    1px solid var(--acq-border);
+}
+
+
+/* ============================================================
+   ISS
+   ============================================================ */
+
+.domain-iss {
+  background:
+    linear-gradient(
+      180deg,
+      var(--iss-bg),
+      #ffffff 88%
+    );
+
+  border-color:
+    var(--iss-border);
+}
+
+.domain-iss .domain-icon {
+  background:
+    var(--iss-zone-2);
+
+  color:
+    var(--iss-accent-strong);
+}
+
+.domain-iss .environment-block,
+.domain-iss .domain-points {
+  background:
+    var(--iss-zone);
+}
+
+.domain-iss .domain-detail-button {
+  background:
+    linear-gradient(
+      90deg,
+      #dff4ea,
+      #d2efdf
+    );
+
+  color:
+    #167958;
+
+  border:
+    1px solid var(--iss-border);
+}
+
+
+/* ============================================================
+   DISP
+   ============================================================ */
+
+.domain-disp {
+  background:
+    linear-gradient(
+      180deg,
+      var(--disp-bg),
+      #ffffff 88%
+    );
+
+  border-color:
+    var(--disp-border);
+}
+
+.domain-disp .domain-icon {
+  background:
+    var(--disp-zone-2);
+
+  color:
+    var(--disp-accent-strong);
+}
+
+.domain-disp .environment-block,
+.domain-disp .domain-points {
+  background:
+    var(--disp-zone);
+}
+
+.domain-disp .domain-detail-button {
+  background:
+    linear-gradient(
+      90deg,
+      #eee6ff,
+      #e3d6fb
+    );
+
+  color:
+    #7146c3;
+
+  border:
+    1px solid var(--disp-border);
+}
+
+
+/* ============================================================
+   HEADER DOMAINE
+   ============================================================ */
+
+.domain-panel-header {
+  min-height:
+    74px;
+
+  display:
+    flex;
+
+  align-items:
+    flex-start;
+
+  justify-content:
+    space-between;
+
+  gap:
+    12px;
+}
+
+.domain-main-title {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    13px;
+}
+
+.domain-icon {
+  width:
+    58px;
+
+  height:
+    58px;
+
+  border-radius:
+    13px;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  font-size:
+    30px;
+}
+
+.domain-main-title h2 {
+  margin:
+    0;
+
+  font-size:
+    21px;
+
+  color:
+    #15365f;
+}
+
+.domain-main-title p {
+  margin:
+    5px 0 0;
+
+  font-size:
+    14px;
+
+  color:
+    #41648a;
+}
+
+
+/* ============================================================
+   BADGES STATUT
+   ============================================================ */
+
+.domain-state {
+  padding:
+    8px 14px;
+
+  border-radius:
+    999px;
+
+  border:
+    1px solid;
+
+  font-size:
+    12px;
+
+  font-weight:
+    800;
+
+  white-space:
+    nowrap;
+}
+
+.state-vigilance {
+  background:
+    var(--status-warning-bg);
+
+  color:
+    var(--status-warning);
+
+  border-color:
+    #f2dcaa;
+}
+
+.state-stable {
+  background:
+    var(--status-good-bg);
+
+  color:
+    var(--status-good);
+
+  border-color:
+    #cdebdc;
+}
+
+.state-watch {
+  background:
+    #f6f1ff;
+
+  color:
+    #7b55ca;
+
+  border-color:
+    #dfd1fa;
+}
+
+
+/* ============================================================
+   ENVIRONNEMENTS SIT / UAT
+   ============================================================ */
+
+.environment-block {
+  margin-top:
+    10px;
+
+  padding:
+    10px;
+
+  border-radius:
+    12px;
+
+  border:
+    1px solid rgba(150,165,185,.13);
+}
+
+.environment-head {
+  min-height:
+    40px;
+
+  display:
+    grid;
+
+  grid-template-columns:
+    52px 1fr auto;
+
+  align-items:
+    center;
+
+  gap:
+    10px;
+}
+
+.environment-head > strong {
+  font-size:
+    20px;
+
+  color:
+    #12375f;
+}
+
+.environment-head > span {
+  font-size:
+    13px;
+
+  color:
+    #365f87;
+}
+
+.weather-zone {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    8px;
+
+  font-size:
+    13px;
+
+  font-weight:
+    700;
+
+  white-space:
+    nowrap;
+}
+
+.trend {
+  font-size:
+    27px;
+
+  line-height:
+    1;
+}
+
+.trend-up {
+  color:
+    var(--status-good);
+}
+
+.trend-flat {
+  color:
+    #2373b4;
+}
+
+.trend-down {
+  color:
+    #367ab6;
+}
+
+.trend-down-danger {
+  color:
+    var(--status-critical);
+}
+
+.weather {
+  font-size:
+    25px;
+}
+
+
+/* ============================================================
+   KPI PAR ENVIRONNEMENT
+   ============================================================ */
+
+.environment-kpis {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap:
+    8px;
+
+  margin-top:
+    8px;
+}
+
+.metric {
+  min-width:
+    0;
+
+  padding:
+    10px;
+
+  border-radius:
+    9px;
+
+  background:
+    rgba(255,255,255,.76);
+
+  border:
+    1px solid rgba(220,227,236,.7);
+}
+
+.metric > span {
+  display:
+    block;
+
+  font-size:
+    11px;
+
+  color:
+    #54708e;
+}
+
+.metric > strong {
+  display:
+    block;
+
+  margin-top:
+    4px;
+
+  font-size:
+    21px;
+
+  color:
+    #113158;
+}
+
+.progress {
+  height:
+    7px;
+
+  margin-top:
+    7px;
+
+  border-radius:
+    999px;
+
+  overflow:
+    hidden;
+
+  background:
+    #dfe6ee;
+}
+
+.progress span {
+  display:
+    block;
+
+  height:
+    100%;
+
+  border-radius:
+    inherit;
+}
+
+
+/* KPI fonctionnels indépendants des domaines */
+
+.metric-execution {
+  background:
+    var(--kpi-execution-bg);
+}
+
+.metric-execution .progress span {
+  background:
+    var(--kpi-execution);
+}
+
+.metric-success {
+  background:
+    var(--kpi-success-bg);
+}
+
+.metric-success .progress span {
+  background:
+    var(--kpi-success);
+}
+
+.metric-coverage {
+  background:
+    var(--kpi-coverage-bg);
+}
+
+.metric-coverage .progress span {
+  background:
+    var(--kpi-coverage);
+}
+
+.metric-anomaly {
+  background:
+    var(--kpi-anomaly-bg);
+}
+
+.metric-anomaly .progress span {
+  background:
+    var(--kpi-anomaly);
+}
+
+.metric-empty {
+  background:
+    #f7f7fa;
+}
+
+.metric-empty strong {
+  color:
+    #8993a1;
+}
+
+
+/* ============================================================
+   POINTS CLES
+   ============================================================ */
+
+.domain-points {
+  min-height:
+    128px;
+
+  margin-top:
+    10px;
+
+  padding:
+    12px 14px;
+
+  border-radius:
+    11px;
+
+  border:
+    1px solid rgba(150,165,185,.12);
+}
+
+.domain-points h3 {
+  margin:
+    0 0 8px;
+
+  font-size:
+    16px;
+}
+
+.domain-acq .domain-points h3 {
+  color:
+    var(--acq-accent-strong);
+}
+
+.domain-iss .domain-points h3 {
+  color:
+    var(--iss-accent-strong);
+}
+
+.domain-disp .domain-points h3 {
+  color:
+    var(--disp-accent-strong);
+}
+
+.domain-points ul {
+  margin:
+    0;
+
+  padding-left:
+    22px;
+
+  color:
+    #365b7e;
+
+  font-size:
+    13px;
+
+  line-height:
+    1.55;
+}
+
+
+/* ============================================================
+   BOUTONS
+   ============================================================ */
+
+.domain-detail-button {
+  display:
+    block;
+
+  margin-top:
+    10px;
+
+  padding:
+    11px 14px;
+
+  border-radius:
+    9px;
+
+  text-align:
+    center;
+
+  text-decoration:
+    none;
+
+  font-weight:
+    800;
+}
+
+
+/* ============================================================
+   BAS DE PAGE
+   ============================================================ */
+
+.bottom-grid {
+  display:
+    grid;
+
+  grid-template-columns:
+    1.45fr 1fr .72fr;
+
+  gap:
+    14px;
+
+  margin-top:
+    14px;
+}
+
+.bottom-panel {
+  background:
+    white;
+
+  border:
+    1px solid var(--border);
+
+  border-radius:
+    13px;
+
+  padding:
+    14px;
+
+  box-shadow:
+    0 3px 10px rgba(34,72,110,.035);
+}
+
+.bottom-title {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    12px;
+
+  margin-bottom:
+    10px;
+}
+
+.bottom-title h3,
+.legend-panel h3 {
+  margin:
+    0;
+
+  font-size:
+    17px;
+
+  color:
+    #15365f;
+}
+
+.alert-count {
+  min-width:
+    27px;
+
+  height:
+    27px;
+
+  border-radius:
+    50%;
+
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  background:
+    #e95353;
+
+  color:
+    white;
+
+  font-weight:
+    800;
+}
+
+
+/* ============================================================
+   ALERTES
+   ============================================================ */
+
+.global-alert {
+  display:
+    grid;
+
+  grid-template-columns:
+    78px 1fr auto;
+
+  gap:
+    12px;
+
+  align-items:
+    center;
+
+  min-height:
+    32px;
+
+  margin-top:
+    6px;
+
+  padding:
+    7px 10px;
+
+  border-radius:
+    8px;
+
+  font-size:
+    12px;
+}
+
+.global-alert time {
+  color:
+    #70839a;
+}
+
+.alert-disp {
+  background:
+    #f8f3ff;
+}
+
+.alert-acq {
+  background:
+    #f3f8ff;
+}
+
+.alert-iss {
+  background:
+    #f2faf6;
+}
+
+
+/* ============================================================
+   TENDANCES
+   ============================================================ */
+
+.trend-legend {
+  display:
+    flex;
+
+  gap:
+    10px;
+
+  font-size:
+    11px;
+}
+
+.trend-legend span {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    4px;
+}
+
+.trend-cards {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap:
+    8px;
+}
+
+.trend-card {
+  min-height:
+    118px;
+
+  padding:
+    10px;
+
+  border-radius:
+    10px;
+
+  background:
+    #fafbfd;
+
+  text-align:
+    center;
+}
+
+.trend-card > span {
+  font-size:
+    11px;
+
+  font-weight:
+    700;
+}
+
+.trend-card strong {
+  display:
+    block;
+
+  font-size:
+    20px;
+
+  margin-top:
+    4px;
+}
+
+.trend-card small {
+  display:
+    block;
+
+  margin-top:
+    2px;
+
+  color:
+    #1b9c67;
+}
+
+
+/* ============================================================
+   DONUTS
+   ============================================================ */
+
+.donut {
+  width:
+    57px;
+
+  height:
+    57px;
+
+  margin:
+    8px auto 2px;
+
+  border-radius:
+    50%;
+
+  position:
+    relative;
+}
+
+.donut::after {
+  content:
+    "";
+
+  position:
+    absolute;
+
+  inset:
+    11px;
+
+  border-radius:
+    50%;
+
+  background:
+    white;
+}
+
+.donut-coverage {
+  background:
+    conic-gradient(
+      var(--kpi-coverage) 0 87%,
+      #e5e8ee 87% 100%
+    );
+}
+
+.donut-success {
+  background:
+    conic-gradient(
+      var(--kpi-success) 0 91%,
+      #e5e8ee 91% 100%
+    );
+}
+
+.donut-anomalies {
+  background:
+    conic-gradient(
+      var(--kpi-anomaly) 0 34%,
+      #e5e8ee 34% 100%
+    );
+}
+
+
+/* ============================================================
+   LEGENDE
+   ============================================================ */
+
+.legend-columns {
+  display:
+    grid;
+
+  grid-template-columns:
+    1fr 1fr;
+
+  gap:
+    14px;
+
+  margin-top:
+    12px;
+}
+
+.legend-columns > div {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  gap:
+    7px;
+}
+
+.legend-columns strong {
+  margin-bottom:
+    2px;
+
+  font-size:
+    12px;
+}
+
+.legend-columns span {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    7px;
+
+  font-size:
+    11px;
+
+  color:
+    #4b647f;
+}
+
+.legend-dot {
+  width:
+    10px;
+
+  height:
+    10px;
+
+  border-radius:
+    50%;
+
+  display:
+    inline-block;
+}
+
+.legend-dot.acq {
+  background:
+    var(--acq-accent);
+}
+
+.legend-dot.iss {
+  background:
+    var(--iss-accent);
+}
+
+.legend-dot.disp {
+  background:
+    var(--disp-accent);
+}
+
+.legend-dot.good,
+.legend-dot.uat {
+  background:
+    var(--status-good);
+}
+
+.legend-dot.warning {
+  background:
+    #efbc4c;
+}
+
+.legend-dot.risk {
+  background:
+    #e78a32;
+}
+
+.legend-dot.critical {
+  background:
+    var(--status-critical);
+}
+
+.legend-dot.inactive {
+  background:
+    #acb3bf;
+}
+
+.legend-dot.sit {
+  background:
+    var(--kpi-execution);
+}
+
+.legend-dot.global {
+  background:
+    #536f8d;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 1300px) {
+
+  .global-summary {
+    grid-template-columns:
+      repeat(3, 1fr);
+  }
+
+  .domain-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+  .bottom-grid {
+    grid-template-columns:
+      1fr;
+  }
+}
+
+
+@media (max-width: 720px) {
+
+  .program-header {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+  }
+
+  .program-header-right {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+  }
+
+  .global-summary {
+    grid-template-columns:
+      1fr;
+  }
+
+  .environment-kpis {
+    grid-template-columns:
+      repeat(2, 1fr);
+  }
+}
+
+/* ============================================================
+   KPI PROGRAMME V1.3
+   FINITIONS 3D / ICONES / ECHELLE / ZOOM
+   ============================================================ */
+
+:root {
+  --shadow-soft:
+    0 6px 18px rgba(36, 74, 118, .08),
+    0 1px 2px rgba(36, 74, 118, .08);
+
+  --shadow-raised:
+    0 8px 20px rgba(34, 72, 110, .11),
+    inset 0 1px 0 rgba(255,255,255,.95);
+
+  --shadow-button:
+    0 6px 14px rgba(35, 72, 110, .12),
+    inset 0 1px 0 rgba(255,255,255,.55);
+
+  --surface-glass:
+    rgba(255,255,255,.82);
+}
+
+
+/* ============================================================
+   ECHELLE GENERALE
+   ============================================================ */
+
+html {
+  zoom: 0.92;
+}
+
+body {
+  min-width: 1180px;
+}
+
+.program-page {
+  max-width: 1740px;
+  padding-top: 14px;
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.program-header {
+  box-shadow:
+    0 3px 12px rgba(40, 70, 110, .055);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255,255,255,.99),
+      rgba(249,252,255,.97)
+    );
+}
+
+.bnpp-logo {
+  width: 210px;
+  filter:
+    drop-shadow(0 2px 3px rgba(20,50,80,.08));
+}
+
+.programme-badge {
+  box-shadow:
+    var(--shadow-soft);
+
+  background:
+    linear-gradient(
+      180deg,
+      #f8fcff,
+      #eaf5ff
+    );
+}
+
+
+/* ============================================================
+   CARTES KPI GLOBALES
+   ============================================================ */
+
+.summary-card {
+  box-shadow:
+    var(--shadow-raised);
+
+  backdrop-filter:
+    blur(5px);
+
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease;
+}
+
+.summary-card:hover {
+  transform:
+    translateY(-2px);
+
+  box-shadow:
+    0 10px 24px rgba(36,74,118,.13),
+    inset 0 1px 0 rgba(255,255,255,.98);
+}
+
+.summary-icon {
+  width: 48px;
+  height: 48px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 12px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.95),
+      rgba(235,243,250,.82)
+    );
+
+  box-shadow:
+    0 4px 10px rgba(42,78,120,.10),
+    inset 0 1px 0 rgba(255,255,255,.95);
+
+  font-size: 27px;
+}
+
+
+/* ============================================================
+   PANELS DOMAINES
+   ============================================================ */
+
+.domain-panel {
+  box-shadow:
+    0 8px 22px rgba(34,72,110,.08),
+    inset 0 1px 0 rgba(255,255,255,.92);
+
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease;
+}
+
+.domain-panel:hover {
+  transform:
+    translateY(-2px);
+
+  box-shadow:
+    0 12px 30px rgba(34,72,110,.11),
+    inset 0 1px 0 rgba(255,255,255,.95);
+}
+
+
+/* ============================================================
+   ICONES DOMAINES
+   ============================================================ */
+
+.domain-icon {
+  position: relative;
+
+  box-shadow:
+    0 6px 14px rgba(38,75,120,.12),
+    inset 0 1px 0 rgba(255,255,255,.9);
+
+  border:
+    1px solid rgba(255,255,255,.8);
+
+  text-shadow:
+    0 1px 0 rgba(255,255,255,.75);
+}
+
+.domain-acq .domain-icon {
+  background:
+    linear-gradient(
+      145deg,
+      #f5fbff,
+      #dcebfb
+    );
+}
+
+.domain-iss .domain-icon {
+  background:
+    linear-gradient(
+      145deg,
+      #f4fcf8,
+      #dff4e8
+    );
+}
+
+.domain-disp .domain-icon {
+  background:
+    linear-gradient(
+      145deg,
+      #fbf7ff,
+      #eadfff
+    );
+}
+
+
+/* ============================================================
+   BADGES STATUT
+   ============================================================ */
+
+.domain-state {
+  box-shadow:
+    0 4px 10px rgba(36,72,110,.07),
+    inset 0 1px 0 rgba(255,255,255,.8);
+}
+
+
+/* ============================================================
+   ENVIRONNEMENTS SIT / UAT
+   ============================================================ */
+
+.environment-block {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255,255,255,.70),
+      rgba(255,255,255,.38)
+    );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 3px 8px rgba(38,72,110,.045);
+}
+
+.domain-acq .environment-block {
+  background:
+    linear-gradient(
+      180deg,
+      #f4faff,
+      #eaf4fe
+    );
+}
+
+.domain-iss .environment-block {
+  background:
+    linear-gradient(
+      180deg,
+      #f4fbf7,
+      #e9f7ef
+    );
+}
+
+.domain-disp .environment-block {
+  background:
+    linear-gradient(
+      180deg,
+      #fbf8ff,
+      #f1eaff
+    );
+}
+
+
+/* ============================================================
+   KPI DANS SIT / UAT
+   ============================================================ */
+
+.metric {
+  box-shadow:
+    0 3px 8px rgba(34,72,110,.055),
+    inset 0 1px 0 rgba(255,255,255,.95);
+
+  transition:
+    transform .16s ease;
+}
+
+.metric:hover {
+  transform:
+    translateY(-1px);
+}
+
+.progress {
+  height: 8px;
+
+  box-shadow:
+    inset 0 1px 2px rgba(30,60,90,.12);
+}
+
+.progress span {
+  box-shadow:
+    0 1px 3px rgba(30,60,90,.14);
+}
+
+
+/* ============================================================
+   COULEURS KPI PLUS LUMINEUSES
+   ============================================================ */
+
+.metric-execution .progress span {
+  background:
+    linear-gradient(
+      90deg,
+      #67b5f6,
+      #3c91df
+    );
+}
+
+.metric-success .progress span {
+  background:
+    linear-gradient(
+      90deg,
+      #65c999,
+      #34aa76
+    );
+}
+
+.metric-coverage .progress span {
+  background:
+    linear-gradient(
+      90deg,
+      #a493f4,
+      #7d69e8
+    );
+}
+
+.metric-anomaly .progress span {
+  background:
+    linear-gradient(
+      90deg,
+      #f18c8c,
+      #e55b5b
+    );
+}
+
+
+/* ============================================================
+   METEO / TENDANCES
+   ============================================================ */
+
+.weather {
+  filter:
+    drop-shadow(0 2px 2px rgba(30,60,90,.12));
+}
+
+.trend {
+  font-weight: 800;
+
+  text-shadow:
+    0 1px 0 rgba(255,255,255,.75);
+}
+
+
+/* ============================================================
+   POINTS CLES
+   ============================================================ */
+
+.domain-points {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.92),
+    0 3px 8px rgba(36,72,110,.045);
+}
+
+
+/* ============================================================
+   BOUTONS
+   ============================================================ */
+
+.domain-detail-button {
+  box-shadow:
+    var(--shadow-button);
+
+  transition:
+    transform .17s ease,
+    box-shadow .17s ease,
+    filter .17s ease;
+}
+
+.domain-detail-button:hover {
+  transform:
+    translateY(-2px);
+
+  filter:
+    brightness(1.025);
+
+  box-shadow:
+    0 9px 18px rgba(35,72,110,.15),
+    inset 0 1px 0 rgba(255,255,255,.7);
+}
+
+.domain-acq .domain-detail-button {
+  background:
+    linear-gradient(
+      180deg,
+      #eaf5ff,
+      #cfe8fc
+    );
+}
+
+.domain-iss .domain-detail-button {
+  background:
+    linear-gradient(
+      180deg,
+      #e8f8f0,
+      #d0efdf
+    );
+}
+
+.domain-disp .domain-detail-button {
+  background:
+    linear-gradient(
+      180deg,
+      #f4edff,
+      #e2d3fb
+    );
+}
+
+
+/* ============================================================
+   PANELS BAS DE PAGE
+   ============================================================ */
+
+.bottom-panel {
+  box-shadow:
+    var(--shadow-raised);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255,255,255,.98),
+      rgba(250,252,255,.95)
+    );
+}
+
+
+/* ============================================================
+   ALERTES
+   ============================================================ */
+
+.global-alert {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.92);
+
+  border:
+    1px solid rgba(220,227,236,.6);
+}
+
+
+/* ============================================================
+   DONUTS
+   ============================================================ */
+
+.donut {
+  box-shadow:
+    0 4px 10px rgba(35,72,110,.08);
+}
+
+.donut::after {
+  box-shadow:
+    inset 0 1px 3px rgba(35,72,110,.08);
+}
+
+
+/* ============================================================
+   LEGENDE
+   ============================================================ */
+
+.legend-dot {
+  box-shadow:
+    0 1px 3px rgba(30,60,90,.14);
+}
+
+
+/* ============================================================
+   FINITIONS TYPOGRAPHIQUES
+   ============================================================ */
+
+.summary-card strong,
+.metric > strong,
+.trend-card strong {
+  text-shadow:
+    0 1px 0 rgba(255,255,255,.8);
+}
+
+.domain-main-title h2,
+.program-title h1 {
+  letter-spacing:
+    -.2px;
+}
+
+
+/* ============================================================
+   RESPONSIVE / ZOOM
+   ============================================================ */
+
+@media (max-width: 1500px) {
+
+  html {
+    zoom: 0.86;
+  }
+}
+
+@media (max-width: 1280px) {
+
+  html {
+    zoom: 0.80;
+  }
+}
+
+
+/* ============================================================
+   KPI PROGRAMME V1.4
+   RESPONSIVE PLEIN ECRAN + FINITIONS
+   ============================================================ */
+
+
+/* ------------------------------------------------------------
+   1. SUPPRESSION DU ZOOM CSS
+   ------------------------------------------------------------ */
+
+html {
+  zoom: 1 !important;
+}
+
+body {
+  min-width: 0 !important;
+}
+
+
+/* ------------------------------------------------------------
+   2. LARGEUR GENERALE
+   ------------------------------------------------------------ */
+
+.program-page {
+  width: 100%;
+  max-width: none !important;
+
+  margin: 0;
+
+  padding:
+    16px
+    clamp(16px, 2vw, 34px)
+    28px;
+}
+
+
+/* ------------------------------------------------------------
+   3. HEADER PLUS EQUILIBRE
+   ------------------------------------------------------------ */
+
+.program-header {
+  width: 100%;
+
+  padding:
+    14px
+    clamp(18px, 2vw, 34px);
+
+  gap: 18px;
+}
+
+.program-brand {
+  min-width: 0;
+}
+
+.bnpp-logo {
+  width:
+    clamp(155px, 11vw, 205px);
+}
+
+.program-title h1 {
+  font-size:
+    clamp(27px, 2vw, 36px);
+}
+
+.program-title p {
+  font-size:
+    clamp(16px, 1.25vw, 21px);
+}
+
+.program-header-right {
+  flex-shrink: 0;
+}
+
+
+/* ------------------------------------------------------------
+   4. KPI GLOBAUX
+   ------------------------------------------------------------ */
+
+.global-summary {
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr))
+    minmax(260px, 1.35fr);
+
+  gap:
+    clamp(10px, .8vw, 16px);
+}
+
+.summary-card {
+  min-width: 0;
+
+  padding:
+    14px
+    clamp(12px, 1vw, 18px);
+}
+
+.summary-card strong {
+  font-size:
+    clamp(25px, 1.75vw, 31px);
+}
+
+
+/* ------------------------------------------------------------
+   5. DOMAINES : 3 COLONNES TOUJOURS ALIGNEES
+   ------------------------------------------------------------ */
+
+.domain-grid {
+  width: 100%;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  align-items: stretch;
+
+  gap:
+    clamp(12px, 1vw, 18px);
+}
+
+.domain-panel {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  height: 100%;
+}
+
+.domain-panel-header {
+  min-height: 76px;
+}
+
+.domain-points {
+  flex: 1;
+
+  min-height: 126px;
+}
+
+.domain-detail-button {
+  margin-top: 10px;
+}
+
+
+/* ------------------------------------------------------------
+   6. TYPOGRAPHIE DOMAINES
+   ------------------------------------------------------------ */
+
+.domain-main-title h2 {
+  font-size:
+    clamp(18px, 1.25vw, 23px);
+}
+
+.domain-main-title p {
+  font-size:
+    clamp(12px, .92vw, 15px);
+}
+
+
+/* ------------------------------------------------------------
+   7. SIT / UAT PLUS LISIBLE
+   ------------------------------------------------------------ */
+
+.environment-head {
+  grid-template-columns:
+    48px
+    minmax(0, 1fr)
+    auto;
+
+  gap:
+    8px;
+}
+
+.environment-head > strong {
+  font-size:
+    clamp(18px, 1.15vw, 21px);
+}
+
+.environment-head > span {
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+
+/* ------------------------------------------------------------
+   8. KPI INTERNES
+   ------------------------------------------------------------ */
+
+.environment-kpis {
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap:
+    clamp(7px, .6vw, 10px);
+}
+
+.metric {
+  padding:
+    9px
+    clamp(8px, .7vw, 11px);
+}
+
+.metric > strong {
+  font-size:
+    clamp(18px, 1.2vw, 22px);
+}
+
+
+/* ------------------------------------------------------------
+   9. METEO HOMOGENE
+   ------------------------------------------------------------ */
+
+.weather-zone {
+  min-width:
+    120px;
+
+  justify-content:
+    flex-end;
+
+  gap:
+    7px;
+}
+
+.weather {
+  width:
+    28px;
+
+  text-align:
+    center;
+
+  font-size:
+    22px;
+
+  line-height:
+    1;
+}
+
+.trend {
+  width:
+    27px;
+
+  text-align:
+    center;
+
+  font-size:
+    24px;
+}
+
+
+/* Météo avec le même relief visuel */
+
+.weather-zone .weather {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    30px;
+
+  height:
+    30px;
+
+  border-radius:
+    50%;
+
+  background:
+    rgba(255,255,255,.58);
+
+  box-shadow:
+    0 3px 7px rgba(35,72,110,.08),
+    inset 0 1px 0 rgba(255,255,255,.95);
+}
+
+
+/* ------------------------------------------------------------
+   10. BAS DE PAGE
+   ------------------------------------------------------------ */
+
+.bottom-grid {
+  width: 100%;
+
+  grid-template-columns:
+    minmax(0, 1.4fr)
+    minmax(0, 1fr)
+    minmax(260px, .7fr);
+
+  gap:
+    clamp(12px, 1vw, 18px);
+}
+
+.bottom-panel {
+  min-width: 0;
+}
+
+
+/* ------------------------------------------------------------
+   11. DONUTS
+   ------------------------------------------------------------ */
+
+.trend-cards {
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+}
+
+.trend-card {
+  min-width: 0;
+}
+
+
+/* ------------------------------------------------------------
+   12. GRAND ECRAN
+   ------------------------------------------------------------ */
+
+@media (min-width: 1700px) {
+
+  .program-page {
+    padding-left:
+      34px;
+
+    padding-right:
+      34px;
+  }
+
+  .domain-panel {
+    padding:
+      16px;
+  }
+
+  .environment-block {
+    padding:
+      12px;
+  }
+}
+
+
+/* ------------------------------------------------------------
+   13. ECRANS 1300 - 1550
+   ------------------------------------------------------------ */
+
+@media (max-width: 1550px) {
+
+  .program-page {
+    padding-left:
+      14px;
+
+    padding-right:
+      14px;
+  }
+
+  .domain-panel {
+    padding:
+      12px;
+  }
+
+  .domain-state {
+    padding:
+      7px 10px;
+  }
+
+  .weather-zone {
+    min-width:
+      105px;
+  }
+}
+
+
+/* ------------------------------------------------------------
+   14. TABLETTE / PETIT DESKTOP
+   ------------------------------------------------------------ */
+
+@media (max-width: 1180px) {
+
+  .global-summary {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .summary-global {
+    grid-column:
+      span 2;
+  }
+
+  .domain-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+  .bottom-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+  .domain-panel {
+    width: 100%;
+  }
+
+  .environment-head > span {
+    white-space:
+      normal;
+  }
+}
+
+
+/* ------------------------------------------------------------
+   15. MOBILE
+   ------------------------------------------------------------ */
+
+@media (max-width: 720px) {
+
+  .program-page {
+    padding:
+      10px;
+  }
+
+  .program-header {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+  }
+
+  .program-brand {
+    width:
+      100%;
+  }
+
+  .program-title {
+    padding-left:
+      14px;
+  }
+
+  .program-header-right {
+    width:
+      100%;
+
+    flex-direction:
+      column;
+
+    align-items:
+      flex-start;
+
+    gap:
+      10px;
+  }
+
+  .global-summary {
+    grid-template-columns:
+      1fr;
+  }
+
+  .summary-global {
+    grid-column:
+      auto;
+  }
+
+  .environment-kpis {
+    grid-template-columns:
+      repeat(2, 1fr);
+  }
+
+  .environment-head {
+    grid-template-columns:
+      44px 1fr;
+  }
+
+  .weather-zone {
+    grid-column:
+      1 / -1;
+
+    justify-content:
+      flex-start;
+
+    margin-top:
+      4px;
+  }
+
+  .trend-cards {
+    grid-template-columns:
+      1fr;
+  }
+
+  .legend-columns {
+    grid-template-columns:
+      1fr;
+  }
+}
+
