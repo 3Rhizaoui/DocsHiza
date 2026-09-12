@@ -1,0 +1,912 @@
+/* ============================================================
+   KPI PROGRAMME
+   NORME VISUELLE UNIQUE DES PAGES DETAILLEES
+
+   ACQ / ISS / DISP
+   ACQ = référence géométrique validée
+   ============================================================ */
+
+:root {
+  --detail-header-height: 64px;
+
+  --detail-page-x: 40px;
+
+  --detail-radius-sm: 7px;
+  --detail-radius-md: 8px;
+  --detail-radius-lg: 10px;
+
+  --detail-text: #0a2c57;
+  --detail-muted: #537293;
+
+  --detail-border: #dce7ef;
+
+  --detail-shadow:
+    0 5px 14px rgba(36,75,115,.05);
+}
+
+
+* {
+  box-sizing: border-box;
+}
+
+
+html {
+  font-size: 14px;
+}
+
+
+body {
+  margin: 0;
+
+  color: var(--detail-text);
+
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff,
+      #f6fbff
+    );
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.acq-topbar,
+.iss-topbar,
+.disp-topbar {
+  width: 100%;
+
+  height: var(--detail-header-height);
+  min-height: var(--detail-header-height);
+
+  padding: 0 22px;
+
+  display: flex;
+  align-items: center;
+
+  background: #fff;
+
+  border-bottom:
+    1px solid #d9e6f2;
+}
+
+
+/* BRAND */
+
+.acq-brand,
+.iss-brand,
+.disp-brand {
+  width: 340px;
+  min-width: 340px;
+
+  display: flex;
+  align-items: center;
+}
+
+
+.acq-logo,
+.iss-logo,
+.disp-logo {
+  width: 122px;
+  height: 42px;
+
+  object-fit: contain;
+}
+
+
+.acq-separator,
+.iss-separator,
+.disp-separator {
+  width: 1px;
+  height: 31px;
+
+  margin: 0 20px;
+
+  background: #cfdae6;
+}
+
+
+.acq-program,
+.iss-program,
+.disp-program {
+  min-width: 178px;
+
+  font-size: 16px;
+  line-height: 1;
+
+  font-weight: 800;
+
+  white-space: nowrap;
+}
+
+
+/* NAV */
+
+.acq-nav,
+.iss-nav,
+.disp-nav {
+  flex: 1;
+
+  height: var(--detail-header-height);
+
+  display: flex;
+  align-items: center;
+
+  gap: 4px;
+}
+
+
+.acq-nav a,
+.iss-nav a,
+.disp-nav a {
+  min-width: 90px;
+  height: 40px;
+
+  padding: 0 15px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 9px;
+
+  color: #173b68;
+
+  font-size: 14px;
+  line-height: 1;
+
+  font-weight: 700;
+
+  text-decoration: none;
+
+  background: transparent;
+}
+
+
+/* seule la couleur active dépend du domaine */
+
+.acq-nav a.active {
+  color: #0873d5;
+  background: #eaf5ff;
+}
+
+.iss-nav a.active {
+  color: #07875d;
+  background: #eaf8f1;
+}
+
+.disp-nav a.active {
+  color: #7438c8;
+  background: #f1e9ff;
+}
+
+
+/* USER */
+
+.acq-user,
+.iss-user,
+.disp-user {
+  width: 315px;
+  min-width: 315px;
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  gap: 12px;
+}
+
+
+.acq-search,
+.iss-search,
+.disp-search {
+  width: 160px;
+  height: 38px;
+
+  padding: 0 12px;
+
+  display: flex;
+  align-items: center;
+
+  border: 1px solid #d6e3ef;
+
+  border-radius: 8px;
+
+  color: #7890a8;
+
+  background: #fff;
+
+  font-size: 12px;
+}
+
+
+.acq-bell,
+.iss-bell,
+.disp-bell {
+  position: relative;
+
+  width: 26px;
+  height: 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+.acq-avatar,
+.iss-avatar,
+.disp-avatar {
+  width: 36px;
+  height: 36px;
+
+  flex: 0 0 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  color: white;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+
+.acq-name,
+.iss-name,
+.disp-name {
+  width: 78px;
+
+  overflow: hidden;
+
+  white-space: nowrap;
+
+  text-overflow: ellipsis;
+
+  font-size: 11px;
+}
+
+
+/* ============================================================
+   BREADCRUMB
+   ============================================================ */
+
+.acq-breadcrumb,
+.iss-breadcrumb,
+.disp-breadcrumb {
+  height: 30px;
+  min-height: 30px;
+
+  padding: 7px 42px;
+
+  font-size: 10px;
+}
+
+
+/* ============================================================
+   PAGE
+   ============================================================ */
+
+.acq-page,
+.iss-page,
+.disp-page {
+  width: 100%;
+  max-width: none;
+
+  margin: 0;
+
+  padding:
+    14px
+    var(--detail-page-x)
+    26px;
+}
+
+
+.acq-page-head,
+.iss-page-head,
+.disp-page-head {
+  min-height: 59px;
+
+  margin-bottom: 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+
+.acq-page-head h1,
+.iss-page-head h1,
+.disp-page-head h1 {
+  margin: 0;
+
+  font-size: 26px;
+  line-height: 1.1;
+
+  font-weight: 800;
+}
+
+
+.acq-page-head p,
+.iss-page-head p,
+.disp-page-head p {
+  margin: 5px 0 0;
+
+  font-size: 13px;
+}
+
+
+/* ACTIONS */
+
+.acq-actions,
+.iss-actions,
+.disp-actions {
+  display: flex;
+
+  gap: 10px;
+}
+
+
+.acq-actions button,
+.iss-actions button,
+.disp-actions button {
+  height: 39px;
+  min-height: 39px;
+
+  padding: 8px 14px;
+
+  border-radius: 8px;
+
+  font-size: 12px;
+
+  font-weight: 800;
+}
+
+
+/* ============================================================
+   MAIN CARD
+   ============================================================ */
+
+.acq-main-card,
+.iss-main-card,
+.disp-main-card {
+  padding: 8px;
+
+  border-radius:
+    var(--detail-radius-lg);
+
+  box-shadow:
+    0 7px 20px rgba(34,78,120,.06);
+}
+
+
+/* REPORT HEADER */
+
+.acq-report-title,
+.iss-report-title,
+.disp-report-title {
+  min-height: 38px;
+
+  display: grid;
+
+  grid-template-columns:
+    36px
+    1fr
+    auto;
+
+  align-items: center;
+}
+
+
+.acq-report-title h2,
+.iss-report-title h2,
+.disp-report-title h2 {
+  margin: 0;
+
+  font-size: 19px;
+  line-height: 1.1;
+}
+
+
+.acq-report-status,
+.iss-report-status,
+.disp-report-status {
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+}
+
+
+/* METEO */
+
+.acq-trend-icon,
+.iss-trend-icon,
+.disp-trend-icon {
+  width: 35px;
+  height: 35px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 20px;
+}
+
+
+.acq-weather,
+.iss-weather,
+.disp-weather {
+  font-size: 30px;
+}
+
+
+/* EXEC SUMMARY */
+
+.acq-summary-text,
+.iss-summary-text,
+.disp-summary-text {
+  margin:
+    3px
+    36px
+    8px;
+
+  padding:
+    7px
+    10px;
+
+  border-radius:
+    var(--detail-radius-sm);
+
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+
+.acq-summary-text p,
+.iss-summary-text p,
+.disp-summary-text p {
+  margin: 3px 0;
+}
+
+
+/* ============================================================
+   ZONES 1 / 2
+   ============================================================ */
+
+.acq-main-grid,
+.iss-main-grid,
+.disp-main-grid {
+  display: grid;
+
+  gap: 8px;
+}
+
+
+.acq-zone,
+.iss-zone,
+.disp-zone {
+  overflow: hidden;
+
+  border-radius:
+    var(--detail-radius-lg);
+
+  box-shadow:
+    0 4px 12px rgba(29,74,115,.06);
+}
+
+
+.acq-zone-head,
+.iss-zone-head,
+.disp-zone-head {
+  position: relative;
+
+  height: 45px;
+  min-height: 45px;
+
+  padding:
+    0
+    14px
+    0
+    55px;
+
+  display: flex;
+  align-items: center;
+
+  color: white;
+}
+
+
+.acq-zone-head h3,
+.iss-zone-head h3,
+.disp-zone-head h3 {
+  margin: 0;
+
+  font-size: 16px;
+  line-height: 1;
+}
+
+
+/* NUMEROS */
+
+.acq-number,
+.iss-number,
+.disp-number {
+  position: absolute;
+
+  left: -7px;
+  top: -4px;
+
+  width: 48px;
+  height: 48px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border:
+    3px solid white;
+
+  border-radius: 50%;
+
+  color: white;
+
+  font-size: 23px;
+
+  box-shadow:
+    0 3px 9px rgba(20,55,90,.18);
+}
+
+
+/* BODY */
+
+.acq-zone-body,
+.iss-zone-body,
+.disp-zone-body {
+  padding:
+    9px
+    13px
+    8px;
+}
+
+
+/* KPI */
+
+.acq-kpis,
+.iss-kpis,
+.disp-kpis {
+  display: grid;
+
+  gap: 8px;
+}
+
+
+.acq-kpis.four,
+.iss-kpis.four,
+.disp-kpis.four {
+  grid-template-columns:
+    repeat(4,1fr);
+}
+
+
+.acq-kpi,
+.iss-kpi,
+.disp-kpi {
+  min-height: 58px;
+
+  padding:
+    7px
+    9px;
+
+  border-radius:
+    var(--detail-radius-sm);
+}
+
+
+.acq-kpi span,
+.iss-kpi span,
+.disp-kpi span {
+  display: block;
+
+  font-size: 9px;
+
+  font-weight: 700;
+}
+
+
+.acq-kpi strong,
+.iss-kpi strong,
+.disp-kpi strong {
+  display: block;
+
+  margin-top: 3px;
+
+  font-size: 21px;
+  line-height: 1;
+}
+
+
+.acq-kpi small,
+.iss-kpi small,
+.disp-kpi small {
+  display: block;
+
+  margin-top: 3px;
+
+  font-size: 8px;
+}
+
+
+/* ============================================================
+   ZONES 3 / 4 / 5
+   ============================================================ */
+
+.acq-bottom-zones,
+.iss-bottom-zones,
+.disp-bottom-zones {
+  display: grid;
+
+  grid-template-columns:
+    1.05fr
+    1.02fr
+    .85fr;
+
+  gap: 8px;
+
+  margin-top: 7px;
+}
+
+
+.acq-bottom-card,
+.iss-bottom-card,
+.disp-bottom-card {
+  position: relative;
+
+  min-height: 105px;
+
+  padding:
+    10px
+    12px
+    8px
+    48px;
+
+  border-radius:
+    var(--detail-radius-md);
+}
+
+
+.acq-bottom-content h3,
+.iss-bottom-content h3,
+.disp-bottom-content h3 {
+  margin:
+    0
+    0
+    6px;
+
+  font-size: 15px;
+}
+
+
+.acq-bottom-content ul,
+.iss-bottom-content ul,
+.disp-bottom-content ul {
+  margin: 0;
+
+  padding-left: 17px;
+
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+
+.acq-bottom-content p,
+.iss-bottom-content p,
+.disp-bottom-content p {
+  margin:
+    10px
+    0
+    0;
+
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+
+/* ============================================================
+   KPI BAS
+   ============================================================ */
+
+.acq-summary-kpis,
+.iss-summary-kpis,
+.disp-summary-kpis {
+  display: grid;
+
+  grid-template-columns:
+    repeat(5,1fr);
+
+  gap: 9px;
+
+  margin-top: 10px;
+}
+
+
+.acq-summary-kpis article,
+.iss-summary-kpis article,
+.disp-summary-kpis article {
+  min-height: 64px;
+
+  padding:
+    8px
+    12px;
+
+  display: grid;
+
+  grid-template-columns:
+    40px
+    1fr
+    auto;
+
+  align-items: center;
+
+  gap: 10px;
+
+  border-radius:
+    var(--detail-radius-md);
+
+  background: white;
+
+  box-shadow:
+    var(--detail-shadow);
+}
+
+
+.acq-summary-icon,
+.iss-summary-icon,
+.disp-summary-icon {
+  width: 36px;
+  height: 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  color: white;
+
+  font-size: 20px;
+}
+
+
+.acq-summary-kpis span,
+.iss-summary-kpis span,
+.disp-summary-kpis span {
+  font-size: 10px;
+}
+
+
+.acq-summary-kpis strong,
+.iss-summary-kpis strong,
+.disp-summary-kpis strong {
+  display: block;
+
+  font-size: 22px;
+}
+
+
+.acq-summary-kpis small,
+.iss-summary-kpis small,
+.disp-summary-kpis small {
+  font-size: 8px;
+
+  text-align: center;
+}
+
+
+/* ============================================================
+   TABLE
+   ============================================================ */
+
+.acq-table-card,
+.iss-table-card,
+.disp-table-card {
+  margin-top: 9px;
+
+  padding:
+    8px
+    11px;
+
+  border-radius:
+    var(--detail-radius-md);
+
+  background: white;
+}
+
+
+.acq-table-head,
+.iss-table-head,
+.disp-table-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 8px;
+}
+
+
+.acq-table-head h3,
+.iss-table-head h3,
+.disp-table-head h3 {
+  margin: 0;
+
+  font-size: 13px;
+}
+
+
+.acq-table-card table,
+.iss-table-card table,
+.disp-table-card table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  font-size: 9px;
+}
+
+
+.acq-table-card th,
+.iss-table-card th,
+.disp-table-card th {
+  padding:
+    7px
+    9px;
+}
+
+
+.acq-table-card td,
+.iss-table-card td,
+.disp-table-card td {
+  padding:
+    7px
+    9px;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media(max-width:1150px) {
+
+  .acq-user,
+  .iss-user,
+  .disp-user {
+    display: none;
+  }
+
+  .acq-main-grid,
+  .iss-main-grid,
+  .disp-main-grid,
+  .acq-bottom-zones,
+  .iss-bottom-zones,
+  .disp-bottom-zones {
+    grid-template-columns: 1fr;
+  }
+
+  .acq-summary-kpis,
+  .iss-summary-kpis,
+  .disp-summary-kpis {
+    grid-template-columns:
+      repeat(2,1fr);
+  }
+}
