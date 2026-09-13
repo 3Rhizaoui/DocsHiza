@@ -2512,3 +2512,31 @@ body {
   --iss-zoom: 1 !important;
   --disp-zoom: 1 !important;
 }
+
+
+/* Zoom CSS unique - ACQ / ISS / Contestation */
+html,
+body {
+  zoom: 1 !important;
+  transform: none !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+
+  overflow-x: hidden !important;
+}
+
+.acq-page,
+.iss-page,
+.disp-page {
+  zoom: 1 !important;
+  transform: none !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+:root {
+  --iss-zoom: 1 !important;
+  --disp-zoom: 1 !important;
+}

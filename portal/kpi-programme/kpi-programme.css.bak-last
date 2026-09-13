@@ -3410,3 +3410,19 @@ body {
 
   box-sizing: border-box !important;
 }
+
+
+/* Zoom CSS unique - Home */
+html {
+  zoom: 1 !important;
+}
+
+body {
+  zoom: 1 !important;
+  transform: none !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+
+  overflow-x: hidden !important;
+}
