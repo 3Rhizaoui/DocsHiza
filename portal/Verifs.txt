@@ -1,0 +1,71 @@
+Exécute ceci sur le PC BNP, depuis la racine du dépôt :
+
+echo "===== BRANCHE / COMMIT ====="
+git branch --show-current
+git log -1 --oneline
+
+echo
+echo "===== DATA LOADER ====="
+grep -n -E \
+'DATA_URL|gil_project\.json|gil_home\.json' \
+portal/commun/js/data-loader.js
+
+echo
+echo "===== JSON GENERES ====="
+ls -lh \
+portal/commun/data/gil_project.json \
+portal/commun/data/gil_home.json \
+2>/dev/null
+
+echo
+echo "===== KPI PROJECT / HOME ====="
+
+python - <<'PY'
+import json
+from pathlib import Path
+
+base = Path("portal/commun/data")
+
+for name in [
+    "gil_project.json",
+    "gil_home.json",
+]:
+    p = base / name
+
+    print()
+    print("====", name, "====")
+
+    if not p.exists():
+        print("ABSENT")
+        continue
+
+    d = json.loads(
+        p.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    print(
+        "generatedAt =",
+        d.get("generatedAt")
+    )
+
+    print(
+        "arrimage =",
+        d.get("arrimage")
+    )
+
+    print(
+        "santeFluxArrimage =",
+        d.get("santeFluxArrimage")
+    )
+PY
+
+Puis lance aussi :
+
+echo
+echo "===== SOURCE DU PIPELINE ====="
+
+grep -n -E \
+'PAYLOAD_DASHBOARD_FINAL|DASHBOARD_GIL_DATA|SOURCE_CANDIDATES|SOURCE =' \
+portal/commun/scripts/publier_portal.py
