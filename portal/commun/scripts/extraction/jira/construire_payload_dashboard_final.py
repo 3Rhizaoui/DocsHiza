@@ -418,12 +418,34 @@ def extract_arrimage_flux_metadata(row):
 
 def source_flux_rows(source):
     """
-    Population du bloc 1 : uniquement les demandes / flux d'arrimage.
-    Les anomalies Octane restent dans anomaliesArrimageDetail.
+    Population canonique des demandes d'arrimage.
+
+    La source JIRA normalisee contient :
+      - epics   : une ligne par demande d'arrimage ;
+      - records : une ou plusieurs lignes par Epic,
+                  notamment une ligne par environnement.
+
+    Le perimetre Arrimage doit donc toujours utiliser
+    source["epics"] en priorite.
+
+    Cette population provient de la JQL "epics" et de la
+    regle business_rules.arrimage_summary_regex definies
+    dans jira_config.json.
     """
+    epics = source.get("epics")
+
+    if isinstance(epics, list):
+        return [
+            row
+            for row in epics
+            if isinstance(row, dict)
+        ]
+
+    # Compatibilite avec d'anciens payloads ne contenant
+    # pas encore la collection epics.
     records = source.get("records")
 
-    if isinstance(records, list) and records:
+    if isinstance(records, list):
         result = []
 
         for row in records:
@@ -431,7 +453,11 @@ def source_flux_rows(source):
                 continue
 
             kind = clean_label(
-                row_value(row, "type", "nature"),
+                row_value(
+                    row,
+                    "type",
+                    "nature"
+                ),
                 ""
             ).lower()
 
@@ -440,16 +466,9 @@ def source_flux_rows(source):
 
             result.append(row)
 
-        if result:
-            return result
+        return result
 
-    epics = source.get("epics")
-
-    if isinstance(epics, list) and epics:
-        return epics
-
-    return source_rows(source)
-
+    return []
 
 def source_rows(source):
     for key in ["records", "epics", "flux", "lignesDashboard", "lignes"]:
@@ -460,22 +479,108 @@ def source_rows(source):
 
 
 def source_metrics(source):
-    indicateurs = source.get("indicateurs") if isinstance(source.get("indicateurs"), dict) else {}
-    rows = source_rows(source)
+    indicateurs = (
+        source.get("indicateurs")
+        if isinstance(
+            source.get("indicateurs"),
+            dict
+        )
+        else {}
+    )
 
-    total = find_metric(indicateurs, ["total", "flux", "epics", "epicsFlux", "lignesDashboard"]) or len(rows)
-    prets = find_metric(indicateurs, ["prets", "prêts", "pretTester", "pretsArrimage", "ready"])
-    en_cours = find_metric(indicateurs, ["enCours", "encours", "fluxEnCours", "inProgress"])
-    bugs = find_metric(indicateurs, ["bugsBloquants", "bloquants", "ko", "anomaliesBloquantes"])
+    # Population canonique Arrimage :
+    # exactement les mêmes Epics pour les KPI
+    # et pour les détails.
+    rows = source_flux_rows(source)
 
-    if not prets:
-        prets = sum(1 for row in rows if is_ready(row))
-    if not en_cours:
-        en_cours = sum(1 for row in rows if is_in_progress(row))
+    # --------------------------------------------------------
+    # KPI ARRIMAGE CANONIQUES
+    #
+    # preparer_source_jira.py calcule déjà ces indicateurs
+    # depuis exactement la même collection source["epics"].
+    #
+    # Aucun recalcul métier différent ne doit être effectué ici.
+    # --------------------------------------------------------
+
+    total = find_metric(
+        indicateurs,
+        [
+            "epics",
+            "total",
+            "flux"
+        ]
+    )
+
+    prets = find_metric(
+        indicateurs,
+        [
+            "flux_prets",
+            "prets",
+            "prêts",
+            "pretTester",
+            "pretsArrimage",
+            "ready"
+        ]
+    )
+
+    en_cours = find_metric(
+        indicateurs,
+        [
+            "flux_en_cours",
+            "enCours",
+            "encours",
+            "fluxEnCours",
+            "inProgress"
+        ]
+    )
+
+    bugs = find_metric(
+        indicateurs,
+        [
+            "bugsBloquants",
+            "bloquants",
+            "ko",
+            "anomaliesBloquantes"
+        ]
+    )
+
+    # Fallback uniquement pour anciens payloads.
+    if not total:
+        total = len(rows)
+
+    if (
+        "flux_prets" not in indicateurs
+        and not prets
+    ):
+        prets = sum(
+            1
+            for row in rows
+            if bool(row.get("pret"))
+        )
+
+    if (
+        "flux_en_cours" not in indicateurs
+        and not en_cours
+    ):
+        en_cours = sum(
+            1
+            for row in rows
+            if not bool(row.get("pret"))
+        )
+
     if not bugs:
-        bugs = sum(1 for row in rows if is_blocked(row))
+        bugs = sum(
+            1
+            for row in rows
+            if is_blocked(row)
+        )
 
-    return int(total or 0), int(prets or 0), int(en_cours or 0), int(bugs or 0)
+    return (
+        int(total or 0),
+        int(prets or 0),
+        int(en_cours or 0),
+        int(bugs or 0)
+    )
 
 
 def score_sante(total, prets, bugs):
@@ -485,8 +590,43 @@ def score_sante(total, prets, bugs):
 
 
 def normalize_flux_row(row, sprint, semaine):
-    env = clean_label(row_value(row, "environnement", "env", "environment"), "Non renseigné")
-    statut = clean_label(row_value(row, "statut", "statutJira", "status", "etat"), "À qualifier")
+    env = clean_label(
+        row_value(
+            row,
+            "environnement",
+            "env",
+            "environment"
+        ),
+        "Non renseigné"
+    )
+
+    # --------------------------------------------------------
+    # Statut canonique Arrimage
+    #
+    # "pret" est calculé une seule fois dans
+    # preparer_source_jira.py depuis l'Epic et ses enfants.
+    #
+    # Les détails doivent utiliser exactement la même règle
+    # que les KPI.
+    # --------------------------------------------------------
+    if "pret" in row:
+        statut = (
+            "Livré"
+            if bool(row.get("pret"))
+            else "En cours"
+        )
+    else:
+        # Compatibilité anciens payloads.
+        statut = clean_label(
+            row_value(
+                row,
+                "statut",
+                "statutJira",
+                "status",
+                "etat"
+            ),
+            "À qualifier"
+        )
 
     enriched = extract_arrimage_flux_metadata(row)
 

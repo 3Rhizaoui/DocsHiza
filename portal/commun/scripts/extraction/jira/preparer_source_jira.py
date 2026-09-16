@@ -18,6 +18,7 @@ from gil_paths import (
 )
 
 RULES_FILE = SCRIPT_DIR / "regles_domaines.json"
+JIRA_CONFIG_FILE = SCRIPT_DIR / "jira_config.json"
 
 
 def text(value):
@@ -509,6 +510,12 @@ def main():
     )
 
     parser.add_argument(
+        "--jira-config",
+        default=JIRA_CONFIG_FILE,
+        type=Path
+    )
+
+    parser.add_argument(
         "--output",
         default=DASHBOARD_GIL_DATA,
         type=Path
@@ -526,6 +533,17 @@ def main():
         args.rules.read_text(
             encoding="utf-8-sig"
         )
+    )
+
+    jira_config = json.loads(
+        args.jira_config.read_text(
+            encoding="utf-8-sig"
+        )
+    )
+
+    jira_business_rules = (
+        jira_config.get("business_rules")
+        or {}
     )
 
     searches = (
@@ -777,8 +795,15 @@ def main():
             fields.get("summary")
         ).strip()
 
+        arrimage_summary_regex = (
+            jira_business_rules.get(
+                "arrimage_summary_regex"
+            )
+            or r"\[[^\]]*Arrimage[^\]]*\]"
+        )
+
         if not re.search(
-            r"\[[^\]]*Arrimage[^\]]*\]",
+            arrimage_summary_regex,
             summary,
             re.IGNORECASE,
         ):
