@@ -1,32 +1,52 @@
-Sur le PC BNP, lance maintenant seulement ceci :
+Sur le PC BNP, exécute ces 3 commandes et envoie-moi le résultat.
 
-echo "===== SPRINT 26 DANS LE RAPPORT ====="
-
-grep -nEi \
-'Sprint 26|sprintCourant|sprintJiraSynthese|contributionSprintCourant|sprintJiraCourant' \
-portal/reporting/general/index.html \
-| head -120
-
-echo
-echo "===== SPRINT 26 DANS LES FICHIERS PUBLIES ====="
-
-grep -Rni \
-'Sprint 26' \
-portal/reporting \
-portal/commun/data \
---include='*.html' \
---include='*.json' \
-2>/dev/null \
-| head -120
-
-Et surtout cherchons comment le titre « Avancement & contribution du Sprint JIRA » de ta capture est construit :
-
-grep -n -A80 -B30 \
-'Avancement.*contribution.*Sprint' \
+echo "===== ZONE 9190-9370 ====="
+sed -n '9190,9370p' \
 portal/reporting/general/index.html
 
-Enfin :
+Puis :
 
-grep -nE \
-'sprintCourant|sprintJiraSynthese|contributionSprintCourant|sprintJiraCourant' \
+echo "===== ZONE 9635-9790 ====="
+sed -n '9635,9790p' \
 portal/reporting/general/index.html
+
+Puis :
+
+echo "===== SPRINT LABEL ====="
+grep -n -A8 -B8 \
+'sprintLabel' \
+portal/reporting/general/index.html
+
+Et si possible aussi ce petit diagnostic JSON :
+
+python - <<'PY'
+import json
+from pathlib import Path
+
+p = Path(
+    "portal/commun/data/jira/presentation/"
+    "payload_dashboard_final.json"
+)
+
+d = json.loads(
+    p.read_text(
+        encoding="utf-8",
+        errors="replace"
+    )
+)
+
+print("sprintCourant =", d.get("sprintCourant"))
+
+for key in (
+    "sprintJiraSynthese",
+    "contributionSprintCourant",
+    "sprintJiraCourant",
+):
+    x = d.get(key) or {}
+    print()
+    print(key)
+    print("sprint =", x.get("sprint"))
+    print("nom =", x.get("nom"))
+    print("label =", x.get("label"))
+    print("totalJira =", x.get("totalJira"))
+PY
