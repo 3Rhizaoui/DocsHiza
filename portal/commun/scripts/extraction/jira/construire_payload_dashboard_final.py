@@ -766,6 +766,7 @@ def normalize_flux_row(row, sprint, semaine):
         "sprint": sprint,
         "semaine": semaine,
         "environnement": env,
+        "environnements": environments,
         "domaine": domaine,
         "sousDomaine": sous,
         "flux": flux,

@@ -7132,6 +7132,28 @@ body{
 
 <!-- GIL_GLOBAL_SHELL_CSS_V11 -->
 <link rel="stylesheet" href="../../assets/gil-global-shell.css">
+
+<style id="disable-gil-kpi-tooltips">
+/* ============================================================
+   Désactivation des popups d'aide KPI
+   ============================================================ */
+
+/* Masque toutes les bulles KPI */
+.gilKpiTooltip,
+.gil-kpi-tooltip,
+[role="tooltip"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Les icônes ⓘ n'ont plus d'utilité */
+.gilKpiInfoIcon {
+  display: none !important;
+}
+</style>
+
 </head>
 
 <body data-gil-page-title="Rapport général GIL (KPI)">
@@ -9787,26 +9809,63 @@ function arrimageSprintConstat(data){
       const bloques = seg('Bloqués');
       const rejetes = seg('Rejetés');
 
-      const envCount = (segment,environment) => {
-        const expected = String(
-          environment || ''
-        ).trim().toUpperCase();
+      const rowEnvironments = row => {
+
+        if (!row) {
+          return [];
+        }
 
         /*
-         * Cohérence stricte avec arrimagePieData :
-         * segment.count = segment.items.length.
+         * Source canonique :
+         * tableau produit depuis les labels Jira.
          */
-        return (segment.items || []).filter(row => {
-          const env = String(
-            row && (
-              row.environnement ||
-              row.environment ||
-              row.env
-            ) || ''
-          ).trim().toUpperCase();
+        if (
+          Array.isArray(row.environnements)
+          && row.environnements.length
+        ) {
+          return row.environnements
+            .map(
+              value =>
+                String(value || '')
+                  .trim()
+                  .toUpperCase()
+            )
+            .filter(Boolean);
+        }
 
-          return env === expected;
-        }).length;
+        /*
+         * Fallback anciens payloads :
+         * "SIT", "UAT", "SIT / UAT", etc.
+         */
+        const raw = String(
+          row.environnement
+          || row.environment
+          || row.env
+          || ''
+        ).toUpperCase();
+
+        return raw
+          .split(/[\\/,;|]+/)
+          .map(value => value.trim())
+          .filter(Boolean);
+      };
+
+
+      const envCount = (segment,environment) => {
+
+        const expected = String(
+          environment || ''
+        )
+        .trim()
+        .toUpperCase();
+
+        return (segment.items || [])
+          .filter(
+            row =>
+              rowEnvironments(row)
+                .includes(expected)
+          )
+          .length;
       };
 
       const envDetail = segment =>
