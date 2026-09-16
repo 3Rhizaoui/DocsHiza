@@ -127,15 +127,8 @@ project_tmp = (
     / "gil_project.json.tmp"
 )
 
-shutil.copyfile(
-    SOURCE,
-    project_tmp
-)
-
-os.replace(
-    project_tmp,
-    project_out
-)
+# La publication réelle de gil_project.json
+# est effectuée après calcul des KPI canoniques.
 
 
 # ------------------------------------------------------------
@@ -389,6 +382,111 @@ start_date, end_date = (
 
 
 # ------------------------------------------------------------
+# KPI CANONIQUES PORTAL
+# Source unique pour Home / Rapport général / Sprint
+# ------------------------------------------------------------
+
+generated_at = (
+    data.get("generatedAt")
+    or datetime.now().astimezone().isoformat()
+)
+
+arrimage_data = {
+
+    "total":
+        total,
+
+    "delivered":
+        delivered,
+
+    "inProgress":
+        in_progress,
+
+    "blocked":
+        blocked,
+
+    "rejected":
+        number(
+            health.get("rejetes")
+        ),
+
+    "score":
+        score,
+
+    "status":
+        health.get(
+            "statut",
+            ""
+        ),
+
+    "deliveredPct":
+        round(
+            delivered
+            / total
+            * 100,
+            1
+        )
+        if total
+        else 0,
+
+    "inProgressPct":
+        round(
+            in_progress
+            / total
+            * 100,
+            1
+        )
+        if total
+        else 0,
+}
+
+sprint_data = {
+
+    "current":
+        sprint_current,
+
+    "previous":
+        sprint_previous,
+
+    "startDate":
+        start_date,
+
+    "endDate":
+        end_date,
+
+    "total":
+        sprint_total,
+
+    "delivered":
+        sprint_delivered,
+
+    "inProgress":
+        sprint_progress,
+
+    "blocked":
+        sprint_blocked,
+}
+
+quality_data = {
+
+    "anomaliesArrimage":
+        len(
+            data.get(
+                "anomaliesArrimageDetail"
+            )
+            or []
+        )
+}
+
+
+# Injection dans le payload principal
+data["arrimage"] = arrimage_data
+data["sprint"] = sprint_data
+data["quality"] = quality_data
+data["generatedAt"] = generated_at
+
+
+# ------------------------------------------------------------
 # META
 # ------------------------------------------------------------
 
@@ -401,10 +499,10 @@ generated_at = (
 home_data = {
 
     "schemaVersion":
-        "gil-portal-home-v1",
+        "gil-portal-home-v2",
 
     "generatedAt":
-        generated_at,
+        data.get("generatedAt"),
 
     "source":
         health.get(
@@ -412,88 +510,36 @@ home_data = {
             "Payload GIL"
         ),
 
-    "arrimage": {
+    "arrimage":
+        data["arrimage"],
 
-        "total":
-            total,
+    "sprint":
+        data["sprint"],
 
-        "delivered":
-            delivered,
-
-        "inProgress":
-            in_progress,
-
-        "blocked":
-            blocked,
-
-        "score":
-            score,
-
-        "status":
-            health.get(
-                "statut",
-                ""
-            ),
-
-        "deliveredPct":
-            round(
-                delivered
-                / total
-                * 100,
-                1
-            )
-            if total
-            else 0,
-
-        "inProgressPct":
-            round(
-                in_progress
-                / total
-                * 100,
-                1
-            )
-            if total
-            else 0,
-    },
-
-    "sprint": {
-
-        "current":
-            sprint_current,
-
-        "previous":
-            sprint_previous,
-
-        "startDate":
-            start_date,
-
-        "endDate":
-            end_date,
-
-        "total":
-            sprint_total,
-
-        "delivered":
-            sprint_delivered,
-
-        "inProgress":
-            sprint_progress,
-
-        "blocked":
-            sprint_blocked,
-    },
-
-    "quality": {
-
-        "anomaliesArrimage":
-            len(
-                data.get(
-                    "anomaliesArrimageDetail"
-                )
-                or []
-            )
-    }
+    "quality":
+        data["quality"],
 }
+
+
+
+# ------------------------------------------------------------
+# Publication du payload central consolidé
+# ------------------------------------------------------------
+
+project_tmp.write_text(
+    json.dumps(
+        data,
+        ensure_ascii=False,
+        indent=2
+    )
+    + "\n",
+    encoding="utf-8"
+)
+
+os.replace(
+    project_tmp,
+    project_out
+)
 
 
 home_out = (

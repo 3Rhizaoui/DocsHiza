@@ -3,14 +3,14 @@
  * GIL Portal - Données communes
  *
  * Source :
- * commun/data/gil_home.json
+ * commun/data/gil_project.json
  * ============================================================
  */
 
 (function(){
 
   const DATA_URL =
-    "commun/data/gil_home.json";
+    "commun/data/gil_project.json";
 
 
   function byId(id){
@@ -475,7 +475,7 @@
        */
       console.warn(
         "[GIL Portal] "
-        + "gil_home.json indisponible, "
+        + "gil_project.json indisponible, "
         + "fallback HTML conservé.",
         error
       );
