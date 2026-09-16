@@ -158,6 +158,278 @@ def environment(value, fallback):
     return found or [fallback]
 
 
+
+def normalize_arrimage_summary(summary, fields):
+    """
+    Normalisation canonique d'une demande d'arrimage Jira.
+
+    Le summary fournit :
+      - typeArrimage
+      - domaine
+      - sousDomaine
+      - flux
+      - version
+
+    Les environnements SIT/UAT proviennent EXCLUSIVEMENT
+    des labels Jira.
+    """
+
+    raw_summary = text(summary).strip()
+    upper = raw_summary.upper()
+
+    result = {
+        "typeArrimage": "",
+        "domaine": "",
+        "sousDomaine": "",
+        "flux": [],
+        "version": "",
+        "environnement": [],
+    }
+
+    # --------------------------------------------------------
+    # Type Arrimage
+    # --------------------------------------------------------
+
+    m = re.search(
+        r"\[([^\]]*ARRIMAGE[^\]]*)\]",
+        raw_summary,
+        re.IGNORECASE,
+    )
+
+    if m:
+        bracket = re.sub(
+            r"\s+",
+            " ",
+            m.group(1)
+        ).strip()
+
+        if (
+            "ARRIMAGE" in bracket.upper()
+            and "BCEF" in bracket.upper()
+        ):
+            result["typeArrimage"] = "Arrimage BCEF"
+        else:
+            result["typeArrimage"] = bracket
+
+    # --------------------------------------------------------
+    # Domaine
+    # --------------------------------------------------------
+
+    domain_patterns = [
+        ("ACQ", r"\bACQ\b"),
+        ("ISS", r"\bISS\b"),
+        ("DISP", r"\bDISP\b"),
+    ]
+
+    for domain, pattern in domain_patterns:
+        if re.search(
+            pattern,
+            upper,
+            re.IGNORECASE
+        ):
+            result["domaine"] = domain
+            break
+
+    # --------------------------------------------------------
+    # Découpage structurel du titre
+    #
+    # Exemple :
+    # [Arrimage BCEF] - ACQ - PRECOMP - PC06-2 et PC07 v1.10
+    # --------------------------------------------------------
+
+    clean_summary = re.sub(
+        r"^\s*\[[^\]]+\]\s*[-–—]?\s*",
+        "",
+        raw_summary
+    )
+
+    parts = [
+        part.strip()
+        for part in re.split(
+            r"\s+[-–—]\s+",
+            clean_summary
+        )
+        if part.strip()
+    ]
+
+    # Tokens techniques qui ne sont PAS des sous-domaines.
+    technical_tokens = {
+        "AVRO",
+        "API",
+        "FILE",
+        "EVENT",
+        "KAFKA",
+    }
+
+    domain_index = None
+
+    for i, part in enumerate(parts):
+        if part.upper() in {
+            "ACQ",
+            "ISS",
+            "DISP"
+        }:
+            domain_index = i
+            break
+
+    if domain_index is not None:
+        next_index = domain_index + 1
+
+        if next_index < len(parts):
+
+            candidate = parts[next_index].strip()
+
+            candidate_without_version = re.sub(
+                r"\s+(?:VERSION\s*|V)\d+(?:\.\d+)*.*$",
+                "",
+                candidate,
+                flags=re.IGNORECASE
+            ).strip()
+
+            # Le segment suivant est un sous-domaine seulement
+            # s'il ne ressemble pas déjà à un identifiant de flux.
+            looks_like_flux = bool(
+                re.search(
+                    r"\b(?:"
+                    r"CMS[-_]?\d[\w-]*"
+                    r"|OA\d[\w-]*"
+                    r"|MM\d[\w-]*"
+                    r"|PC\d[\w-]*"
+                    r"|TC\d[\w-]*"
+                    r"|CNT[-_]?EM\d+"
+                    r"|EM\d+"
+                    r")\b",
+                    candidate_without_version,
+                    re.IGNORECASE
+                )
+            )
+
+            if (
+                candidate_without_version
+                and candidate_without_version.upper()
+                    not in technical_tokens
+                and not looks_like_flux
+            ):
+                result["sousDomaine"] = (
+                    candidate_without_version
+                    .strip()
+                    .upper()
+                )
+
+    # --------------------------------------------------------
+    # Flux
+    # --------------------------------------------------------
+
+    fluxes = []
+
+    def add_flux(value):
+        value = str(value or "").strip()
+
+        if not value:
+            return
+
+        if value.lower() not in {
+            x.lower()
+            for x in fluxes
+        }:
+            fluxes.append(value)
+
+    # CMS14_003 / CMS20_001 / CMS37_001 / CMS-22
+    # OA3_002
+    # MM7 / MM5-1
+    # PC06-2 / PC07
+    # TC04-1
+
+    token_pattern = (
+        r"\b(?:"
+        r"CMS\d+(?:[_-]\d+)?"
+        r"|CMS[-_]\d+(?:[_-]\d+)?"
+        r"|OA\d+(?:[_-]\d+)?"
+        r"|MM\d+(?:-\d+)?"
+        r"|PC\d+(?:[_-]\d+)?"
+        r"|TC\d+(?:[_-]\d+)?"
+        r")\b"
+    )
+
+    for value in re.findall(
+        token_pattern,
+        raw_summary,
+        flags=re.IGNORECASE
+    ):
+        add_flux(value)
+
+    # Cas :
+    # CNT EM6 EM9 EM15 EM18
+    if re.search(
+        r"\bCNT\b",
+        upper
+    ):
+        for em in re.findall(
+            r"\bEM\d+\b",
+            upper
+        ):
+            add_flux(
+                "CNT-" + em.upper()
+            )
+
+    result["flux"] = fluxes
+
+    # --------------------------------------------------------
+    # Version
+    # --------------------------------------------------------
+
+    version_match = re.search(
+        r"\b(?:VERSION\s*|V)"
+        r"(\d+(?:\.\d+){0,3})\b",
+        raw_summary,
+        flags=re.IGNORECASE
+    )
+
+    if version_match:
+        result["version"] = (
+            version_match.group(1)
+        )
+
+    # --------------------------------------------------------
+    # Environnement
+    #
+    # IMPORTANT :
+    # uniquement les labels Jira.
+    # --------------------------------------------------------
+
+    labels = fields.get("labels") or []
+
+    if not isinstance(labels, list):
+        labels = [labels]
+
+    environments = []
+
+    for label in labels:
+
+        label_text = text(label).strip().upper()
+
+        if not label_text:
+            continue
+
+        if re.search(
+            r"(^|[^A-Z])SIT([^A-Z]|$)",
+            label_text
+        ):
+            if "SIT" not in environments:
+                environments.append("SIT")
+
+        if re.search(
+            r"(^|[^A-Z])UAT([^A-Z]|$)",
+            label_text
+        ):
+            if "UAT" not in environments:
+                environments.append("UAT")
+
+    result["environnement"] = environments
+
+    return result
+
+
 def classify(
     issue,
     rules,
@@ -999,6 +1271,17 @@ def main():
             description(fields)
         )
 
+        # ----------------------------------------------------
+        # Normalisation canonique Arrimage
+        # ----------------------------------------------------
+
+        arrimage_meta = (
+            normalize_arrimage_summary(
+                summary,
+                fields
+            )
+        )
+
         responsible = (
             text(
                 fields.get(
@@ -1077,6 +1360,12 @@ def main():
 
             "pret":
                 ready,
+
+            # Contrat canonique Arrimage.
+            # Toutes les couches aval doivent progressivement
+            # consommer cet objet sans re-parser le summary.
+            "arrimage":
+                arrimage_meta,
 
             "domaine":
                 classification[

@@ -155,10 +155,95 @@ def is_generic_arrimage_value(value):
 
 def extract_arrimage_flux_metadata(row):
     """
-    Enrichissement dynamique d'un Epic d'arrimage à partir des données
-    Jira déjà présentes : summary/resume, description et champs normalisés.
-    Aucun ticket, sprint ou customfield n'est codé en dur.
+    Normalisation aval d'un Epic d'arrimage.
+
+    Source prioritaire :
+      row["arrimage"]
+
+    Ce bloc canonique est construit une seule fois dans
+    preparer_source_jira.py à partir de jira_config.json
+    et des données Jira.
+
+    L'ancien parsing du summary reste uniquement en fallback
+    pour compatibilité avec les anciens payloads.
     """
+
+    canonical = (
+        row.get("arrimage")
+        if isinstance(row, dict)
+        and isinstance(row.get("arrimage"), dict)
+        else {}
+    )
+
+    if canonical:
+        canonical_flux = canonical.get("flux") or []
+
+        if not isinstance(canonical_flux, list):
+            canonical_flux = [canonical_flux]
+
+        canonical_flux = [
+            clean_label(value, "")
+            for value in canonical_flux
+            if clean_label(value, "")
+        ]
+
+        canonical_env = (
+            canonical.get("environnement")
+            or []
+        )
+
+        if not isinstance(canonical_env, list):
+            canonical_env = [canonical_env]
+
+        return {
+            "typeArrimage":
+                clean_label(
+                    canonical.get("typeArrimage"),
+                    ""
+                ),
+
+            "domaine":
+                clean_label(
+                    canonical.get("domaine"),
+                    ""
+                ),
+
+            "sousDomaine":
+                clean_label(
+                    canonical.get("sousDomaine"),
+                    ""
+                ),
+
+            "flux":
+                " / ".join(canonical_flux),
+
+            "fluxList":
+                canonical_flux,
+
+            "version":
+                clean_label(
+                    canonical.get("version"),
+                    ""
+                ),
+
+            "environnement":
+                [
+                    clean_label(value, "")
+                    for value in canonical_env
+                    if clean_label(value, "")
+                ],
+
+            "pattern": "",
+            "dateMaj": "",
+            "dateCible": "",
+
+            "datesEnvironnements": {
+                "SIT": "",
+                "UAT": "",
+                "PROD": "",
+            },
+        }
+
     summary = clean_label(
         row_value(row, "resume", "summary", "commentaire"),
         ""
@@ -590,15 +675,45 @@ def score_sante(total, prets, bugs):
 
 
 def normalize_flux_row(row, sprint, semaine):
-    env = clean_label(
-        row_value(
-            row,
-            "environnement",
-            "env",
-            "environment"
-        ),
-        "Non renseigné"
+
+    enriched = extract_arrimage_flux_metadata(row)
+
+    # --------------------------------------------------------
+    # Environnement canonique Arrimage
+    #
+    # Source prioritaire :
+    # row["arrimage"]["environnement"]
+    #
+    # Cette valeur provient exclusivement des labels Jira.
+    # --------------------------------------------------------
+
+    environments = (
+        enriched.get("environnement")
+        or []
     )
+
+    if not isinstance(environments, list):
+        environments = [environments]
+
+    environments = [
+        clean_label(value, "")
+        for value in environments
+        if clean_label(value, "")
+    ]
+
+    if environments:
+        env = " / ".join(environments)
+    else:
+        # Compatibilité anciens payloads.
+        env = clean_label(
+            row_value(
+                row,
+                "environnement",
+                "env",
+                "environment"
+            ),
+            "Non renseigné"
+        )
 
     # --------------------------------------------------------
     # Statut canonique Arrimage
@@ -627,8 +742,6 @@ def normalize_flux_row(row, sprint, semaine):
             ),
             "À qualifier"
         )
-
-    enriched = extract_arrimage_flux_metadata(row)
 
     domaine = enriched["domaine"]
     sous = enriched["sousDomaine"]
