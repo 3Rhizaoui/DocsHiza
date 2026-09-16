@@ -23,6 +23,11 @@ SOURCE_DASHBOARD = DASHBOARD_GIL_DATA
 COMPARAISON = COMPARAISON_SPRINTS
 OUT = PAYLOAD_DASHBOARD_FINAL
 
+JIRA_CONFIG = (
+    Path(__file__).resolve().parent
+    / "jira_config.json"
+)
+
 
 def fail(message):
     raise SystemExit("[ERREUR] " + message)
@@ -1320,6 +1325,40 @@ def main():
 
     source = read_json(SOURCE_DASHBOARD, {})
 
+    jira_config = read_json(
+        JIRA_CONFIG,
+        {}
+    ) or {}
+
+    jira_queries = (
+        jira_config.get("queries")
+        if isinstance(jira_config, dict)
+        else {}
+    )
+
+    if not isinstance(jira_queries, dict):
+        jira_queries = {}
+
+    arrimage_jql = clean_label(
+        jira_queries.get("epics"),
+        ""
+    )
+
+    if not arrimage_jql:
+        fail(
+            "Requête JIRA 'epics' absente de jira_config.json"
+        )
+
+    octane_jql = clean_label(
+        jira_queries.get("anomalies_resolues"),
+        ""
+    )
+
+    if not octane_jql:
+        fail(
+            "Requête JIRA 'anomalies_resolues' absente de jira_config.json"
+        )
+
     print(
         "[TRACE][BUILD_PAYLOAD][SOURCE]",
         "anomalies=", len(source.get("anomalies") or []),
@@ -1327,8 +1366,52 @@ def main():
     )
     comparison = read_json(COMPARAISON, [])
 
-    courant = pick_sprint(SPRINT_COURANT, "Scrum Sprint 23")
-    precedent = pick_sprint(SPRINT_PRECEDENT, "Scrum Sprint 22")
+    # ------------------------------------------------------------
+    # Sprint courant canonique
+    #
+    # Source de vérité :
+    # JIRA -> board configuré -> vue "Sprints actifs".
+    #
+    # Aucune valeur de sprint n'est codée en dur.
+    # ------------------------------------------------------------
+    jira_brut_active = read_json(
+        JIRA_BRUT,
+        {}
+    ) or {}
+
+    sprint_actif_board = (
+        jira_brut_active.get("sprint_actif_board")
+        or {}
+        if isinstance(jira_brut_active, dict)
+        else {}
+    )
+
+    courant = clean_label(
+        sprint_actif_board.get("sprint")
+        if isinstance(sprint_actif_board, dict)
+        else "",
+        ""
+    )
+
+    if not courant:
+        fail(
+            "Sprint actif Jira introuvable "
+            "dans la source Sprints actifs"
+        )
+
+    # Sprint précédent fourni dynamiquement par le pipeline Jira.
+    # Aucune valeur de secours codée en dur.
+    precedent = pick_sprint(
+        SPRINT_PRECEDENT,
+        ""
+    )
+
+    print(
+        "[TRACE][SPRINT_CANONIQUE]",
+        "courant=", courant,
+        "rapidViewId=",
+        sprint_actif_board.get("rapidViewId")
+    )
 
     total, prets, en_cours, bugs = source_metrics(source)
     if total <= 0:
@@ -1535,17 +1618,6 @@ def main():
     # Cette source devient prioritaire pour le constat du sprint
     # lorsqu'elle est disponible et fiable.
     # ============================================================
-
-    jira_brut_active = read_json(
-        JIRA_BRUT,
-        {}
-    ) or {}
-
-    sprint_actif_board = (
-        jira_brut_active.get("sprint_actif_board") or {}
-        if isinstance(jira_brut_active, dict)
-        else {}
-    )
 
     sprint_actif_total = as_int(
         sprint_actif_board.get("total")
@@ -1969,21 +2041,15 @@ def main():
             # Valeur dynamique issue de la population Arrimage.
             "traitesGlobaux": prets,
 
-            "regle": (
-                'project = AERL_GIL '
-                'AND summary ~ "Arrimage" '
-                'AND issuetype = Epic'
-            ),
+            "regle":
+                arrimage_jql,
         },
 
         "octane": {
             "total": len(octane_sprint),
             "tickets": octane_sprint,
-            "regle": (
-                'project = "Group Integration Layer" '
-                'AND issuetype = Bug '
-                'AND Reference IS NOT EMPTY'
-            ),
+            "regle":
+                octane_jql,
         },
 
         "source": (

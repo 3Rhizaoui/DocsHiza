@@ -73,20 +73,40 @@ function jqlFromValue(value, name) {
 }
 
 
-function extractProjectKeyFromJql(items) {
-  for (const item of (items || [])) {
-    const jql = typeof item === 'string' ? item : String(item.jql || '');
-    const match = jql.match(/\bproject\s*=\s*"?([A-Z][A-Z0-9_]+)"?/i);
-    if (match) return match[1];
+function quoteJqlProject(value) {
+  const text = String(value || '').trim();
+
+  if (!text) {
+    throw new Error(
+      'projectKey Jira absent : impossible de construire la JQL'
+    );
   }
+
+  return /^[A-Z][A-Z0-9_]*$/.test(text)
+    ? text
+    : '"' + text.replace(/"/g, '\\"') + '"';
+}
+
+function projectKeyFromQueries(queries) {
+  for (const item of queries || []) {
+    const jql = String(item.jql || '');
+
+    const match = jql.match(
+      /\bproject\s*=\s*(?:"([^"]+)"|([A-Z][A-Z0-9_]*))/i
+    );
+
+    if (match) {
+      return String(
+        match[1] ||
+        match[2] ||
+        ''
+      ).trim();
+    }
+  }
+
   return '';
 }
 
-function quoteJqlProject(value) {
-  const text = String(value || '').trim();
-  if (!text) return 'AERL_GIL';
-  return /^[A-Z][A-Z0-9_]*$/.test(text) ? text : '"' + text.replace(/"/g, '\\"') + '"';
-}
 
 function readConfiguration() {
   if (fs.existsSync(CONFIG_FILE)) {
@@ -114,6 +134,13 @@ function readConfiguration() {
       }))
       .filter(item => item.jql);
 
+    const projectKey =
+      String(
+        config.project_key ||
+        config.projectKey ||
+        projectKeyFromQueries(activeQueries)
+      ).trim();
+
     if (!baseUrl) {
       throw new Error('jira_base_url est absent de jira_config.json');
     }
@@ -122,8 +149,15 @@ function readConfiguration() {
       throw new Error('Aucune requête JQL active dans jira_config.json');
     }
 
+    if (!projectKey) {
+      throw new Error(
+        'projectKey Jira introuvable dans jira_config.json ou dans les JQL'
+      );
+    }
+
     return {
       baseUrl,
+      projectKey,
       queries: activeQueries,
       activeSprintBoard:
         config.active_sprint_board ||
@@ -878,15 +912,6 @@ async function collectSprintDiagnostics(cdp, baseUrl, projectKey) {
 }
 
 
-function officialProjectKeyFromQueries(queries) {
-  for (const item of (queries || [])) {
-    const jql = String(item.jql || item.query || item || '');
-    const m = jql.match(/\bproject\s*=\s*"?([A-Z][A-Z0-9_]+)"?/i);
-    if (m) return m[1];
-  }
-  return 'AERL_GIL';
-}
-
 async function executeJiraGet(cdp, url) {
   const expression = `
     (async () => {
@@ -993,8 +1018,34 @@ function summarizeSprint(sprint, issues, projectKey) {
   };
 }
 
-async function collectOfficialSprintDiagnostics(cdp, baseUrl, projectKey) {
-  projectKey = projectKey || 'AERL_GIL';
+async function collectOfficialSprintDiagnostics(
+  cdp,
+  baseUrl,
+  projectKey,
+  activeSprintBoard = {}
+) {
+  projectKey = String(
+    projectKey || ''
+  ).trim();
+
+  if (!projectKey) {
+    throw new Error(
+      'projectKey Jira introuvable dans la configuration'
+    );
+  }
+
+  const configuredBoardId = String(
+    activeSprintBoard.rapidViewId ||
+    activeSprintBoard.rapid_view_id ||
+    ''
+  ).trim();
+
+  if (configuredBoardId) {
+    console.log(
+      '[diagnostic_sprints_officiel] Board configuré :',
+      configuredBoardId
+    );
+  }
 
   console.log('');
   console.log('[diagnostic_sprints_officiel] Recherche des boards Jira du projet...');
@@ -1010,17 +1061,79 @@ async function collectOfficialSprintDiagnostics(cdp, baseUrl, projectKey) {
     throw new Error(`Aucun board Jira trouvé pour le projet ${projectKey}`);
   }
 
-  const preferredBoards = boards
-    .filter(board => {
-      const type = String(board.type || '').toLowerCase();
-      const name = String(board.name || '').toLowerCase();
-      return type === 'scrum' || name.includes(String(projectKey || '').toLowerCase()) || name.includes('gil');
-    })
-    .concat(boards.filter(board => {
-      const type = String(board.type || '').toLowerCase();
-      const name = String(board.name || '').toLowerCase();
-      return !(type === 'scrum' || name.includes(String(projectKey || '').toLowerCase()) || name.includes('gil'));
-    }));
+  let preferredBoards = [];
+
+  if (configuredBoardId) {
+
+    const configuredBoard =
+      boards.find(
+        board =>
+          String(board.id) === configuredBoardId
+      );
+
+    if (!configuredBoard) {
+      throw new Error(
+        `Le board Jira configuré ${configuredBoardId} ` +
+        `est introuvable pour le projet ${projectKey}`
+      );
+    }
+
+    /*
+     * Source de vérité :
+     * un board configuré exclut toute sélection automatique.
+     */
+    preferredBoards = [
+      configuredBoard
+    ];
+
+  } else {
+
+    /*
+     * Compatibilité :
+     * découverte automatique seulement si aucun board
+     * n'est explicitement configuré.
+     */
+    preferredBoards = boards
+      .filter(board => {
+        const type =
+          String(board.type || '')
+            .toLowerCase();
+
+        const name =
+          String(board.name || '')
+            .toLowerCase();
+
+        return (
+          type === 'scrum' ||
+          name.includes(
+            String(projectKey || '')
+              .toLowerCase()
+          ) ||
+          name.includes('gil')
+        );
+      })
+      .concat(
+        boards.filter(board => {
+
+          const type =
+            String(board.type || '')
+              .toLowerCase();
+
+          const name =
+            String(board.name || '')
+              .toLowerCase();
+
+          return !(
+            type === 'scrum' ||
+            name.includes(
+              String(projectKey || '')
+                .toLowerCase()
+            ) ||
+            name.includes('gil')
+          );
+        })
+      );
+  }
 
   let selected = null;
 
@@ -1702,7 +1815,18 @@ async function captureActiveSprintBoard(
 
 async function main() {
   const config = readConfiguration();
-  if (!config.projectKey) config.projectKey = officialProjectKeyFromQueries(config.queries);
+  if (!config.projectKey) {
+    config.projectKey =
+      projectKeyFromQueries(
+        config.queries
+      );
+  }
+
+  if (!config.projectKey) {
+    throw new Error(
+      'projectKey Jira introuvable dans la configuration ou les JQL'
+    );
+  }
   const executable = browserPath();
 
   fs.mkdirSync(
@@ -1771,7 +1895,12 @@ console.log('Connectez-vous avec le SSO, puis attendez que la page JIRA soit com
         throw new Error('collectOfficialSprintDiagnostics est absente du fichier capturer_jira_sso.js');
       }
 
-      sprintDiagnostic = await collectOfficialSprintDiagnostics(cdp, config.baseUrl, config.projectKey);
+      sprintDiagnostic = await collectOfficialSprintDiagnostics(
+        cdp,
+        config.baseUrl,
+        config.projectKey,
+        config.activeSprintBoard
+      );
 
       console.log('[SPRINTS] Diagnostic officiel OK.');
       console.log(`[SPRINTS] Board : ${sprintDiagnostic.board?.id || '?'} - ${sprintDiagnostic.board?.name || '?'}`);
