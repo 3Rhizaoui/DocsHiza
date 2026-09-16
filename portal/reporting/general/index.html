@@ -8351,9 +8351,75 @@ body{
       return 'En cours';
     }
 
-    function arrimagePieData(data){
+    
+/*
+ * ============================================================
+ * KPI CANONIQUES ARRIMAGE
+ *
+ * Source unique :
+ * gil_project.json -> data.arrimage
+ *
+ * Les KPI globaux ne doivent plus être recalculés depuis
+ * histoFlux / sprint / semaine / environnement.
+ * ============================================================
+ */
+function arrimageCanonicalKpis(data){
+
+  const a =
+    data &&
+    data.arrimage &&
+    typeof data.arrimage === "object"
+      ? data.arrimage
+      : {};
+
+  const num = value => {
+
+    const n = Number(value);
+
+    return Number.isFinite(n)
+      ? n
+      : 0;
+  };
+
+  return {
+    total:
+      num(a.total),
+
+    delivered:
+      num(a.delivered),
+
+    inProgress:
+      num(a.inProgress),
+
+    blocked:
+      num(a.blocked),
+
+    rejected:
+      num(a.rejected),
+
+    score:
+      num(a.score),
+
+    status:
+      String(
+        a.status || ""
+      )
+  };
+}
+
+
+function arrimagePieData(data){
       const rows = arrimageCurrentFluxRows(data);
       const anomalies = arrimageOctaneAnomalies(data);
+
+      /*
+       * KPI globaux :
+       * source canonique gil_project.json -> data.arrimage
+       *
+       * rows reste utilisé uniquement pour les détails
+       * domaine / sous-domaine / flux.
+       */
+      const canonical = arrimageCanonicalKpis(data);
 
       const defs = [
         {label:'Livrés', color:'#15803d'},
@@ -8362,7 +8428,7 @@ body{
         {label:'Rejetés', color:'#94a3b8'}
       ];
 
-      const total = rows.length;
+      const total = canonical.total;
       const globalPairs = arrimageCountMap(rows, x => arrimageClean(x.domaine) + ' / ' + arrimageClean(x.sousDomaine));
 
       const segments = defs.map(def => {
@@ -8378,8 +8444,31 @@ body{
         return {
           label:def.label,
           color:def.color,
-          count:items.length,
-          pct: total ? items.length / total : 0,
+          count:
+            def.label === 'Livrés'
+              ? canonical.delivered
+              : def.label === 'En cours'
+                ? canonical.inProgress
+                : def.label === 'Bloqués'
+                  ? canonical.blocked
+                  : def.label === 'Rejetés'
+                    ? canonical.rejected
+                    : 0,
+
+          pct:
+            total
+              ? (
+                  def.label === 'Livrés'
+                    ? canonical.delivered
+                    : def.label === 'En cours'
+                      ? canonical.inProgress
+                      : def.label === 'Bloqués'
+                        ? canonical.blocked
+                        : def.label === 'Rejetés'
+                          ? canonical.rejected
+                          : 0
+                ) / total
+              : 0,
           items:items,
           bugs:bugs,
           domaines:arrimageCountMap(items, x => x.domaine),
