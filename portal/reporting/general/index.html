@@ -9654,7 +9654,23 @@ function arrimageSprintConstat(data){
           '<div class="arrimageSprintStats">'+
 
             '<span class="arrimageSprintKpi">'+
-              'JIRA du sprint : <b>'+
+              'Sprint actif : <b>'+
+                esc(
+                  (
+                    synthese &&
+                    synthese.sprint &&
+                    (
+                      synthese.sprint.nom ||
+                      synthese.sprint.name
+                    )
+                  ) ||
+                  data.sprintCourant ||
+                  'Sprint non renseigné'
+                )+
+              '</b>'+
+            '</span>'+
+            '<span class="arrimageSprintKpi">'+
+              'Tickets JIRA : <b>'+
                 totalJira+
               '</b>'+
             '</span>'+
@@ -9737,7 +9753,23 @@ function arrimageSprintConstat(data){
         '<div class="arrimageSprintStats">'+
 
           '<span class="arrimageSprintKpi">'+
-            'JIRA du sprint : <b>'+
+            'Sprint actif : <b>'+
+              esc(
+                (
+                  synthese &&
+                  synthese.sprint &&
+                  (
+                    synthese.sprint.nom ||
+                    synthese.sprint.name
+                  )
+                ) ||
+                data.sprintCourant ||
+                'Sprint non renseigné'
+              )+
+            '</b>'+
+          '</span>'+
+          '<span class="arrimageSprintKpi">'+
+            'Tickets JIRA : <b>'+
               total+
             '</b>'+
           '</span>'+
