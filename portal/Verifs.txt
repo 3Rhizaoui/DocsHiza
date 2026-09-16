@@ -1,11 +1,98 @@
-Sur le PC BNP où tu es déjà dans le bon dossier, exécute simplement :
+python - <<'PY'
+import sys
+import json
+from pathlib import Path
 
-grep -n -A120 -B20 \
-'function arrimageCurrentFluxRows\|function arrimagePieData\|function arrimageGeneralConstat' \
-portal/reporting/general/index.html
+script_dir = Path(
+    "portal/commun/scripts/extraction/jira"
+).resolve()
 
-Puis :
+sys.path.insert(0, str(script_dir))
 
-grep -n -A80 -B20 \
-'const arr=arrimageCurrentFluxRows\|const arrPie = arrimagePieData' \
-portal/reporting/general/index.html
+from gil_paths import (
+    JIRA_BRUT,
+    SPRINT_COURANT,
+    PAYLOAD_DASHBOARD_FINAL,
+)
+
+def load(path):
+    if not path.exists():
+        print("ABSENT :", path)
+        return {}
+    return json.loads(
+        path.read_text(
+            encoding="utf-8",
+            errors="replace"
+        )
+    )
+
+print("=" * 70)
+print("JIRA_BRUT :", JIRA_BRUT)
+
+j = load(JIRA_BRUT)
+
+active = j.get("sprint_actif_board") or {}
+diag = j.get("diagnostic_sprints") or {}
+
+print()
+print("sprint_actif_board.sprint       =", active.get("sprint"))
+print("sprint_actif_board.rapidViewId  =", active.get("rapidViewId"))
+print(
+    "diagnostic_sprints.courant      =",
+    (diag.get("courant") or {}).get("nom")
+)
+print(
+    "diagnostic_sprints.courant.etat =",
+    (diag.get("courant") or {}).get("etat")
+)
+
+print()
+print("=" * 70)
+print("SPRINT_COURANT :", SPRINT_COURANT)
+
+s = load(SPRINT_COURANT)
+
+print(
+    "sprint_courant.nom =",
+    (s.get("sprint") or {}).get("nom")
+    or s.get("nom")
+)
+
+print()
+print("=" * 70)
+print("PAYLOAD FINAL :", PAYLOAD_DASHBOARD_FINAL)
+
+p = load(PAYLOAD_DASHBOARD_FINAL)
+
+print("sprintCourant =", p.get("sprintCourant"))
+
+synth = p.get("sprintJiraSynthese") or {}
+print(
+    "sprintJiraSynthese.sprint.nom =",
+    (synth.get("sprint") or {}).get("nom")
+)
+
+contrib = p.get("contributionSprintCourant") or {}
+print(
+    "contributionSprintCourant.sprint =",
+    contrib.get("sprint")
+)
+
+print(
+    "sprintJiraCourant.sprint.nom =",
+    (
+        (p.get("sprintJiraCourant") or {})
+        .get("sprint")
+        or {}
+    ).get("nom")
+)
+PY
+
+
+
+Puis cherche aussi les traces du pipeline :
+
+grep -RniE \
+'Board configuré|Sprint courant officiel|SPRINT_CANONIQUE|rapidViewId' \
+portal/commun/data \
+2>/dev/null | tail -80
