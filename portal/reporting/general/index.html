@@ -7152,6 +7152,44 @@ body{
 .gilKpiInfoIcon {
   display: none !important;
 }
+
+/* =========================================================
+   Sprint JIRA - lisibilité du pilotage
+   ========================================================= */
+
+.arrimageSprintStats .arrimageSprintKpi {
+  background: #e8f3ff;
+  border: 1px solid #c9e0f5;
+  border-radius: 7px;
+  padding: 7px 11px;
+  font-size: 1.15em;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.arrimageSprintStats .arrimageSprintKpi b {
+  font-weight: 700;
+}
+
+.sprintContributionTitle {
+  margin-top: 10px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  background: #edf6ff;
+  border-radius: 6px;
+  font-size: 1.15em;
+  font-weight: 700;
+}
+
+.sprintWorkGroupCard > summary {
+  background: #f7fbff;
+  border-radius: 5px;
+}
+
+.sprintWorkGroupCard > summary:hover {
+  background: #edf6ff;
+}
+
 </style>
 
 </head>
@@ -9617,6 +9655,234 @@ function sprintWorkGroupsHtml(data, sprintLabel){
 }
 
 
+
+function sprintAnomalyCardsHtml(groups){
+
+  const safeGroups = Array.isArray(groups)
+    ? groups
+    : [];
+
+  if(!safeGroups.length){
+    return '';
+  }
+
+  return safeGroups.map(group => {
+
+    const title = String(
+      group && group.title || 'Anomalies'
+    ).trim();
+
+    const tickets = (
+      group &&
+      Array.isArray(group.tickets)
+    )
+      ? group.tickets
+      : [];
+
+    const counts = {};
+
+    tickets.forEach(ticket => {
+      const status =
+        sprintTicketStatusBucket(ticket);
+
+      counts[status] =
+        (counts[status] || 0) + 1;
+    });
+
+    const preferredStatuses = [
+      'À faire',
+      'Analyse en cours',
+      'Dev en cours',
+      'Bloqué',
+      'À tester',
+      'Terminé'
+    ];
+
+    const otherStatuses =
+      Object.keys(counts)
+        .filter(
+          status =>
+            !preferredStatuses.includes(status)
+        );
+
+    const statuses =
+      preferredStatuses
+        .filter(
+          status =>
+            counts[status] !== undefined
+        )
+        .concat(otherStatuses);
+
+    const statusHtml =
+      '<span class="arrimageSprintKpi">'+
+        'Total : <b>'+
+          tickets.length+
+        '</b>'+
+      '</span>'+
+      statuses.map(status =>
+        '<span class="arrimageSprintKpi">'+
+          esc(status)+
+          ' : <b>'+
+            Number(counts[status] || 0)+
+          '</b>'+
+        '</span>'
+      ).join('');
+
+    const ticketsHtml = tickets.length
+      ? tickets.map((ticket,index) => {
+
+          const key =
+            sprintTicketValue(
+              ticket,
+              [
+                'key',
+                'cle',
+                'jiraKey',
+                'jira_key'
+              ],
+              ''
+            );
+
+          const summary =
+            sprintTicketValue(
+              ticket,
+              [
+                'summary',
+                'resume',
+                'titre',
+                'title'
+              ],
+              'Sans résumé'
+            );
+
+          const status =
+            sprintTicketStatusBucket(ticket);
+
+          const reference =
+            sprintTicketValue(
+              ticket,
+              [
+                'reference',
+                'referenceOctane',
+                'octaneReference',
+                'customfield_23820'
+              ],
+              ''
+            );
+
+          const responsable =
+            sprintTicketValue(
+              ticket,
+              [
+                'responsable',
+                'assignee',
+                'assigneeName'
+              ],
+              ''
+            );
+
+          return ''+
+            '<div style="'+
+              'margin:7px 0;'+
+              'padding:8px 10px;'+
+              'border:1px solid #d9e7f4;'+
+              'border-radius:6px;'+
+              'background:#fff;'+
+              'font-size:11px;'+
+              'line-height:1.45;'+
+            '">'+
+
+              '<div>'+
+                '<b>'+
+                  esc(
+                    key ||
+                    ('Anomalie '+(index+1))
+                  )+
+                '</b>'+
+              '</div>'+
+
+              '<div>'+
+                esc(summary)+
+              '</div>'+
+
+              (
+                reference
+                  ? '<div>'+
+                      'Référence : <b>'+
+                        esc(reference)+
+                      '</b>'+
+                    '</div>'
+                  : ''
+              )+
+
+              '<div style="'+
+                'display:flex;'+
+                'gap:6px;'+
+                'flex-wrap:wrap;'+
+                'margin-top:5px;'+
+              '">'+
+
+                '<span class="arrimageSprintKpi">'+
+                  esc(status)+
+                '</span>'+
+
+                (
+                  responsable
+                    ? '<span class="arrimageSprintKpi">'+
+                        esc(responsable)+
+                      '</span>'
+                    : ''
+                )+
+
+              '</div>'+
+
+            '</div>';
+        }).join('')
+      : '<div class="miniNote">'+
+          'Aucune anomalie pour le sprint actif.'+
+        '</div>';
+
+    return ''+
+      '<details class="arrimageSprintBlock sprintWorkGroupCard">'+
+
+        '<summary style="'+
+          'cursor:pointer;'+
+          'font-weight:700;'+
+          'padding:8px 4px;'+
+          'user-select:none;'+
+        '">'+
+
+          '<span>'+
+            esc(title)+
+          '</span>'+
+
+          '<span style="'+
+            'float:right;'+
+            'font-weight:700;'+
+            'margin-right:8px;'+
+          '">'+
+            tickets.length+
+          '</span>'+
+
+        '</summary>'+
+
+        '<div style="'+
+          'padding:4px 6px 10px 18px;'+
+        '">'+
+
+          '<div class="arrimageSprintStats" style="margin-bottom:8px;">'+
+            statusHtml+
+          '</div>'+
+
+          ticketsHtml+
+
+        '</div>'+
+
+      '</details>';
+  }).join('');
+}
+
+
 function arrimageSprintConstat(data){
 
   const sprintLabel = String(
@@ -9818,6 +10084,48 @@ function arrimageSprintConstat(data){
         'octaneReference',
         'customfield_23820'
       ]
+    );
+
+
+  /*
+   * Anomalies du sprint actif uniquement.
+   *
+   * Octane :
+   *   type Bug + Référence renseignée.
+   *
+   * Jira interne :
+   *   type Bug + Référence absente.
+   *
+   * Aucun numéro de sprint ni compteur n'est codé en dur.
+   */
+  const sprintRealBugTickets =
+    sprintRealTickets.filter(ticket => {
+
+      const type =
+        normalizeSprintText(
+          sprintTicketType(ticket)
+        );
+
+      return (
+        type === 'bug' ||
+        type.includes('anomal')
+      );
+    });
+
+
+  const sprintOctaneAnomalyTickets =
+    sprintRealBugTickets.filter(ticket =>
+      String(
+        sprintTicketReference(ticket) || ''
+      ).trim() !== ''
+    );
+
+
+  const sprintInternalJiraAnomalyTickets =
+    sprintRealBugTickets.filter(ticket =>
+      String(
+        sprintTicketReference(ticket) || ''
+      ).trim() === ''
     );
 
 
@@ -10177,7 +10485,7 @@ function arrimageSprintConstat(data){
     })()+
 
 
-    '<div class="miniNote">'+
+    '<div class="miniNote sprintContributionTitle">'+
       '<b>Contribution du sprint actuel à la livraison des flux d’arrimage — BCEF / GIL / ESTREEM</b>'+
     '</div>'+
 
@@ -10185,6 +10493,25 @@ function arrimageSprintConstat(data){
       data,
       sprintLabel
     )+
+
+    '<div class="arrimageSprintSections">'+
+
+      sprintAnomalyCardsHtml([
+        {
+          title:
+            'Anomalies d’arrimage / Octane',
+          tickets:
+            sprintOctaneAnomalyTickets
+        },
+        {
+          title:
+            'Anomalies Jira internes',
+          tickets:
+            sprintInternalJiraAnomalyTickets
+        }
+      ])+
+
+    '</div>'+
 
   '</div>';
 }
