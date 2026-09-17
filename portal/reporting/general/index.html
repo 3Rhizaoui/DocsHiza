@@ -9228,6 +9228,372 @@ function arrimageContributionAnomaliesHtml(
 }
 
 
+
+function sprintWorkGroupName(group, index){
+  if(!group || typeof group !== 'object'){
+    return 'Groupe '+(index+1);
+  }
+
+  return String(
+    group.nom ||
+    group.name ||
+    group.titre ||
+    group.title ||
+    group.groupe ||
+    group.group ||
+    group.swimlane ||
+    group.section ||
+    ('Groupe '+(index+1))
+  ).trim();
+}
+
+
+function sprintWorkGroupTickets(group){
+  if(!group || typeof group !== 'object'){
+    return [];
+  }
+
+  const candidates = [
+    group.tickets,
+    group.billets,
+    group.issues,
+    group.items,
+    group.fiches,
+    group.cartes
+  ];
+
+  for(const value of candidates){
+    if(Array.isArray(value)){
+      return value;
+    }
+  }
+
+  return [];
+}
+
+
+function sprintTicketValue(ticket, names, fallback){
+  if(!ticket || typeof ticket !== 'object'){
+    return fallback || '';
+  }
+
+  for(const name of names){
+    const value = ticket[name];
+
+    if(
+      value !== undefined &&
+      value !== null &&
+      String(value).trim()
+    ){
+      if(typeof value === 'object'){
+        return String(
+          value.name ||
+          value.nom ||
+          value.value ||
+          value.label ||
+          fallback ||
+          ''
+        ).trim();
+      }
+
+      return String(value).trim();
+    }
+  }
+
+  return fallback || '';
+}
+
+
+function sprintTicketStatus(ticket){
+  return sprintTicketValue(
+    ticket,
+    [
+      'statut',
+      'status',
+      'etat',
+      'statusName',
+      'statutJira'
+    ],
+    'Non renseigné'
+  );
+}
+
+
+function sprintTicketStatusBucket(ticket){
+  const raw = sprintTicketStatus(ticket)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'')
+    .trim()
+    .toLowerCase();
+
+  if(
+    raw.includes('termine') ||
+    raw.includes('done') ||
+    raw.includes('closed')
+  ){
+    return 'Terminé';
+  }
+
+  if(
+    raw.includes('a tester') ||
+    raw.includes('to test') ||
+    raw.includes('testing')
+  ){
+    return 'À tester';
+  }
+
+  if(
+    raw.includes('bloque') ||
+    raw.includes('blocked')
+  ){
+    return 'Bloqué';
+  }
+
+  if(
+    raw.includes('dev en cours') ||
+    raw.includes('developpement') ||
+    raw.includes('development')
+  ){
+    return 'Dev en cours';
+  }
+
+  if(
+    raw.includes('analyse')
+  ){
+    return 'Analyse en cours';
+  }
+
+  if(
+    raw.includes('a faire') ||
+    raw.includes('todo') ||
+    raw.includes('to do')
+  ){
+    return 'À faire';
+  }
+
+  return sprintTicketStatus(ticket);
+}
+
+
+function sprintWorkGroupsHtml(data, sprintLabel){
+  const synthese =
+    data &&
+    data.sprintJiraSynthese &&
+    typeof data.sprintJiraSynthese === 'object'
+      ? data.sprintJiraSynthese
+      : {};
+
+  const groups = Array.isArray(synthese.groupes)
+    ? synthese.groupes
+    : [];
+
+  if(!groups.length){
+    return ''+
+      '<div class="arrimageSprintSections">'+
+        '<div class="arrimageSprintBlock">'+
+          '<h4>Groupes de travail du sprint</h4>'+
+          '<div class="miniNote">'+
+            'Aucun groupe Jira détaillé disponible pour '+
+            esc(sprintLabel || 'le sprint courant')+
+            '.'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+  }
+
+  return ''+
+    '<div class="arrimageSprintSections">'+
+
+    groups.map((group,index) => {
+      const name =
+        sprintWorkGroupName(
+          group,
+          index
+        );
+
+      const tickets =
+        sprintWorkGroupTickets(group);
+
+      /*
+       * Si Jira fournit seulement le compteur du groupe,
+       * on l'utilise. Sinon on prend la taille réelle
+       * de la collection tickets.
+       */
+      const explicitTotal = Number(
+        group.nombre ||
+        group.total ||
+        group.count ||
+        group.issueCount ||
+        0
+      );
+
+      const total =
+        tickets.length ||
+        explicitTotal ||
+        0;
+
+      const counts = {};
+
+      tickets.forEach(ticket => {
+        const status =
+          sprintTicketStatusBucket(ticket);
+
+        counts[status] =
+          (counts[status] || 0) + 1;
+      });
+
+      const preferredStatuses = [
+        'À faire',
+        'Analyse en cours',
+        'Dev en cours',
+        'Bloqué',
+        'À tester',
+        'Terminé'
+      ];
+
+      const otherStatuses =
+        Object.keys(counts)
+          .filter(
+            status =>
+              !preferredStatuses.includes(status)
+          );
+
+      const statuses =
+        preferredStatuses
+          .filter(
+            status =>
+              counts[status] !== undefined
+          )
+          .concat(otherStatuses);
+
+      const statusHtml =
+        '<span class="arrimageSprintKpi">'+
+          'Total : <b>'+
+          total+
+          '</b>'+
+        '</span>'+
+        statuses.map(status =>
+          '<span class="arrimageSprintKpi">'+
+            esc(status)+
+            ' : <b>'+
+            Number(counts[status] || 0)+
+            '</b>'+
+          '</span>'
+        ).join('');
+
+      const ticketsHtml =
+        tickets.length
+          ? tickets.map((ticket,ticketIndex) => {
+              const key =
+                sprintTicketValue(
+                  ticket,
+                  [
+                    'key',
+                    'cle',
+                    'jiraKey',
+                    'jira_key',
+                    'reference'
+                  ],
+                  ''
+                );
+
+              const summary =
+                sprintTicketValue(
+                  ticket,
+                  [
+                    'summary',
+                    'resume',
+                    'titre',
+                    'title',
+                    'nom'
+                  ],
+                  'Sans résumé'
+                );
+
+              const status =
+                sprintTicketStatusBucket(ticket);
+
+              const assignee =
+                sprintTicketValue(
+                  ticket,
+                  [
+                    'responsable',
+                    'assignee',
+                    'assigneeName'
+                  ],
+                  ''
+                );
+
+              return ''+
+                '<div style="'+
+                  'margin:7px 0;'+
+                  'padding:8px 10px;'+
+                  'border:1px solid #d9e7f4;'+
+                  'border-radius:6px;'+
+                  'background:#fff;'+
+                  'font-size:11px;'+
+                  'line-height:1.45;'+
+                '">'+
+
+                  '<div>'+
+                    '<b>'+
+                      esc(
+                        key ||
+                        ('Ticket '+(ticketIndex+1))
+                      )+
+                    '</b>'+
+                  '</div>'+
+
+                  '<div>'+
+                    esc(summary)+
+                  '</div>'+
+
+                  '<div style="'+
+                    'display:flex;'+
+                    'gap:6px;'+
+                    'flex-wrap:wrap;'+
+                    'margin-top:5px;'+
+                  '">'+
+
+                    '<span class="arrimageSprintKpi">'+
+                      esc(status)+
+                    '</span>'+
+
+                    (
+                      assignee
+                        ? '<span class="arrimageSprintKpi">'+
+                            esc(assignee)+
+                          '</span>'
+                        : ''
+                    )+
+
+                  '</div>'+
+                '</div>';
+            }).join('')
+          : '<div class="miniNote">'+
+              'Détail des tickets non disponible.'+
+            '</div>';
+
+      return ''+
+        '<div class="arrimageSprintBlock">'+
+
+          '<h4>'+
+            esc(name)+
+          '</h4>'+
+
+          '<div class="arrimageSprintStats" style="margin-bottom:8px;">'+
+            statusHtml+
+          '</div>'+
+
+          ticketsHtml+
+
+        '</div>';
+    }).join('')+
+
+    '</div>';
+}
+
+
 function arrimageSprintConstat(data){
 
   const sprintLabel = String(
@@ -9792,41 +10158,14 @@ function arrimageSprintConstat(data){
       '<b>Contribution du sprint actuel à la livraison des flux d’arrimage — BCEF / GIL / ESTREEM</b>'+
     '</div>'+
 
+    sprintWorkGroupsHtml(
+      data,
+      sprintLabel
+    )+
 
-    '<div class="arrimageSprintSections">'+
-
-      '<div class="arrimageSprintBlock">'+
-
-        '<h4>'+
-          '1. Demandes d’arrimage / flux livrés'+
-        '</h4>'+
-
-        arrimageContributionRequestsHtml(
-          Array.isArray(data.contributionSprintArrimage)
-            ? data.contributionSprintArrimage
-            : sprintRealArrimageTickets,
-          sprintLabel
-        )+
-
-      '</div>'+
-
-      '<div class="arrimageSprintBlock">'+
-
-        '<h4>'+
-          '2. Anomalies d’arrimage'+
-        '</h4>'+
-
-        arrimageContributionAnomaliesHtml(
-          Array.isArray(data.contributionSprintAnomalies)
-            ? data.contributionSprintAnomalies
-            : sprintRealAnomalyTickets,
-          sprintLabel
-        )+
-
-      '</div>'+
-
-    '</div>';
+  '</div>';
 }
+
 
 /* GIL_SPRINT_CONSTAT_V1_JS_END */
 
