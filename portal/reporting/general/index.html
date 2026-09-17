@@ -5740,7 +5740,9 @@ details[open] > summary .arrimageTreeArrow::before{
 
 .arrimagePriorityList{
   display:flex !important;
-  flex-direction:column !important;
+  flex-direction:row !important;
+  flex-wrap:nowrap !important;
+  gap:8px !important;
 
   width:100% !important;
 }
@@ -5748,6 +5750,9 @@ details[open] > summary .arrimageTreeArrow::before{
 
 .arrimagePriorityItem{
   display:grid !important;
+
+  flex:1 1 0 !important;
+  min-width:0 !important;
 
   grid-template-columns:
     42px
@@ -7189,6 +7194,144 @@ body{
 .sprintWorkGroupCard > summary:hover {
   background: #edf6ff;
 }
+
+
+
+/* ==========================================================
+   GIL - Sprint contribution / anomalies
+   Présentation uniquement : aucune règle métier
+   ========================================================== */
+
+.sprintContributionGrid{
+  display:grid;
+  grid-template-columns:minmax(0, 1.65fr) minmax(300px, .85fr);
+  gap:12px;
+  align-items:start;
+  width:100%;
+  margin-top:8px;
+}
+
+.sprintContributionLeft,
+.sprintContributionRight{
+  min-width:0;
+}
+
+.sprintContributionRight{
+  padding-left:12px;
+  border-left:1px solid #d9e7f4;
+}
+
+.sprintAnomalyColumnTitle{
+  margin:0 0 8px 0;
+  padding:7px 10px;
+
+  border:1px solid #d2e5f7;
+  border-radius:7px;
+
+  background:#edf6ff;
+
+  font-size:12px;
+  font-weight:800;
+}
+
+.sprintContributionRight .arrimageSprintSections{
+  display:block;
+}
+
+.sprintContributionRight .arrimageSprintBlock{
+  width:100%;
+  margin-bottom:8px;
+}
+
+
+/* Détail individuel d'une anomalie.
+   <details> reste fermé par défaut. */
+
+.sprintAnomalyTicket{
+  margin:6px 0;
+
+  border:1px solid #d9e7f4;
+  border-radius:6px;
+
+  background:#fff;
+  overflow:hidden;
+}
+
+.sprintAnomalyTicket > summary{
+  cursor:pointer;
+  padding:7px 8px;
+
+  font-size:11px;
+  font-weight:700;
+
+  user-select:none;
+}
+
+.sprintAnomalyTicket > summary:hover{
+  background:#f5f9fd;
+}
+
+.sprintAnomalyTicketKey{
+  font-weight:800;
+}
+
+.sprintAnomalyTicketStatus{
+  float:right;
+
+  margin-left:8px;
+  padding:2px 6px;
+
+  border:1px solid #c9e0f5;
+  border-radius:5px;
+
+  background:#e8f3ff;
+
+  font-weight:700;
+}
+
+.sprintAnomalyTicketBody{
+  padding:7px 10px 9px 22px;
+
+  border-top:1px solid #edf2f7;
+
+  font-size:11px;
+  line-height:1.45;
+}
+
+.sprintAnomalySummary{
+  margin-bottom:4px;
+  font-weight:600;
+}
+
+.sprintAnomalyMeta{
+  margin-top:3px;
+}
+
+
+/* Petit écran : retour naturel en une colonne. */
+
+@media (max-width:1100px){
+  .sprintContributionGrid{
+    grid-template-columns:1fr;
+  }
+
+  .sprintContributionRight{
+    padding-left:0;
+    padding-top:10px;
+
+    border-left:0;
+    border-top:1px solid #d9e7f4;
+  }
+
+  .arrimagePriorityList{
+    flex-wrap:wrap !important;
+  }
+
+  .arrimagePriorityItem{
+    flex:1 1 calc(50% - 8px) !important;
+  }
+}
+
 
 </style>
 
@@ -9782,61 +9925,49 @@ function sprintAnomalyCardsHtml(groups){
             );
 
           return ''+
-            '<div style="'+
-              'margin:7px 0;'+
-              'padding:8px 10px;'+
-              'border:1px solid #d9e7f4;'+
-              'border-radius:6px;'+
-              'background:#fff;'+
-              'font-size:11px;'+
-              'line-height:1.45;'+
-            '">'+
+            '<details class="sprintAnomalyTicket">'+
 
-              '<div>'+
-                '<b>'+
+              '<summary>'+
+                '<span class="sprintAnomalyTicketKey">'+
                   esc(
                     key ||
                     ('Anomalie '+(index+1))
                   )+
-                '</b>'+
-              '</div>'+
-
-              '<div>'+
-                esc(summary)+
-              '</div>'+
-
-              (
-                reference
-                  ? '<div>'+
-                      'Référence : <b>'+
-                        esc(reference)+
-                      '</b>'+
-                    '</div>'
-                  : ''
-              )+
-
-              '<div style="'+
-                'display:flex;'+
-                'gap:6px;'+
-                'flex-wrap:wrap;'+
-                'margin-top:5px;'+
-              '">'+
-
-                '<span class="arrimageSprintKpi">'+
+                '</span>'+
+                '<span class="sprintAnomalyTicketStatus">'+
                   esc(status)+
                 '</span>'+
+              '</summary>'+
+
+              '<div class="sprintAnomalyTicketBody">'+
+
+                '<div class="sprintAnomalySummary">'+
+                  esc(summary)+
+                '</div>'+
+
+                (
+                  reference
+                    ? '<div class="sprintAnomalyMeta">'+
+                        'Référence Octane : <b>'+
+                          esc(reference)+
+                        '</b>'+
+                      '</div>'
+                    : ''
+                )+
 
                 (
                   responsable
-                    ? '<span class="arrimageSprintKpi">'+
-                        esc(responsable)+
-                      '</span>'
+                    ? '<div class="sprintAnomalyMeta">'+
+                        'Responsable : <b>'+
+                          esc(responsable)+
+                        '</b>'+
+                      '</div>'
                     : ''
                 )+
 
               '</div>'+
 
-            '</div>';
+            '</details>';
         }).join('')
       : '<div class="miniNote">'+
           'Aucune anomalie pour le sprint actif.'+
@@ -10013,44 +10144,6 @@ function arrimageSprintConstat(data){
       .replace(/\s+/g,' ');
 
 
-  const sprintTicketValue = (ticket, keys) => {
-
-    if(
-      !ticket ||
-      typeof ticket !== 'object'
-    ){
-      return '';
-    }
-
-    for(const key of keys){
-
-      const value = ticket[key];
-
-      if(
-        value !== undefined &&
-        value !== null &&
-        String(value).trim() !== ''
-      ){
-        return value;
-      }
-    }
-
-    return '';
-  };
-
-
-  const sprintTicketStatus = ticket =>
-    sprintTicketValue(
-      ticket,
-      [
-        'statut',
-        'status',
-        'statusName',
-        'statutJira'
-      ]
-    );
-
-
   const sprintTicketType = ticket =>
     sprintTicketValue(
       ticket,
@@ -10176,7 +10269,7 @@ function arrimageSprintConstat(data){
 
       return (
         type === 'epic' &&
-        summary.includes('arrimage')
+        summary.includes('arrimage bcef')
       );
     });
 
@@ -10489,27 +10582,39 @@ function arrimageSprintConstat(data){
       '<b>Contribution du sprint actuel à la livraison des flux d’arrimage — BCEF / GIL / ESTREEM</b>'+
     '</div>'+
 
-    sprintWorkGroupsHtml(
-      data,
-      sprintLabel
-    )+
+    '<div class="sprintContributionGrid">'+
 
-    '<div class="arrimageSprintSections">'+
+      '<div class="sprintContributionLeft">'+
 
-      sprintAnomalyCardsHtml([
-        {
-          title:
-            'Anomalies d’arrimage / Octane',
-          tickets:
-            sprintOctaneAnomalyTickets
-        },
-        {
-          title:
-            'Anomalies Jira internes',
-          tickets:
-            sprintInternalJiraAnomalyTickets
-        }
-      ])+
+        sprintWorkGroupsHtml(
+          data,
+          sprintLabel
+        )+
+
+      '</div>'+
+
+      '<div class="sprintContributionRight">'+
+
+        '<div class="sprintAnomalyColumnTitle">'+
+          'Anomalies du sprint actif'+
+        '</div>'+
+
+        sprintAnomalyCardsHtml([
+          {
+            title:
+              'Anomalies d’arrimage / Octane',
+            tickets:
+              sprintOctaneAnomalyTickets
+          },
+          {
+            title:
+              'Anomalies Jira internes',
+            tickets:
+              sprintInternalJiraAnomalyTickets
+          }
+        ])+
+
+      '</div>'+
 
     '</div>'+
 

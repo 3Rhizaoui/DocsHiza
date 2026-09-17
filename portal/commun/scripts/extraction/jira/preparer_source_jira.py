@@ -1071,8 +1071,15 @@ def main():
             jira_business_rules.get(
                 "arrimage_summary_regex"
             )
-            or r"\[[^\]]*Arrimage[^\]]*\]"
+            or ""
         )
+
+        if not arrimage_summary_regex:
+            raise SystemExit(
+                "[JIRA][ERREUR] "
+                "business_rules.arrimage_summary_regex "
+                "absent de jira_config.json"
+            )
 
         if not re.search(
             arrimage_summary_regex,
