@@ -310,3 +310,31 @@ body.gilNormalizedPage .gilGlobalFooter {
     none !important;
 }
 
+
+/* ==========================================================
+   GIL_FOOTER_LOGOS_SMALL_V1
+   Réduction des logos IT GROUP / ITMS du footer uniquement
+   ========================================================== */
+
+footer img[src*="IT%20GROUPE"],
+footer img[src*="IT GROUPE"],
+footer img[src*="ITMS"],
+[class*="Footer"] img[src*="IT%20GROUPE"],
+[class*="Footer"] img[src*="IT GROUPE"],
+[class*="Footer"] img[src*="ITMS"],
+[class*="footer"] img[src*="IT%20GROUPE"],
+[class*="footer"] img[src*="IT GROUPE"],
+[class*="footer"] img[src*="ITMS"] {
+
+  width:135px !important;
+  height:42px !important;
+
+  max-width:135px !important;
+  max-height:42px !important;
+
+  object-fit:contain !important;
+  object-position:center !important;
+
+  margin:0 !important;
+  padding:0 !important;
+}
