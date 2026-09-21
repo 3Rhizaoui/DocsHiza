@@ -1,0 +1,108 @@
+
+/* ==========================================================
+   GIL BRANDING 4 CORNERS V2
+   ========================================================== */
+
+:root {
+  --gil-brand-logo-width: 180px;
+  --gil-brand-logo-height: 58px;
+  --gil-brand-side-gap: 24px;
+  --gil-brand-top-gap: 12px;
+  --gil-brand-bottom-gap: 12px;
+}
+
+.gilUnifiedBrandCorner {
+  position: fixed;
+  z-index: 99990;
+
+  width: var(--gil-brand-logo-width);
+  height: var(--gil-brand-logo-height);
+
+  display: flex;
+  align-items: center;
+
+  box-sizing: border-box;
+
+  background: rgba(255,255,255,.97);
+  border-radius: 8px;
+  padding: 4px;
+
+  box-shadow:
+    0 1px 4px rgba(15,55,85,.08);
+
+  pointer-events: none;
+}
+
+.gilUnifiedBrandCorner img {
+  display: block !important;
+
+  width: 100% !important;
+  height: 100% !important;
+
+  max-width: 100% !important;
+  max-height: 100% !important;
+
+  min-width: 0 !important;
+  min-height: 0 !important;
+
+  object-fit: contain !important;
+  object-position: center !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.gilUnifiedBrandTopLeft {
+  top: var(--gil-brand-top-gap);
+  left: var(--gil-brand-side-gap);
+  justify-content: flex-start;
+}
+
+.gilUnifiedBrandTopRight {
+  top: var(--gil-brand-top-gap);
+  right: var(--gil-brand-side-gap);
+  justify-content: flex-end;
+}
+
+.gilUnifiedBrandBottomLeft {
+  bottom: var(--gil-brand-bottom-gap);
+  left: var(--gil-brand-side-gap);
+  justify-content: flex-start;
+}
+
+.gilUnifiedBrandBottomRight {
+  bottom: var(--gil-brand-bottom-gap);
+  right: var(--gil-brand-side-gap);
+  justify-content: flex-end;
+}
+
+/*
+ * Masquer les anciens logos du shell
+ * afin d'éviter les doublons.
+ */
+body.gilUnifiedBrandingActive .gilTopBnp > img,
+body.gilUnifiedBrandingActive .gilTopGhost > img,
+body.gilUnifiedBrandingActive .gilBrandFooterLeft > img,
+body.gilUnifiedBrandingActive .gilBrandFooterRight > img,
+body.gilUnifiedBrandingActive .gilCycleHeader img[src*="bnpp_logo"],
+body.gilUnifiedBrandingActive .gilCycleHeader img[src*="gil_logo"],
+body.gilUnifiedBrandingActive .gilCycleHeader img[src*="ghost_logo"],
+body.gilUnifiedBrandingActive .gilCycleFooter img[src*="bnpp_logo"],
+body.gilUnifiedBrandingActive .gilCycleFooter img[src*="gil_logo"],
+body.gilUnifiedBrandingActive .gilCycleFooter img[src*="ghost_logo"],
+body.gilUnifiedBrandingActive .gilGhostReplacement {
+  visibility: hidden !important;
+}
+
+@media (max-width:900px) {
+  :root {
+    --gil-brand-logo-width: 135px;
+    --gil-brand-logo-height: 44px;
+    --gil-brand-side-gap: 10px;
+    --gil-brand-top-gap: 8px;
+    --gil-brand-bottom-gap: 8px;
+  }
+}
