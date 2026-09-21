@@ -5,6 +5,8 @@ import re
 import json
 import zipfile
 import hashlib
+import base64
+import mimetypes
 
 ROOT = Path(__file__).resolve().parent
 
@@ -31,6 +33,22 @@ GIL_PROJECT = (
     / "gil_project.json"
 )
 
+# GIL_PROJECT_FALLBACK_V6
+# Certaines branches ne produisent pas gil_project.json.
+# Dans ce cas le snapshot métier publié est payload_base.json.
+if not GIL_PROJECT.exists():
+    GIL_PROJECT = PAYLOAD_BASE
+
+# ============================================================
+# FALLBACK PUBLICATION
+#
+# Sur certaines branches, gil_project.json n'est pas généré.
+# payload_base.json contient alors le snapshot métier disponible.
+# ============================================================
+
+if not GIL_PROJECT.exists():
+    GIL_PROJECT = PAYLOAD_BASE
+
 GIL_HOME = (
     SOURCE
     / "commun"
@@ -54,9 +72,12 @@ PAYLOAD_STANDALONE = (
 required = [
     SOURCE,
     GIL_PROJECT,
-    GIL_HOME,
     PAYLOAD_STANDALONE,
 ]
+
+# GIL_HOME_FALLBACK_V6
+# gil_home.json est optionnel :
+# si absent, la Home sera dérivée du snapshot métier.
 
 for path in required:
 
@@ -110,7 +131,7 @@ destination = (
 
 
 print("=" * 72)
-print("GENERATION LIVRAISON PORTAL GIL - V5 SHAREPOINT")
+print("GENERATION LIVRAISON PORTAL GIL - V6 SHAREPOINT")
 print("=" * 72)
 
 print("Source      :", SOURCE)
@@ -162,6 +183,21 @@ def ignore_delivery_files(directory, names):
 
 
         # ----------------------------------------------
+        # EXCLUDE_KPI_PROGRAMME_DELIVERY_V6
+        #
+        # Prototype / rapport technique hors périmètre
+        # de la livraison Portal métier.
+        # ----------------------------------------------
+
+        if (
+            name == "kpi-programme"
+            and current == SOURCE
+        ):
+            ignored.add(name)
+            continue
+
+
+        # ----------------------------------------------
         # Backups / caches / profils SSO
         # ----------------------------------------------
 
@@ -201,12 +237,231 @@ gil_project = json.loads(
     )
 )
 
-gil_home = json.loads(
-    GIL_HOME.read_text(
-        encoding="utf-8",
-        errors="replace"
+# ============================================================
+# GIL_HOME_FALLBACK_V6
+# ============================================================
+
+if GIL_HOME.exists():
+
+    gil_home = json.loads(
+        GIL_HOME.read_text(
+            encoding="utf-8",
+            errors="replace"
+        )
     )
-)
+
+    print(
+        "gil_home.json         => utilisé"
+    )
+
+else:
+
+    # --------------------------------------------------------
+    # Construire la synthèse Home depuis le snapshot métier.
+    # --------------------------------------------------------
+
+    sprint_current = str(
+        gil_project.get(
+            "sprintCourant",
+            ""
+        )
+        or ""
+    ).strip()
+
+    sprint_rows = (
+        gil_project.get(
+            "comparaisonSprints",
+            []
+        )
+        or []
+    )
+
+    current_sprint = None
+
+    for row in sprint_rows:
+
+        if not isinstance(
+            row,
+            dict
+        ):
+            continue
+
+        if str(
+            row.get(
+                "sprint",
+                ""
+            )
+            or ""
+        ).strip() == sprint_current:
+
+            current_sprint = row
+            break
+
+
+    if (
+        current_sprint is None
+        and sprint_rows
+    ):
+
+        candidates = [
+            row
+            for row in sprint_rows
+            if isinstance(row, dict)
+        ]
+
+        if candidates:
+            current_sprint = candidates[-1]
+
+
+    current_sprint = (
+        current_sprint
+        if isinstance(
+            current_sprint,
+            dict
+        )
+        else {}
+    )
+
+
+    total = int(
+        current_sprint.get(
+            "fluxTotal",
+            gil_project.get(
+                "kpis",
+                {}
+            ).get(
+                "flux",
+                0
+            )
+        )
+        or 0
+    )
+
+    delivered = int(
+        current_sprint.get(
+            "fluxLivresTotal",
+            gil_project.get(
+                "kpis",
+                {}
+            ).get(
+                "pretTester",
+                0
+            )
+        )
+        or 0
+    )
+
+    in_progress = int(
+        current_sprint.get(
+            "fluxEnCoursTotal",
+            0
+        )
+        or 0
+    )
+
+    blocked = int(
+        current_sprint.get(
+            "fluxBloquesTotal",
+            0
+        )
+        or 0
+    )
+
+
+    def pct(value, total_value):
+
+        if not total_value:
+            return 0
+
+        return round(
+            (
+                float(value)
+                / float(total_value)
+            )
+            * 100,
+            1
+        )
+
+
+    gil_home = {
+
+        "generatedAt":
+            gil_project.get(
+                "generatedAt",
+                ""
+            ),
+
+        "arrimage": {
+
+            "total":
+                total,
+
+            "delivered":
+                delivered,
+
+            "deliveredPct":
+                pct(
+                    delivered,
+                    total
+                ),
+
+            "inProgress":
+                in_progress,
+
+            "inProgressPct":
+                pct(
+                    in_progress,
+                    total
+                ),
+
+            "blocked":
+                blocked,
+
+            "blockedPct":
+                pct(
+                    blocked,
+                    total
+                ),
+        },
+
+        "sprint": {
+
+            "current":
+                sprint_current,
+
+            "total":
+                total,
+
+            "delivered":
+                delivered,
+
+            "inProgress":
+                in_progress,
+
+            "blocked":
+                blocked,
+        },
+
+        "source":
+            "payload_base.json - fallback livraison V6",
+    }
+
+
+    print(
+        "gil_home.json         => absent"
+    )
+
+    print(
+        "Home dérivée snapshot =>",
+        total,
+        "total /",
+        delivered,
+        "livrés /",
+        in_progress,
+        "en cours /",
+        blocked,
+        "bloqués"
+    )
 
 # Compatibilité avec le code V4 :
 # toutes les fonctions utilisant payload_base utilisent
@@ -1099,6 +1354,562 @@ print(
 )
 
 
+
+# ============================================================
+# V6_HELPERS_AUTOPORTEURS
+# ============================================================
+
+def v6_is_external(value):
+
+    value = str(
+        value or ""
+    ).strip().lower()
+
+    return (
+        not value
+        or value.startswith("#")
+        or value.startswith("http://")
+        or value.startswith("https://")
+        or value.startswith("//")
+        or value.startswith("mailto:")
+        or value.startswith("javascript:")
+        or value.startswith("data:")
+    )
+
+
+def v6_local_target(page, value):
+
+    clean = (
+        str(value)
+        .split("?", 1)[0]
+        .split("#", 1)[0]
+    )
+
+    return (
+        page.parent
+        / clean
+    ).resolve()
+
+
+def v6_data_uri(path):
+
+    mime, _ = mimetypes.guess_type(
+        str(path)
+    )
+
+    if not mime:
+        mime = "application/octet-stream"
+
+    raw = path.read_bytes()
+
+    encoded = base64.b64encode(
+        raw
+    ).decode("ascii")
+
+    return (
+        "data:"
+        + mime
+        + ";base64,"
+        + encoded
+    )
+
+
+def v6_inline_css_urls(
+    css,
+    css_file
+):
+
+    pattern = re.compile(
+        r"url\(\s*([\"']?)(.*?)\1\s*\)",
+        re.I
+    )
+
+    def replace_url(match):
+
+        value = (
+            match.group(2)
+            .strip()
+        )
+
+        if v6_is_external(
+            value
+        ):
+            return match.group(0)
+
+        clean = (
+            value
+            .split("?", 1)[0]
+            .split("#", 1)[0]
+        )
+
+        target = (
+            css_file.parent
+            / clean
+        ).resolve()
+
+        if (
+            not target.exists()
+            or not target.is_file()
+        ):
+            return match.group(0)
+
+        return (
+            'url("'
+            + v6_data_uri(target)
+            + '")'
+        )
+
+    return pattern.sub(
+        replace_url,
+        css
+    )
+
+
+def v6_inline_stylesheets(
+    html,
+    page
+):
+
+    pattern = re.compile(
+        r'<link(?=[^>]*rel=["\']stylesheet["\'])'
+        r'(?=[^>]*href=["\']([^"\']+)["\'])[^>]*>',
+        re.I
+    )
+
+    def replace_link(match):
+
+        href = match.group(1)
+
+        if v6_is_external(
+            href
+        ):
+            return match.group(0)
+
+        target = v6_local_target(
+            page,
+            href
+        )
+
+        if (
+            not target.exists()
+            or not target.is_file()
+        ):
+            return match.group(0)
+
+        css = target.read_text(
+            encoding="utf-8",
+            errors="replace"
+        )
+
+        css = v6_inline_css_urls(
+            css,
+            target
+        )
+
+        return (
+            '\n<style data-gil-inline-source="'
+            + href
+            + '">\n'
+            + css
+            + "\n</style>\n"
+        )
+
+    return pattern.sub(
+        replace_link,
+        html
+    )
+
+
+def v6_inline_scripts(
+    html,
+    page
+):
+
+    pattern = re.compile(
+        r'<script(?=[^>]*src=["\']([^"\']+)["\'])'
+        r'[^>]*>\s*</script>',
+        re.I | re.S
+    )
+
+    def replace_script(match):
+
+        src = match.group(1)
+
+        if v6_is_external(
+            src
+        ):
+            return match.group(0)
+
+        target = v6_local_target(
+            page,
+            src
+        )
+
+        if (
+            not target.exists()
+            or not target.is_file()
+        ):
+            return match.group(0)
+
+        js = target.read_text(
+            encoding="utf-8",
+            errors="replace"
+        )
+
+        js = re.sub(
+            r"</script",
+            r"<\/script",
+            js,
+            flags=re.I
+        )
+
+        return (
+            '\n<script data-gil-inline-source="'
+            + src
+            + '">\n'
+            + js
+            + "\n</script>\n"
+        )
+
+    return pattern.sub(
+        replace_script,
+        html
+    )
+
+
+def v6_inline_images(
+    html,
+    page
+):
+
+    pattern = re.compile(
+        r'(?P<prefix>\b(?:src|poster)\s*=\s*["\'])'
+        r'(?P<value>[^"\']+)'
+        r'(?P<suffix>["\'])',
+        re.I
+    )
+
+    allowed = {
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".webp",
+        ".svg",
+        ".ico",
+    }
+
+    def replace_asset(match):
+
+        value = match.group(
+            "value"
+        )
+
+        if v6_is_external(
+            value
+        ):
+            return match.group(0)
+
+        target = v6_local_target(
+            page,
+            value
+        )
+
+        if (
+            not target.exists()
+            or not target.is_file()
+            or target.suffix.lower()
+               not in allowed
+        ):
+            return match.group(0)
+
+        return (
+            match.group("prefix")
+            + v6_data_uri(target)
+            + match.group("suffix")
+        )
+
+    return pattern.sub(
+        replace_asset,
+        html
+    )
+
+
+def v6_inline_html_css_urls(
+    html,
+    page
+):
+
+    pattern = re.compile(
+        r"url\(\s*([\"']?)(.*?)\1\s*\)",
+        re.I
+    )
+
+    def replace_url(match):
+
+        value = (
+            match.group(2)
+            .strip()
+        )
+
+        if v6_is_external(
+            value
+        ):
+            return match.group(0)
+
+        target = v6_local_target(
+            page,
+            value
+        )
+
+        if (
+            not target.exists()
+            or not target.is_file()
+        ):
+            return match.group(0)
+
+        return (
+            'url("'
+            + v6_data_uri(target)
+            + '")'
+        )
+
+    return pattern.sub(
+        replace_url,
+        html
+    )
+
+
+def v6_make_self_contained(page):
+
+    if not page.exists():
+
+        raise RuntimeError(
+            "Page absente : "
+            + str(page)
+        )
+
+    html = page.read_text(
+        encoding="utf-8",
+        errors="replace"
+    )
+
+    html = v6_inline_stylesheets(
+        html,
+        page
+    )
+
+    html = v6_inline_scripts(
+        html,
+        page
+    )
+
+    html = v6_inline_images(
+        html,
+        page
+    )
+
+    html = v6_inline_html_css_urls(
+        html,
+        page
+    )
+
+    signature = (
+        "\n"
+        "<!-- GIL_SHAREPOINT_AUTOPORTEUR_V6 -->"
+        "\n"
+    )
+
+    if (
+        "GIL_SHAREPOINT_AUTOPORTEUR_V6"
+        not in html
+    ):
+
+        if "</body>" in html:
+
+            html = html.replace(
+                "</body>",
+                signature
+                + "</body>",
+                1
+            )
+
+        else:
+
+            html += signature
+
+    page.write_text(
+        html,
+        encoding="utf-8"
+    )
+
+
+
+
+# ============================================================
+# V6_EXECUTION_AUTOPORTEUR
+# ============================================================
+
+v6_auto_pages = [
+
+    destination / "index.html",
+
+    destination
+    / "cartographie"
+    / "index.html",
+
+    destination
+    / "reporting"
+    / "general"
+    / "index.html",
+
+    destination
+    / "reporting"
+    / "sprint"
+    / "index.html",
+
+    destination
+    / "qualite"
+    / "standalone"
+    / "index.html",
+
+    destination
+    / "qualite"
+    / "suivi-quotidien"
+    / "index.html",
+
+    destination
+    / "qualite"
+    / "ateliers"
+    / "index.html",
+]
+
+
+for page in v6_auto_pages:
+
+    v6_make_self_contained(
+        page
+    )
+
+    print(
+        "autoporteur V6        =>",
+        page.relative_to(
+            destination
+        )
+    )
+
+
+# ============================================================
+# CONTROLE V6
+# ============================================================
+
+v6_autoporteur_problems = []
+
+v6_resource_pattern = re.compile(
+    r'''
+    (?:
+        <script[^>]+\bsrc\s*=\s*["']([^"']+)["']
+        |
+        <link[^>]+\bhref\s*=\s*["']([^"']+)["']
+        |
+        <img[^>]+\bsrc\s*=\s*["']([^"']+)["']
+    )
+    ''',
+    re.I | re.X
+)
+
+
+for page in v6_auto_pages:
+
+    html = page.read_text(
+        encoding="utf-8",
+        errors="replace"
+    )
+
+    if (
+        "GIL_SHAREPOINT_AUTOPORTEUR_V6"
+        not in html
+    ):
+
+        v6_autoporteur_problems.append(
+            str(
+                page.relative_to(
+                    destination
+                )
+            )
+            + " : signature V6 absente"
+        )
+
+    for match in v6_resource_pattern.finditer(
+        html
+    ):
+
+        value = next(
+            (
+                x
+                for x in match.groups()
+                if x
+            ),
+            ""
+        ).strip()
+
+        if v6_is_external(
+            value
+        ):
+            continue
+
+        # Expressions JavaScript dynamiques :
+        # ex. src="${assetUrl(...)}"
+        # Ce ne sont pas des chemins locaux statiques.
+        if (
+            "${" in value
+            or "}" in value
+        ):
+            continue
+
+        lower = value.lower()
+
+        # Navigation entre pages autorisée
+        if (
+            lower.endswith(".html")
+            or ".html?" in lower
+            or ".html#" in lower
+        ):
+            continue
+
+        v6_autoporteur_problems.append(
+            str(
+                page.relative_to(
+                    destination
+                )
+            )
+            + " : ressource locale restante -> "
+            + value
+        )
+
+
+if v6_autoporteur_problems:
+
+    print()
+    print(
+        "ATTENTION - AUTONOMIE V6 INCOMPLETE"
+    )
+
+    for problem in v6_autoporteur_problems:
+
+        print(
+            " -",
+            problem
+        )
+
+else:
+
+    print(
+        "pages autoporteuses V6 => OK"
+    )
+
+
+
 # ============================================================
 # 7. ANALYSE HTML + JS
 # ============================================================
@@ -1532,7 +2343,7 @@ for file in destination.rglob("*"):
 
 manifest = {
     "application": "GIL Portal",
-    "deliveryVersion": "V5",
+    "deliveryVersion": "V6",
     "generatedAt": datetime.now().isoformat(
         timespec="seconds"
     ),
@@ -1786,7 +2597,7 @@ print(
 
 print()
 print("=" * 72)
-print("RESULTAT V5")
+print("RESULTAT V6")
 print("=" * 72)
 
 print(
