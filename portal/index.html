@@ -10073,6 +10073,67 @@ body.gilGhostHidden
 
 </style>
 
+
+<style id="GIL_NO_GHOST_FINAL_SOURCE_V1">
+
+.gilSidebar::after,
+.gilGhostWatermark,
+.ghostWatermark,
+.ghostSidebar,
+.gilSidebarGhost,
+.gilGhostSidebar,
+img[src*="ghost_logo"],
+img[src*="ghost_watermark"],
+img[src*="ghost_icon"],
+img[src*="ghost.png"] {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+  background-image: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+
+
+/* ==========================================================
+   GIL_HOME_ITMS_FOOTER_FINAL_V1
+   ========================================================== */
+
+.gilBrandFooterItms {
+  display: block !important;
+
+  width: 145px !important;
+  max-width: 145px !important;
+
+  height: auto !important;
+  max-height: 48px !important;
+
+  object-fit: contain !important;
+  object-position: center !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+
+
+/* ==========================================================
+   GIL_DISABLE_SETTINGS_FINAL_V3
+   Suppression definitive du menu Parametres
+   ========================================================== */
+
+.gilNavSettings,
+.gilSettingsPanel,
+.gilGhostToggle {
+  display: none !important;
+}
+
+</style>
+
 </head>
 
 
@@ -10186,8 +10247,8 @@ body.gilGhostHidden
       <div class="gilTopGhost">
 
         <img
-          src="assets/ghost_logo.png"
-          alt="GHOST - Test & Quality"
+          src="assets/gil_logo.png"
+          alt="GIL - Group Integration Layer"
         />
 
         <div class="gilTopUpdated">
@@ -10650,8 +10711,8 @@ body.gilGhostHidden
   <div class="gilBrandFooterLeft">
 
     <img
-      src="assets/bnpp_logo.png"
-      alt="BNP Paribas"
+      src="assets/IT GROUPE.png"
+      alt="IT GROUP"
       class="gilFooterBnpLogo"
     />
 
@@ -10660,9 +10721,9 @@ body.gilGhostHidden
   <div class="gilBrandFooterRight">
 
     <img
-      src="assets/ghost_logo.png"
-      alt="GHOST - Test & Quality"
-      class="gilBrandFooterGhost"
+      src="assets/ITMS.png"
+      alt="ITMS - AN IT GROUP COMPANY"
+      class="gilBrandFooterItms"
     />
 
   </div>
@@ -11994,15 +12055,6 @@ body.gilGhostHidden
     );
 
 
-    /*
-     * Footer en bas à droite.
-     */
-    addReplacement(
-      document.querySelector(
-        ".gilBrandFooterRight"
-      ),
-      "gilGhostReplacement"
-    );
 
   }
 

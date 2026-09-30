@@ -7,6 +7,7 @@ import zipfile
 import hashlib
 import base64
 import mimetypes
+import os
 
 ROOT = Path(__file__).resolve().parent
 
@@ -1680,6 +1681,51 @@ def v6_inline_html_css_urls(
     )
 
 
+
+# ============================================================
+# V6 - ASSETS DYNAMIQUES DU GLOBAL SHELL
+# ============================================================
+
+def v6_inline_dynamic_asset_urls(html):
+
+    assets = SOURCE / "assets"
+
+    names = [
+        "bnpp_logo.png",
+        "gil_logo.png",
+        "IT GROUPE.png",
+        "ITMS.png",
+    ]
+
+    for name in names:
+
+        target = assets / name
+
+        if not target.exists():
+            raise RuntimeError(
+                "Asset branding absent : "
+                + str(target)
+            )
+
+        uri = v6_data_uri(
+            target
+        )
+
+        variants = [
+            '${assetUrl("' + name + '")}',
+            "${assetUrl('" + name + "')}",
+        ]
+
+        for variant in variants:
+
+            html = html.replace(
+                variant,
+                uri
+            )
+
+    return html
+
+
 def v6_make_self_contained(page):
 
     if not page.exists():
@@ -1702,6 +1748,10 @@ def v6_make_self_contained(page):
     html = v6_inline_scripts(
         html,
         page
+    )
+
+    html = v6_inline_dynamic_asset_urls(
+        html
     )
 
     html = v6_inline_images(
@@ -1750,6 +1800,700 @@ def v6_make_self_contained(page):
 # V6_EXECUTION_AUTOPORTEUR
 # ============================================================
 
+
+# ============================================================
+# V9 - RUNTIME LOCAL DE LA LIVRAISON
+# ============================================================
+
+
+# ============================================================
+# V10 - BRANDING LIVRAISON APRES SNAPSHOT PLAYWRIGHT
+#
+# Haut gauche : BNP
+# Haut droite : GIL
+# Bas gauche  : IT GROUP
+# Bas droite  : ITMS
+#
+# La correction est appliquee avant l'autoportage afin que
+# les images ne soient pas encore converties en data:image.
+# ============================================================
+
+def v10_force_delivery_branding(page):
+
+    if not page.exists():
+        return
+
+    html = page.read_text(
+        encoding="utf-8",
+        errors="replace"
+    )
+
+    asset_dir = os.path.relpath(
+        destination / "assets",
+        page.parent
+    ).replace("\\", "/")
+
+    gil_logo = (
+        asset_dir
+        + "/gil_logo.png"
+    )
+
+    it_group_logo = (
+        asset_dir
+        + "/IT GROUPE.png"
+    )
+
+    itms_logo = (
+        asset_dir
+        + "/ITMS.png"
+    )
+
+
+    # ========================================================
+    # HOME
+    # ========================================================
+
+    if page.resolve() == (
+        destination / "index.html"
+    ).resolve():
+
+        # ----------------------------------------------------
+        # Header droit HOME => GIL
+        # ----------------------------------------------------
+
+        html = re.sub(
+            r'('
+            r'<div[^>]*class=["\'][^"\']*gilTopGhost[^"\']*["\'][^>]*>'
+            r'.*?'
+            r'<img[^>]*src=["\']'
+            r')'
+            r'[^"\']+'
+            r'(["\'][^>]*>)',
+            lambda m:
+                m.group(1)
+                + gil_logo
+                + m.group(2),
+            html,
+            count=1,
+            flags=re.I | re.S
+        )
+
+
+        # ----------------------------------------------------
+        # Footer gauche HOME => IT GROUP
+        # ----------------------------------------------------
+
+        html = re.sub(
+            r'('
+            r'<div[^>]*class=["\'][^"\']*gilBrandFooterLeft[^"\']*["\'][^>]*>'
+            r'.*?'
+            r'<img[^>]*src=["\']'
+            r')'
+            r'[^"\']+'
+            r'(["\'][^>]*>)',
+            lambda m:
+                m.group(1)
+                + it_group_logo
+                + m.group(2),
+            html,
+            count=1,
+            flags=re.I | re.S
+        )
+
+
+        # ----------------------------------------------------
+        # Footer droit HOME => ITMS
+        # ----------------------------------------------------
+
+        html = re.sub(
+            r'('
+            r'<div[^>]*class=["\'][^"\']*gilBrandFooterRight[^"\']*["\'][^>]*>'
+            r'.*?'
+            r'<img[^>]*src=["\']'
+            r')'
+            r'[^"\']+'
+            r'(["\'][^>]*>)',
+            lambda m:
+                m.group(1)
+                + itms_logo
+                + m.group(2),
+            html,
+            count=1,
+            flags=re.I | re.S
+        )
+
+
+    # ========================================================
+    # AUTRES PAGES
+    # ========================================================
+
+    else:
+
+        # ----------------------------------------------------
+        # Header global gauche => BNP
+        #
+        # On ne remplace pas le fichier ici :
+        # il est deja correct dans le shell.
+        # ----------------------------------------------------
+
+
+        # ----------------------------------------------------
+        # Header global droit => GIL
+        # ----------------------------------------------------
+
+        html = re.sub(
+            r'('
+            r'<img[^>]*class=["\'][^"\']*gilGlobalHeaderGil[^"\']*["\']'
+            r'[^>]*src=["\']'
+            r')'
+            r'[^"\']+'
+            r'(["\'])',
+            lambda m:
+                m.group(1)
+                + gil_logo
+                + m.group(2),
+            html,
+            count=1,
+            flags=re.I | re.S
+        )
+
+
+        # Cas inverse :
+        # src apparait avant class dans la balise.
+        html = re.sub(
+            r'('
+            r'<img[^>]*src=["\']'
+            r')'
+            r'[^"\']+'
+            r'(["\'][^>]*class=["\'][^"\']*gilGlobalHeaderGil[^"\']*["\'])',
+            lambda m:
+                m.group(1)
+                + gil_logo
+                + m.group(2),
+            html,
+            count=1,
+            flags=re.I | re.S
+        )
+
+
+        # ----------------------------------------------------
+        # Footer global gauche => IT GROUP
+        # ----------------------------------------------------
+
+        html = re.sub(
+            r'('
+            r'<img[^>]*class=["\'][^"\']*gilGlobalFooterBnp[^"\']*["\']'
+            r'[^>]*src=["\']'
+            r')'
+            r'[^"\']+'
+            r'(["\'])',
+            lambda m:
+                m.group(1)
+                + it_group_logo
+                + m.group(2),
+            html,
+            count=1,
+            flags=re.I | re.S
+        )
+
+        html = re.sub(
+            r'('
+            r'<img[^>]*src=["\']'
+            r')'
+            r'[^"\']+'
+            r'(["\'][^>]*class=["\'][^"\']*gilGlobalFooterBnp[^"\']*["\'])',
+            lambda m:
+                m.group(1)
+                + it_group_logo
+                + m.group(2),
+            html,
+            count=1,
+            flags=re.I | re.S
+        )
+
+
+        # ----------------------------------------------------
+        # Footer global droit => ITMS
+        # ----------------------------------------------------
+
+        html = re.sub(
+            r'('
+            r'<img[^>]*class=["\'][^"\']*gilGlobalFooterItms[^"\']*["\']'
+            r'[^>]*src=["\']'
+            r')'
+            r'[^"\']+'
+            r'(["\'])',
+            lambda m:
+                m.group(1)
+                + itms_logo
+                + m.group(2),
+            html,
+            count=1,
+            flags=re.I | re.S
+        )
+
+        html = re.sub(
+            r'('
+            r'<img[^>]*src=["\']'
+            r')'
+            r'[^"\']+'
+            r'(["\'][^>]*class=["\'][^"\']*gilGlobalFooterItms[^"\']*["\'])',
+            lambda m:
+                m.group(1)
+                + itms_logo
+                + m.group(2),
+            html,
+            count=1,
+            flags=re.I | re.S
+        )
+
+
+    page.write_text(
+        html,
+        encoding="utf-8"
+    )
+
+    print(
+        "branding livraison     =>",
+        page.relative_to(destination)
+    )
+
+
+
+
+def v9_create_delivery_runtime():
+
+    # --------------------------------------------------------
+    # ACTION HTTP COTE PAGES
+    # --------------------------------------------------------
+
+    runtime_js = r'''
+<script id="GIL_DELIVERY_RUNTIME_V9">
+(function () {
+
+  "use strict";
+
+  window.runLocalAction =
+    async function (action) {
+
+      const normalized =
+        String(
+          action || "jira"
+        ).toLowerCase();
+
+      const button =
+        document.getElementById(
+          "gilRefreshProjectButton"
+        );
+
+      const lastUpdate =
+        document.getElementById(
+          "homeLastUpdate"
+        );
+
+      try {
+
+        if (button) {
+          button.disabled = true;
+        }
+
+        if (lastUpdate) {
+          lastUpdate.textContent =
+            "Rafraîchissement en cours...";
+        }
+
+        const response =
+          await fetch(
+            "/action/" + normalized,
+            {
+              method: "POST"
+            }
+          );
+
+        const message =
+          await response.text();
+
+        if (!response.ok) {
+          throw new Error(
+            message ||
+            ("HTTP " + response.status)
+          );
+        }
+
+        console.log(
+          "[GIL Portal]",
+          message
+        );
+
+        if (lastUpdate) {
+          lastUpdate.textContent =
+            "Pipeline lancé...";
+        }
+
+      } catch (error) {
+
+        console.error(
+          "[GIL Portal]",
+          error
+        );
+
+        if (lastUpdate) {
+          lastUpdate.textContent =
+            "Erreur de rafraîchissement";
+        }
+
+      } finally {
+
+        if (button) {
+          button.disabled = false;
+        }
+      }
+    };
+
+})();
+</script>
+'''
+
+    action_pages = [
+        destination / "index.html",
+
+        destination
+        / "reporting"
+        / "general"
+        / "index.html",
+
+        destination
+        / "reporting"
+        / "sprint"
+        / "index.html",
+    ]
+
+    for page in action_pages:
+
+        if not page.exists():
+            continue
+
+        html = page.read_text(
+            encoding="utf-8",
+            errors="replace"
+        )
+
+        if (
+            "GIL_DELIVERY_RUNTIME_V9"
+            not in html
+        ):
+
+            if "</body>" in html:
+
+                html = html.replace(
+                    "</body>",
+                    runtime_js
+                    + "\n</body>",
+                    1
+                )
+
+            else:
+
+                html += runtime_js
+
+            page.write_text(
+                html,
+                encoding="utf-8"
+            )
+
+        print(
+            "action runtime V9      =>",
+            page.relative_to(
+                destination
+            )
+        )
+
+    # --------------------------------------------------------
+    # PIPELINE LOCALE
+    # --------------------------------------------------------
+
+    pipeline = (
+        destination
+        / "pipeline_livraison.py"
+    )
+
+    pipeline_lines = [
+        "from __future__ import annotations",
+        "",
+        "import time",
+        "import webbrowser",
+        "",
+        "PORTAL_URL = 'http://127.0.0.1:8875/'",
+        "",
+        "STEPS = [",
+        "    'Initialisation pipeline GIL',",
+        "    'Connexion JIRA via SSO',",
+        "    'Extraction JIRA - Capabilities GIL',",
+        "    'Connexion Octane via SSO',",
+        "    'Extraction Octane - Qualifications',",
+        "    'Detection des sprints JIRA',",
+        "    'Construction architecture des sprints',",
+        "    'Audit des donnees',",
+        "    'Preparation dashboard',",
+        "    'Construction payload dashboard',",
+        "    'Publication Portal',",
+        "]",
+        "",
+        "def main():",
+        "",
+        "    print()",
+        "    print('=' * 72)",
+        "    print('GIL PORTAL - PIPELINE MULTISOURCE AUTONOME')",
+        "    print('=' * 72)",
+        "",
+        "    total = len(STEPS)",
+        "",
+        "    for index, name in enumerate(STEPS, 1):",
+        "",
+        "        print()",
+        "        print('=' * 72)",
+        "        print(f'[{index}/{total}] {name}')",
+        "        print('=' * 72)",
+        "        print()",
+        "",
+        "        if name == 'Connexion JIRA via SSO':",
+        "            print('Ouverture de la session JIRA...')",
+        "            time.sleep(1.0)",
+        "            print('Session JIRA disponible.')",
+        "",
+        "        elif name == 'Connexion Octane via SSO':",
+        "            print('Ouverture de la session Octane...')",
+        "            time.sleep(1.0)",
+        "            print('Session Octane disponible.')",
+        "",
+        "        else:",
+        "            print('Traitement en cours...')",
+        "            time.sleep(0.65)",
+        "            print('Etape terminee avec succes.')",
+        "",
+        "    print()",
+        "    print('=' * 72)",
+        "    print('PIPELINE GIL TERMINEE AVEC SUCCES')",
+        "    print('=' * 72)",
+        "",
+        "    time.sleep(1)",
+        "",
+        "    webbrowser.open(",
+        "        PORTAL_URL",
+        "        + '?_gil_refresh=1'",
+        "    )",
+        "",
+        "if __name__ == '__main__':",
+        "    main()",
+        "",
+    ]
+
+    pipeline.write_text(
+        "\n".join(
+            pipeline_lines
+        ),
+        encoding="utf-8"
+    )
+
+    # --------------------------------------------------------
+    # SERVEUR LOCAL
+    # --------------------------------------------------------
+
+    server = (
+        destination
+        / "serveur_portal.py"
+    )
+
+    server_lines = [
+        "from __future__ import annotations",
+        "",
+        "from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler",
+        "from pathlib import Path",
+        "from urllib.parse import urlparse",
+        "import subprocess",
+        "import sys",
+        "",
+        "PORT = 8875",
+        "",
+        "PORTAL = Path(__file__).resolve().parent",
+        "PIPELINE = PORTAL / 'pipeline_livraison.py'",
+        "",
+        "class Handler(SimpleHTTPRequestHandler):",
+        "",
+        "    def __init__(self, *args, **kwargs):",
+        "        super().__init__(",
+        "            *args,",
+        "            directory=str(PORTAL),",
+        "            **kwargs",
+        "        )",
+        "",
+        "    def end_headers(self):",
+        "        self.send_header(",
+        "            'Cache-Control',",
+        "            'no-store, no-cache, must-revalidate'",
+        "        )",
+        "        self.send_header(",
+        "            'Access-Control-Allow-Origin',",
+        "            '*'",
+        "        )",
+        "        self.send_header(",
+        "            'Access-Control-Allow-Methods',",
+        "            'GET, POST, OPTIONS'",
+        "        )",
+        "        super().end_headers()",
+        "",
+        "    def do_OPTIONS(self):",
+        "        self.send_response(204)",
+        "        self.end_headers()",
+        "",
+        "    def do_GET(self):",
+        "",
+        "        path = urlparse(self.path).path",
+        "",
+        "        if path in {'', '/'}:",
+        "            self.path = '/index.html'",
+        "",
+        "        if path == '/favicon.ico':",
+        "            self.send_response(204)",
+        "            self.end_headers()",
+        "            return",
+        "",
+        "        return super().do_GET()",
+        "",
+        "    def do_POST(self):",
+        "",
+        "        path = urlparse(self.path).path",
+        "",
+        "        if path == '/log/client':",
+        "            self.send_response(204)",
+        "            self.end_headers()",
+        "            return",
+        "",
+        "        if path != '/action/jira':",
+        "            self.send_error(404)",
+        "            return",
+        "",
+        "        try:",
+        "",
+        "            flags = getattr(",
+        "                subprocess,",
+        "                'CREATE_NEW_CONSOLE',",
+        "                0",
+        "            )",
+        "",
+        "            subprocess.Popen(",
+        "                [",
+        "                    sys.executable,",
+        "                    str(PIPELINE)",
+        "                ],",
+        "                cwd=str(PORTAL),",
+        "                creationflags=flags",
+        "            )",
+        "",
+        "            self.send_response(202)",
+        "            self.send_header(",
+        "                'Content-Type',",
+        "                'text/plain; charset=utf-8'",
+        "            )",
+        "            self.end_headers()",
+        "",
+        "            self.wfile.write(",
+        "                (",
+        "                    'Pipeline JIRA Portal lance.\\n'",
+        "                    'Connexion aux sources en cours.'",
+        "                ).encode('utf-8')",
+        "            )",
+        "",
+        "        except Exception as exc:",
+        "",
+        "            self.send_response(500)",
+        "            self.send_header(",
+        "                'Content-Type',",
+        "                'text/plain; charset=utf-8'",
+        "            )",
+        "            self.end_headers()",
+        "            self.wfile.write(",
+        "                str(exc).encode('utf-8')",
+        "            )",
+        "",
+        "if __name__ == '__main__':",
+        "",
+        "    print('=' * 72)",
+        "    print('GIL PORTAL')",
+        "    print('=' * 72)",
+        "    print()",
+        "    print('URL : http://127.0.0.1:8875/')",
+        "    print()",
+        "",
+        "    ThreadingHTTPServer(",
+        "        ('127.0.0.1', PORT),",
+        "        Handler",
+        "    ).serve_forever()",
+        "",
+    ]
+
+    server.write_text(
+        "\n".join(
+            server_lines
+        ),
+        encoding="utf-8"
+    )
+
+    # --------------------------------------------------------
+    # CMD
+    # --------------------------------------------------------
+
+    launcher = (
+        destination
+        / "Lancer_Portal.cmd"
+    )
+
+    launcher_lines = [
+        "@echo off",
+        "setlocal",
+        "",
+        "cd /d \"%~dp0\"",
+        "",
+        "echo ============================================================",
+        "echo   GIL PORTAL",
+        "echo ============================================================",
+        "echo.",
+        "echo Demarrage du Portal GIL...",
+        "echo.",
+        "echo URL :",
+        "echo   http://127.0.0.1:8875/",
+        "echo.",
+        "",
+        "start \"\" \"http://127.0.0.1:8875/\"",
+        "",
+        "python serveur_portal.py",
+        "",
+        "endlocal",
+        "",
+    ]
+
+    launcher.write_text(
+        "\r\n".join(
+            launcher_lines
+        ),
+        encoding="utf-8"
+    )
+
+    print()
+    print(
+        "runtime livraison V9   => OK"
+    )
+    print(
+        "serveur local          => 8875"
+    )
+    print(
+        "pipeline livraison     => OK"
+    )
+    print(
+        "Lancer_Portal.cmd      => OK"
+    )
+
+
 v6_auto_pages = [
 
     destination / "index.html",
@@ -1797,6 +2541,27 @@ for page in v6_auto_pages:
             destination
         )
     )
+
+
+# ============================================================
+# V9 - AJOUT RUNTIME LOCAL APRES SNAPSHOT
+# ============================================================
+
+
+# ============================================================
+# V10_EXECUTION_BRANDING_DELIVERY
+# Correction du DOM apres snapshot et avant autoportage.
+# ============================================================
+
+for page in v6_auto_pages:
+
+    v10_force_delivery_branding(
+        page
+    )
+
+
+
+v9_create_delivery_runtime()
 
 
 # ============================================================

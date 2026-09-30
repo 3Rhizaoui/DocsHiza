@@ -122,13 +122,7 @@
       <div class="gilGlobalHeaderBrand">
 
         <img
-          class="gilGlobalGhost"
-          src="${assetUrl("ghost_logo.png")}"
-          alt="GHOST - Test & Quality"
-        >
-
-        <img
-          class="gilGlobalGilReplacement"
+          class="gilGlobalHeaderGil"
           src="${assetUrl("gil_logo.png")}"
           alt="GIL - Group Integration Layer"
         >
@@ -163,22 +157,16 @@
     footer.innerHTML = `
       <img
         class="gilGlobalFooterBnp"
-        src="${assetUrl("bnpp_logo.png")}"
-        alt="BNP Paribas"
+        src="${assetUrl("IT GROUPE.png")}"
+        alt="IT GROUP"
       >
 
       <div class="gilGlobalHeaderBrand">
 
         <img
-          class="gilGlobalFooterBrand gilGlobalGhost"
-          src="${assetUrl("ghost_logo.png")}"
-          alt="GHOST - Test & Quality"
-        >
-
-        <img
-          class="gilGlobalFooterBrand gilGlobalGilReplacement"
-          src="${assetUrl("gil_logo.png")}"
-          alt="GIL - Group Integration Layer"
+          class="gilGlobalFooterBrand gilGlobalFooterItms"
+          src="${assetUrl("ITMS.png")}"
+          alt="ITMS - AN IT GROUP COMPANY"
         >
 
       </div>
@@ -195,8 +183,6 @@
     document.body.classList.add(
       "gilNormalizedPage"
     );
-
-    applyGhostPreference();
 
     buildHeader();
     buildFooter();

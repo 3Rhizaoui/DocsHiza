@@ -338,3 +338,49 @@ footer img[src*="ITMS"],
   margin:0 !important;
   padding:0 !important;
 }
+
+/* ==========================================================
+   GIL BRANDING FINAL SOURCE
+   BNP / GIL / IT GROUP / ITMS
+   ========================================================== */
+
+.gilGlobalHeaderGil,
+.gilGlobalFooterItms {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.gilGlobalHeaderGil {
+  width: 170px !important;
+  max-width: 170px !important;
+  height: auto !important;
+}
+
+.gilGlobalFooterBnp {
+  width: 135px !important;
+  height: auto !important;
+}
+
+.gilGlobalFooterItms {
+  width: 135px !important;
+  max-width: 135px !important;
+  height: auto !important;
+}
+
+.gilGlobalGhost,
+.gilGlobalGilReplacement {
+  display: none !important;
+}
+
+
+/* ==========================================================
+   GIL_HIDE_LEGACY_OUTER_BRANDING_V1
+   Le shell global devient l'unique branding périphérique.
+   On conserve les bandeaux métier internes.
+   ========================================================== */
+
+body.gilNormalizedPage > header.top {
+  display: none !important;
+}
+
