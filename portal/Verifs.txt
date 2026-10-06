@@ -1,22 +1,8 @@
-Dans le même cmd, exécute ce bloc :
-echo ===== EDGE 64 BITS =====
-if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" echo %ProgramFiles%\Microsoft\Edge\Application\msedge.exe
+Le plus simple maintenant est de ne pas installer Playwright sur le PC BNP. On va plutôt utiliser un module WebSocket déjà présent dans beaucoup d’environnements Node, s’il existe. Vérifie d’abord ces trois possibilités :
+node -e "try { console.log('ws=',require.resolve('ws')) } catch(e) { console.log('WS_ABSENT') }"
 
-echo ===== EDGE 32 BITS =====
-if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" echo %ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe
+node -e "try { console.log('undici=',require.resolve('undici')) } catch(e) { console.log('UNDICI_ABSENT') }"
 
-echo ===== EDGE UTILISATEUR =====
-if exist "%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe" echo %LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe
+node -e "try { const {WebSocket}=require('undici'); console.log('UNDICI_WEBSOCKET=',typeof WebSocket) } catch(e) { console.log('UNDICI_WEBSOCKET_ABSENT') }"
 
-Puis :
-echo ===== REGISTRE EDGE =====
-reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe" /ve
-
-reg query "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe" /ve
-
-Si les commandes registre ne donnent rien, utilise cette recherche ciblée :
-dir "C:\Program Files\Microsoft\Edge\Application\msedge.exe" /s /b 2>nul
-
-dir "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" /s /b 2>nul
-
-dir "%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe" /s /b 2>nul
+Si ws est présent, c’est idéal : on adapte le captureur V11 pour utiliser :
