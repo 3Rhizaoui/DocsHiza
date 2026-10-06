@@ -1178,8 +1178,21 @@ async function main() {
   if (
     browserChannel
   ) {
-    launchOptions.channel =
-      browserChannel;
+
+    if (
+      browserChannel.toLowerCase() ===
+      'msedge-bnp'
+    ) {
+
+      launchOptions.executablePath =
+        'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+
+    }
+    else {
+
+      launchOptions.channel =
+        browserChannel;
+    }
   }
 
 
