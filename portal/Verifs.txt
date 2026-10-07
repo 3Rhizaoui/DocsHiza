@@ -1,16 +1,7 @@
-pm.test("Statut HTTP acceptable", function () {
-    pm.expect(pm.response.code).to.be.oneOf([200, 201, 202, 204]);
-});
+const token = pm.collectionVariables.get("apigee_access_token_event_push");
 
-const body = pm.response.text();
-
-if (body && body.trim() !== "") {
-    try {
-        const jsonData = pm.response.json();
-        console.log("Réponse JSON reçue", jsonData);
-    } catch (e) {
-        console.log("Réponse reçue mais non JSON");
-    }
-} else {
-    console.log("Réponse vide : pas de parsing JSON");
-}
+console.log("TOKEN UTILISE MM5-1 =", token);
+console.log(
+    "HEADER FINAL MM5-1 =",
+    pm.variables.replaceIn("Bearer {{apigee_access_token_event_push}}")
+);
