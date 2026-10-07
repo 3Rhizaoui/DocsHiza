@@ -1,149 +1,16 @@
-1. Mets le script dans la requête de génération du token
-Dans :
-Security > APIGEE TOKEN EVENT_PUSH_API
-ouvre l’onglet Tests / Post-response et mets :
-const json = pm.response.json();
+pm.test("Statut HTTP acceptable", function () {
+    pm.expect(pm.response.code).to.be.oneOf([200, 201, 202, 204]);
+});
 
-if (json.access_token) {
+const body = pm.response.text();
 
-    pm.collectionVariables.set(
-        "apigee_access_token_event_push",
-        json.access_token
-    );
-
-    console.log(
-        "TOKEN EVENT_PUSH sauvegardé :",
-        json.access_token.substring(0, 20) + "..."
-    );
-
+if (body && body.trim() !== "") {
+    try {
+        const jsonData = pm.response.json();
+        console.log("Réponse JSON reçue", jsonData);
+    } catch (e) {
+        console.log("Réponse reçue mais non JSON");
+    }
 } else {
-
-    console.error(
-        "ERREUR : access_token absent dans la réponse"
-    );
+    console.log("Réponse vide : pas de parsing JSON");
 }
-
-Puis Save la requête.
-Très important : après avoir sauvegardé, relance le Runner. À cet endroit tu ne devrais plus voir :
-This request does not have any tests.
-
-2. Pour le deuxième token
-Dans :
-APIGEE TOKEN INLA IAS CALLED
-mets par exemple :
-const json = pm.response.json();
-
-if (json.access_token) {
-
-    pm.collectionVariables.set(
-        "apigee_access_token_inla_ias_called",
-        json.access_token
-    );
-
-    console.log(
-        "TOKEN INLA IAS sauvegardé"
-    );
-
-} else {
-
-    console.error(
-        "ERREUR : access_token absent"
-    );
-}
-
-3. MM5-1 doit utiliser exactement le même nom
-Pour ACQ-MM5-1, vérifie :
-Authorization
-
-ou ton Header :
-Authorization
-Bearer {{apigee_access_token_event_push}}
-
-Le nom doit être strictement identique :
-apigee_access_token_event_push
-
-Pas par exemple :
-apigee_access_token_event-push
-apigee_access_token_event_push_api
-apigee_access_token
-
-4. Ajoute temporairement un contrôle dans MM5-1
-Dans le Pre-request Script de ACQ-MM5-1, mets temporairement :
-const token = pm.collectionVariables.get(
-    "apigee_access_token_event_push"
-);
-
-console.log(
-    "MM5-1 - token disponible ?",
-    !!token
-);
-
-console.log(
-    "MM5-1 - longueur token :",
-    token ? token.length : 0
-);
-
-Ainsi, dans Postman Console, au moment du Runner, tu dois obtenir quelque chose du genre :
-TOKEN EVENT_PUSH sauvegardé
-MM5-1 - token disponible ? true
-MM5-1 - longueur token : 1234
-
-Si tu obtiens :
-MM5-1 - token disponible ? false
-
-on saura immédiatement que le problème est la portée/sauvegarde de la variable.
-5. Il y a un deuxième problème visible sur ta capture
-Pour ACQ-MM5-1, Postman affiche :
-An error occurred while running test scripts for this request. Check Postman Console for more info.
-
-Ça veut dire qu'en plus du problème potentiel de token, un script JavaScript dans Tests/Post-response de MM5-1 plante.
-Ce n'est pas simplement un test en échec. C'est une véritable erreur JavaScript.
-Par exemple, tu pourrais avoir :
-const json = pm.response.json();
-
-alors que la réponse reçue lors du Runner n'est pas du JSON.
-Ou :
-json.xxx.yyy
-
-alors que xxx n'existe pas dans la réponse d'erreur.
-Ce que je te conseille maintenant
-Ouvre en bas à gauche :
-Console
-puis refais :
-Run collection
-et copie-moi la ligne rouge correspondant à ACQ-MM5-1.
-Avec cette seule erreur de Console, je pourrai te dire exactement quelle ligne de ton script MM5-1 plante.
-Ton architecture cible doit être :
-GIL ACQ pentest
-
-Security
-   |
-   +-- APIGEE TOKEN EVENT_PUSH_API
-   |       |
-   |       +--> sauvegarde
-   |            apigee_access_token_event_push
-   |
-   +-- APIGEE TOKEN INLA IAS CALLED
-           |
-           +--> sauvegarde
-                apigee_access_token_inla_ias_called
-
-Flows
-   |
-   +-- EVENT
-        |
-        +-- Onboarding
-        |     |
-        |     +-- MM5-1 ----> {{apigee_access_token_event_push}}
-        |     +-- MM5-2 ----> {{apigee_access_token_event_push}}
-        |     +-- MM5-3 ----> {{apigee_access_token_event_push}}
-        |     ...
-        |
-        +-- Authorize
-        |     +-- OA5-2 ----> {{apigee_access_token_event_push}}
-        |
-        +-- CreditCom
-              +-- PC07
-              +-- PC06-2
-
-Et là tu pourras réellement lancer toute la collection en une fois, y compris ensuite avec Newman.
