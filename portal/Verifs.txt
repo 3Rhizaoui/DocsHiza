@@ -1,8 +1,66 @@
-Le plus simple maintenant est de ne pas installer Playwright sur le PC BNP. On va plutôt utiliser un module WebSocket déjà présent dans beaucoup d’environnements Node, s’il existe. Vérifie d’abord ces trois possibilités :
-node -e "try { console.log('ws=',require.resolve('ws')) } catch(e) { console.log('WS_ABSENT') }"
+Oui. Dans ton organisation actuelle, c’est même une bonne approche : les requêtes du dossier Security génèrent les tokens, les enregistrent automatiquement, puis toutes les requêtes de Flows/EVENT/... les réutilisent.
+Pour APIGEE TOKEN EVENT_PUSH_API, ta réponse contient bien access_token. Dans l’onglet Tests de cette requête, ajoute :
+const response = pm.response.json();
 
-node -e "try { console.log('undici=',require.resolve('undici')) } catch(e) { console.log('UNDICI_ABSENT') }"
+if (response.access_token) {
+    pm.collectionVariables.set(
+        "apigee_access_token_event_push",
+        response.access_token
+    );
 
-node -e "try { const {WebSocket}=require('undici'); console.log('UNDICI_WEBSOCKET=',typeof WebSocket) } catch(e) { console.log('UNDICI_WEBSOCKET_ABSENT') }"
+    console.log("Token APIGEE EVENT_PUSH sauvegardé");
+} else {
+    console.error("Aucun access_token reçu");
+}
 
-Si ws est présent, c’est idéal : on adapte le captureur V11 pour utiliser :
+Je te recommande ici une variable de collection, car Security et Flows sont tous les deux dans la même collection GIL ACQ pentest. Tu n'as donc pas besoin de déclarer la variable dans chaque dossier.
+Ensuite, dans toutes les API concernées sous :
+GIL ACQ pentest
+ ├── Security
+ │    ├── APIGEE TOKEN EVENT_PUSH_API
+ │    └── APIGEE TOKEN INLA IAS CALLED
+ │
+ └── Flows
+      └── EVENT
+           ├── Onboarding
+           │    ├── ACQ-MM5-1
+           │    ├── ACQ-MM5-2
+           │    └── ...
+           └── Authorize
+                └── ACQ-OA5-2
+
+tu mets simplement :
+Authorization: Bearer {{apigee_access_token_event_push}}
+
+Pour ton deuxième token
+Dans APIGEE TOKEN INLA IAS CALLED, tu peux faire exactement la même chose avec un autre nom :
+const response = pm.response.json();
+
+if (response.access_token) {
+    pm.collectionVariables.set(
+        "apigee_access_token_inla",
+        response.access_token
+    );
+}
+
+Et les flux concernés utilisent :
+Bearer {{apigee_access_token_inla}}
+
+Encore mieux pour ton pentest
+Tu peux enregistrer également le refresh_token visible sur ta capture :
+const response = pm.response.json();
+
+pm.collectionVariables.set(
+    "apigee_access_token_event_push",
+    response.access_token
+);
+
+pm.collectionVariables.set(
+    "apigee_refresh_token_event_push",
+    response.refresh_token
+);
+
+Ta réponse indique expires_in: 3599, donc le token a une durée annoncée d'environ 1 heure. Lorsque tu relances APIGEE TOKEN EVENT_PUSH_API, la variable est automatiquement remplacée par le nouveau token.
+Le fonctionnement devient donc :
+Security → Génération token → sauvegarde automatique dans collection variable → Flows/EVENT → {{apigee_access_token_event_push}}
+C'est nettement mieux que de copier/coller manuellement les tokens.
